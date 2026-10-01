@@ -1,0 +1,179 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Rooms</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Sora:wght@500;600;700&amp;family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600&amp;display=swap">
+<style>
+body{margin:0;background:#0E0F12}
+a{color:inherit;text-decoration:none}a:hover{color:inherit}
+button{font:inherit;border:0;padding:0;cursor:pointer}
+a:focus-visible,button:focus-visible,input:focus-visible{outline:2px solid #F2A541;outline-offset:2px}
+.i{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;flex-shrink:0}
+.f{fill:currentColor;stroke:none}
+.vol{-webkit-appearance:none;appearance:none;height:44px;margin:0;background:transparent;cursor:pointer}
+.vol::-webkit-slider-runnable-track{height:6px;border-radius:3px;background:linear-gradient(to right,#F2A541 var(--v),#2C3038 var(--v))}
+.vol::-webkit-slider-thumb{-webkit-appearance:none;width:20px;height:20px;margin-top:-7px;border-radius:50%;background:#F2F1EE;border:0}
+.vol::-moz-range-track{height:6px;border-radius:3px;background:#2C3038}
+.vol::-moz-range-progress{height:6px;border-radius:3px;background:#F2A541}
+.vol::-moz-range-thumb{width:20px;height:20px;border-radius:50%;background:#F2F1EE;border:0}
+.pill:focus-within{box-shadow:0 0 0 2px #F2A541}
+</style>
+</helmet>
+<div style="width: 390px; height: 844px; box-sizing: border-box; background: #0E0F12; color: #F2F1EE; font-family: 'DM Sans', sans-serif; display: flex; flex-direction: column; overflow: hidden">
+
+<header style="padding: 28px 20px 8px; display: flex; align-items: flex-start; justify-content: space-between">
+<div>
+<h1 style="margin: 0; font-family: Sora, sans-serif; font-size: 30px; font-weight: 600; letter-spacing: -0.02em">Rooms</h1>
+<p style="margin: 6px 0 0; font-size: 14px; color: #9A9DA6">3 of 5 rooms in use</p>
+</div>
+<button aria-label="Mute all rooms" style="width: 44px; height: 44px; border-radius: 22px; background: #17191E; color: #F2F1EE; display: flex; align-items: center; justify-content: center">
+<svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9h4l5-4v14l-5-4H4z"></path><path d="M17 9l5 6M22 9l-5 6"></path></svg>
+</button>
+</header>
+
+<main style="flex-grow: 1; padding: 12px 20px 0; display: flex; flex-direction: column; gap: 12px">
+<h2 style="margin: 0; font-size: 12px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: #9A9DA6">Now playing</h2>
+
+<section style="background: #17191E; border-radius: 22px; padding: 14px 14px 4px; display: flex; flex-direction: column; gap: 2px">
+<div style="display: flex; align-items: center; gap: 12px">
+<a href="NowPlaying.dc.html" style="flex-grow: 1; display: flex; align-items: center; gap: 12px; min-width: 0">
+<div style="width: 56px; height: 56px; border-radius: 14px; background: #3A2A12; color: #F2A541; display: flex; align-items: center; justify-content: center">
+<svg class="i" style="width: 26px; height: 26px" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="2"></circle><path d="M8.5 8.5a5 5 0 0 0 0 7M15.5 8.5a5 5 0 0 1 0 7M5.6 5.6a9 9 0 0 0 0 12.8M18.4 5.6a9 9 0 0 1 0 12.8"></path></svg>
+</div>
+<div style="min-width: 0; display: flex; flex-direction: column; gap: 3px">
+<div style="display: flex; align-items: center; gap: 8px">
+<span style="font-family: Sora, sans-serif; font-size: 17px; font-weight: 600">Downstairs</span>
+<span style="font-size: 11px; font-weight: 600; color: #C9CBD1; background: #262A31; border-radius: 6px; padding: 2px 6px">Group</span>
+</div>
+<span style="font-size: 14px">Radio Paradise</span>
+<span style="font-size: 13px; color: #9A9DA6">Living Room + Kitchen · Live stream</span>
+</div>
+</a>
+<button aria-label="Stop Downstairs" style="width: 48px; height: 48px; border-radius: 24px; background: #2C3038; color: #F2F1EE; display: flex; align-items: center; justify-content: center">
+<svg class="i f" viewBox="0 0 24 24" aria-hidden="true"><rect x="6" y="6" width="12" height="12" rx="2"></rect></svg>
+</button>
+</div>
+<div class="pill" style="position: relative; height: 44px; margin: 8px 0 10px; border-radius: 22px; background: #22252B; overflow: hidden">
+<div style="position: absolute; left: 0; top: 0; bottom: 0; width: {{downV}}; background: #4A3412"></div>
+<div style="position: absolute; inset: 0; padding: 0 14px; display: flex; align-items: center; justify-content: space-between; gap: 8px; pointer-events: none">
+<svg class="i" style="color: #F2A541" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9h4l5-4v14l-5-4H4z"></path><path d="M17 9a4 4 0 0 1 0 6"></path></svg>
+<span style="font-size: 13px; font-weight: 600; font-variant-numeric: tabular-nums">{{down}}%</span>
+</div>
+<input type="range" aria-label="Downstairs volume" min="0" max="100" value="{{down}}" onChange="{{setDown}}" style="position: absolute; inset: 0; width: 100%; height: 100%; margin: 0; opacity: 0; cursor: ew-resize">
+</div>
+</section>
+
+<section style="background: #17191E; border-radius: 22px; padding: 14px 14px 4px; display: flex; flex-direction: column; gap: 2px">
+<div style="display: flex; align-items: center; gap: 12px">
+<a href="NowPlaying.dc.html" style="flex-grow: 1; display: flex; align-items: center; gap: 12px; min-width: 0">
+<div style="width: 56px; height: 56px; border-radius: 14px; background: #261F3A; color: #B49CFF; display: flex; align-items: center; justify-content: center">
+<svg class="i" style="width: 26px; height: 26px" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 18V5l11-2v13"></path><circle cx="6" cy="18" r="3"></circle><circle cx="17" cy="16" r="3"></circle></svg>
+</div>
+<div style="min-width: 0; display: flex; flex-direction: column; gap: 3px">
+<span style="font-family: Sora, sans-serif; font-size: 17px; font-weight: 600">Office</span>
+<span style="font-size: 14px">Morning playlist</span>
+<span style="font-size: 13px; color: #9A9DA6">File · {{officeStatus}}</span>
+</div>
+</a>
+<sc-if value="{{officePlaying}}" hint-placeholder-val="{{ false }}">
+<button aria-label="Pause Office" onClick="{{toggleOffice}}" style="width: 48px; height: 48px; border-radius: 24px; background: #F2A541; color: #1A1206; display: flex; align-items: center; justify-content: center">
+<svg class="i f" viewBox="0 0 24 24" aria-hidden="true"><rect x="6" y="5" width="4" height="14" rx="1"></rect><rect x="14" y="5" width="4" height="14" rx="1"></rect></svg>
+</button>
+</sc-if>
+<sc-if value="{{officePaused}}" hint-placeholder-val="{{ true }}">
+<button aria-label="Resume Office" onClick="{{toggleOffice}}" style="width: 48px; height: 48px; border-radius: 24px; background: #2C3038; color: #F2F1EE; display: flex; align-items: center; justify-content: center">
+<svg class="i f" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5l11 7-11 7z"></path></svg>
+</button>
+</sc-if>
+</div>
+<div class="pill" style="position: relative; height: 44px; margin: 8px 0 10px; border-radius: 22px; background: #22252B; overflow: hidden">
+<div style="position: absolute; left: 0; top: 0; bottom: 0; width: {{officeV}}; background: #4A3412"></div>
+<div style="position: absolute; inset: 0; padding: 0 14px; display: flex; align-items: center; justify-content: space-between; gap: 8px; pointer-events: none">
+<svg class="i" style="color: #F2A541" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9h4l5-4v14l-5-4H4z"></path><path d="M17 9a4 4 0 0 1 0 6"></path></svg>
+<span style="font-size: 13px; font-weight: 600; font-variant-numeric: tabular-nums">{{office}}%</span>
+</div>
+<input type="range" aria-label="Office volume" min="0" max="100" value="{{office}}" onChange="{{setOffice}}" style="position: absolute; inset: 0; width: 100%; height: 100%; margin: 0; opacity: 0; cursor: ew-resize">
+</div>
+</section>
+
+<h2 style="margin: 8px 0 0; font-size: 12px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: #9A9DA6">Idle</h2>
+<section style="background: #17191E; border-radius: 22px; padding: 4px 14px; display: flex; flex-direction: column">
+<div style="display: flex; align-items: center; gap: 12px; min-height: 64px; border-bottom: 1px solid #22252B">
+<div style="width: 40px; height: 40px; border-radius: 12px; background: #22252B; color: #C9CBD1; display: flex; align-items: center; justify-content: center">
+<svg class="i" viewBox="0 0 24 24" aria-hidden="true"><rect x="6" y="3" width="12" height="18" rx="2"></rect><circle cx="12" cy="14" r="3"></circle><circle cx="12" cy="7" r="1"></circle></svg>
+</div>
+<div style="flex-grow: 1; display: flex; flex-direction: column; gap: 2px">
+<span style="font-size: 16px; font-weight: 600">Bedroom</span>
+<span style="font-size: 13px; color: #9A9DA6">Nothing playing</span>
+</div>
+<a href="StartPlayback.dc.html" aria-label="Play something in Bedroom" style="width: 44px; height: 44px; border-radius: 22px; background: #262A31; color: #F2A541; display: flex; align-items: center; justify-content: center">
+<svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"></path></svg>
+</a>
+</div>
+<div style="display: flex; align-items: center; gap: 12px; min-height: 64px">
+<div style="width: 40px; height: 40px; border-radius: 12px; background: #1B1D22; color: #6E727B; display: flex; align-items: center; justify-content: center">
+<svg class="i" viewBox="0 0 24 24" aria-hidden="true"><rect x="6" y="3" width="12" height="18" rx="2"></rect><circle cx="12" cy="14" r="3"></circle><circle cx="12" cy="7" r="1"></circle></svg>
+</div>
+<div style="flex-grow: 1; display: flex; flex-direction: column; gap: 2px">
+<span style="font-size: 16px; font-weight: 600; color: #9A9DA6">Patio</span>
+<span style="font-size: 13px; color: #9A9DA6">Turned off</span>
+</div>
+<span style="font-size: 12px; font-weight: 600; color: #9A9DA6; border: 1px solid #2C3038; border-radius: 8px; padding: 4px 8px">Off</span>
+</div>
+</section>
+</main>
+
+<div style="padding: 12px 20px">
+<a href="StartPlayback.dc.html" style="height: 56px; border-radius: 28px; background: #F2A541; color: #1A1206; display: flex; align-items: center; justify-content: center; gap: 8px; font-size: 16px; font-weight: 600">
+<svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"></path></svg>
+Play something
+</a>
+</div>
+
+<nav aria-label="Main" style="height: 76px; box-sizing: border-box; border-top: 1px solid #1F2228; display: flex; justify-content: space-around; align-items: flex-start; padding-top: 6px">
+<a href="Main.dc.html" aria-current="page" style="min-width: 72px; height: 52px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; font-size: 12px; font-weight: 600; color: #F2A541">
+<svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 11l9-7 9 7v9a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"></path></svg>
+Rooms
+</a>
+<a href="#" style="min-width: 72px; height: 52px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; font-size: 12px; font-weight: 500; color: #9A9DA6">
+<svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 4v16M9 4v16M14 4l6 16"></path></svg>
+Sources
+</a>
+<a href="Settings.dc.html" style="min-width: 72px; height: 52px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; font-size: 12px; font-weight: 500; color: #9A9DA6">
+<svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h10M18 7h2M4 17h4M12 17h8"></path><circle cx="16" cy="7" r="2"></circle><circle cx="10" cy="17" r="2"></circle></svg>
+Settings
+</a>
+</nav>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    this.state = { down: 62, office: 40, officePlaying: false };
+  }
+  renderVals() {
+    const s = this.state;
+    return {
+      down: s.down,
+      downV: s.down + '%',
+      setDown: (e) => this.setState({ down: +e.target.value }),
+      office: s.office,
+      officeV: s.office + '%',
+      setOffice: (e) => this.setState({ office: +e.target.value }),
+      officePlaying: s.officePlaying,
+      officePaused: !s.officePlaying,
+      officeStatus: s.officePlaying ? 'Playing' : 'Paused',
+      toggleOffice: () => this.setState({ officePlaying: !s.officePlaying })
+    };
+  }
+}
+</script>
+</body>
+</html>

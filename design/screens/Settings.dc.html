@@ -1,0 +1,235 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Settings</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Sora:wght@500;600;700&amp;family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600&amp;display=swap">
+<style>
+body{margin:0;background:#0E0F12}
+a{color:inherit;text-decoration:none}a:hover{color:inherit}
+button{font:inherit;border:0;padding:0;cursor:pointer}
+a:focus-visible,button:focus-visible,input:focus-visible{outline:2px solid #F2A541;outline-offset:2px}
+.i{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;flex-shrink:0}
+.sw{-webkit-appearance:none;appearance:none;flex-shrink:0;width:48px;height:28px;margin:0;border-radius:14px;background:#2C3038;position:relative;cursor:pointer;transition:background .15s}
+.sw::after{content:"";position:absolute;top:3px;left:3px;width:22px;height:22px;border-radius:50%;background:#9A9DA6;transition:left .15s,background .15s}
+.sw:checked{background:#F2A541}
+.sw:checked::after{left:23px;background:#1A1206}
+</style>
+</helmet>
+<div style="width: 390px; height: 844px; box-sizing: border-box; background: #0E0F12; color: #F2F1EE; font-family: 'DM Sans', sans-serif; display: flex; flex-direction: column; overflow: hidden">
+
+<header style="padding: 28px 20px 0">
+<h1 style="margin: 0; font-family: Sora, sans-serif; font-size: 30px; font-weight: 600; letter-spacing: -0.02em">Settings</h1>
+</header>
+
+<div style="margin: 18px 20px 0; padding: 4px; border-radius: 16px; background: #17191E; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 4px">
+<sc-for list="{{tabs}}" as="t" hint-placeholder-count="4">
+<button aria-pressed="{{t.pressed}}" onClick="{{t.pick}}" style="height: 40px; border-radius: 12px; font-size: 13px; font-weight: 600; background: {{t.bg}}; color: {{t.fg}}">{{t.label}}</button>
+</sc-for>
+</div>
+
+<main style="flex-grow: 1; padding: 16px 20px 0; display: flex; flex-direction: column; gap: 12px; overflow: hidden">
+
+<sc-if value="{{showRooms}}" hint-placeholder-val="{{ true }}">
+<p style="margin: 0; font-size: 13px; line-height: 1.45; color: #9A9DA6">A room that's off can't start new playback.</p>
+<section style="background: #17191E; border-radius: 22px; padding: 4px 14px; display: flex; flex-direction: column">
+<sc-for list="{{outputs}}" as="o" hint-placeholder-count="5">
+<label style="min-height: 64px; display: flex; align-items: center; gap: 12px; cursor: pointer; border-bottom: {{o.divider}}">
+<div style="width: 40px; height: 40px; border-radius: 12px; background: #22252B; color: #C9CBD1; display: flex; align-items: center; justify-content: center">
+<svg class="i" viewBox="0 0 24 24" aria-hidden="true"><rect x="6" y="3" width="12" height="18" rx="2"></rect><circle cx="12" cy="14" r="3"></circle><circle cx="12" cy="7" r="1"></circle></svg>
+</div>
+<div style="flex-grow: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px">
+<span style="font-size: 16px; font-weight: 600; color: {{o.nameColor}}">{{o.name}}</span>
+<span style="font-size: 13px; color: #9A9DA6">{{o.sub}}</span>
+</div>
+<input type="checkbox" role="switch" class="sw" aria-label="{{o.name}}" checked="{{o.on}}" onChange="{{o.toggle}}">
+</label>
+</sc-for>
+</section>
+</sc-if>
+
+<sc-if value="{{showGroups}}" hint-placeholder-val="{{ false }}">
+<p style="margin: 0; font-size: 13px; line-height: 1.45; color: #9A9DA6">Groups play to several rooms in sync.</p>
+<section style="background: #17191E; border-radius: 22px; padding: 4px 14px; display: flex; flex-direction: column">
+<sc-for list="{{groups}}" as="g" hint-placeholder-count="2">
+<label style="min-height: 72px; display: flex; align-items: center; gap: 12px; cursor: pointer; border-bottom: {{g.divider}}">
+<div style="width: 40px; height: 40px; border-radius: 12px; background: #22252B; color: #C9CBD1; display: flex; align-items: center; justify-content: center">
+<svg class="i" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="7" width="10" height="14" rx="2"></rect><path d="M8 3h11a2 2 0 0 1 2 2v12"></path></svg>
+</div>
+<div style="flex-grow: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px">
+<span style="font-size: 16px; font-weight: 600; color: {{g.nameColor}}">{{g.name}}</span>
+<span style="font-size: 13px; color: #9A9DA6; line-height: 1.35">{{g.members}}</span>
+</div>
+<input type="checkbox" role="switch" class="sw" aria-label="{{g.name}}" checked="{{g.on}}" onChange="{{g.toggle}}">
+</label>
+</sc-for>
+</section>
+</sc-if>
+
+<sc-if value="{{showSources}}" hint-placeholder-val="{{ false }}">
+<h2 style="margin: 0; font-size: 12px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: #9A9DA6">From configuration</h2>
+<section style="background: #17191E; border-radius: 22px; padding: 4px 14px; display: flex; flex-direction: column">
+<sc-for list="{{inputs}}" as="s" hint-placeholder-count="4">
+<label style="min-height: 60px; display: flex; align-items: center; gap: 12px; cursor: pointer; border-bottom: {{s.divider}}">
+<div style="width: 38px; height: 38px; border-radius: 10px; display: flex; align-items: center; justify-content: center; background: {{s.tileBg}}; color: {{s.tileFg}}">
+<sc-if value="{{s.isStream}}" hint-placeholder-val="{{ true }}">
+<svg class="i" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="2"></circle><path d="M8.5 8.5a5 5 0 0 0 0 7M15.5 8.5a5 5 0 0 1 0 7M5.6 5.6a9 9 0 0 0 0 12.8M18.4 5.6a9 9 0 0 1 0 12.8"></path></svg>
+</sc-if>
+<sc-if value="{{s.isLine}}" hint-placeholder-val="{{ false }}">
+<svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v6M9 9h6v5a3 3 0 0 1-6 0zM12 17v4"></path></svg>
+</sc-if>
+<sc-if value="{{s.isFile}}" hint-placeholder-val="{{ false }}">
+<svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 18V5l11-2v13"></path><circle cx="6" cy="18" r="3"></circle><circle cx="17" cy="16" r="3"></circle></svg>
+</sc-if>
+</div>
+<div style="flex-grow: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px">
+<span style="font-size: 15px; font-weight: 600; color: {{s.nameColor}}">{{s.name}}</span>
+<span style="font-size: 12px; color: #9A9DA6; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">{{s.sub}}</span>
+</div>
+<input type="checkbox" role="switch" class="sw" aria-label="{{s.name}}" checked="{{s.on}}" onChange="{{s.toggle}}">
+</label>
+</sc-for>
+</section>
+<h2 style="margin: 4px 0 0; font-size: 12px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: #9A9DA6">Added from apps</h2>
+<sc-if value="{{hasRuntime}}" hint-placeholder-val="{{ true }}">
+<section style="background: #17191E; border-radius: 22px; padding: 4px 6px 4px 14px; display: flex; align-items: center; gap: 12px; min-height: 64px">
+<div style="width: 38px; height: 38px; border-radius: 10px; background: #3A1E14; color: #FF8A5B; display: flex; align-items: center; justify-content: center">
+<svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1"></path><path d="M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1"></path></svg>
+</div>
+<div style="flex-grow: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px">
+<span style="font-size: 15px; font-weight: 600">SoundCloud track</span>
+<span style="font-size: 12px; color: #9A9DA6">Added today 14:30 · removed when it stops</span>
+</div>
+<button aria-label="Remove SoundCloud track" onClick="{{removeRuntime}}" style="width: 44px; height: 44px; border-radius: 22px; background: transparent; color: #C9CBD1; display: flex; align-items: center; justify-content: center">
+<svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3"></path></svg>
+</button>
+</section>
+</sc-if>
+<sc-if value="{{noRuntime}}" hint-placeholder-val="{{ false }}">
+<p style="margin: 0; font-size: 13px; color: #9A9DA6">Nothing added. Links you play, and sources apps like DLNA add, show up here.</p>
+</sc-if>
+</sc-if>
+
+<sc-if value="{{showExtensions}}" hint-placeholder-val="{{ false }}">
+<p style="margin: 0; font-size: 13px; line-height: 1.45; color: #9A9DA6">Extensions are set in the server's configuration. This list is read-only.</p>
+<section style="background: #17191E; border-radius: 22px; padding: 4px 14px; display: flex; flex-direction: column">
+<sc-for list="{{extensions}}" as="x" hint-placeholder-count="5">
+<div style="min-height: 60px; display: flex; align-items: center; gap: 12px; border-bottom: {{x.divider}}">
+<div style="flex-grow: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px">
+<span style="font-size: 15px; font-weight: 600">{{x.name}}</span>
+<span style="font-size: 12px; color: #9A9DA6">{{x.conn}}</span>
+</div>
+<span style="display: flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 600; border-radius: 999px; padding: 4px 10px; background: {{x.badgeBg}}; color: {{x.badgeFg}}">
+<span style="width: 6px; height: 6px; border-radius: 50%; background: {{x.badgeFg}}"></span>
+{{x.status}}
+</span>
+</div>
+</sc-for>
+</section>
+</sc-if>
+</main>
+
+<nav aria-label="Main" style="height: 76px; box-sizing: border-box; border-top: 1px solid #1F2228; display: flex; justify-content: space-around; align-items: flex-start; padding-top: 6px">
+<a href="Main.dc.html" style="min-width: 72px; height: 52px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; font-size: 12px; font-weight: 500; color: #9A9DA6">
+<svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 11l9-7 9 7v9a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"></path></svg>
+Rooms
+</a>
+<a href="#" style="min-width: 72px; height: 52px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; font-size: 12px; font-weight: 500; color: #9A9DA6">
+<svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 4v16M9 4v16M14 4l6 16"></path></svg>
+Sources
+</a>
+<a href="Settings.dc.html" aria-current="page" style="min-width: 72px; height: 52px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; font-size: 12px; font-weight: 600; color: #F2A541">
+<svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h10M18 7h2M4 17h4M12 17h8"></path><circle cx="16" cy="7" r="2"></circle><circle cx="10" cy="17" r="2"></circle></svg>
+Settings
+</a>
+</nav>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    this.state = {
+      tab: 'rooms',
+      on: { living: true, kitchen: true, bedroom: true, office: true, patio: false,
+            downstairs: true, everywhere: true, rp: true, jazz: true, turntable: true, morning: false },
+      runtime: true
+    };
+  }
+  renderVals() {
+    const s = this.state;
+    const DIV = '1px solid #22252B';
+    const flip = (id) => () => this.setState({ on: Object.assign({}, s.on, { [id]: !s.on[id] }) });
+    const row = (x, i, arr) => Object.assign({}, x, {
+      on: !!s.on[x.id],
+      toggle: flip(x.id),
+      nameColor: s.on[x.id] ? '#F2F1EE' : '#9A9DA6',
+      divider: i < arr.length - 1 ? DIV : 'none'
+    });
+    const tabs = [['rooms', 'Rooms'], ['groups', 'Groups'], ['sources', 'Sources'], ['extensions', 'Extensions']].map(([id, label]) => ({
+      label,
+      pressed: String(s.tab === id),
+      bg: s.tab === id ? '#2C3038' : 'transparent',
+      fg: s.tab === id ? '#F2F1EE' : '#9A9DA6',
+      pick: () => this.setState({ tab: id })
+    }));
+    const outputs = [
+      { id: 'living', name: 'Living Room', sub: 'In Downstairs' },
+      { id: 'kitchen', name: 'Kitchen', sub: 'In Downstairs' },
+      { id: 'bedroom', name: 'Bedroom', sub: 'Speaker' },
+      { id: 'office', name: 'Office', sub: 'Speaker' },
+      { id: 'patio', name: 'Patio', sub: 'Speaker' }
+    ].map((x, i, arr) => Object.assign(row(x, i, arr), { sub: s.on[x.id] ? x.sub : 'Off' }));
+    const groups = [
+      { id: 'downstairs', name: 'Downstairs', members: 'Living Room, Kitchen' },
+      { id: 'everywhere', name: 'Everywhere', members: 'Living Room, Kitchen, Bedroom, Office, Patio' }
+    ].map(row);
+    const kinds = {
+      stream: { bg: '#3A2A12', fg: '#F2A541' },
+      line: { bg: '#12302E', fg: '#5FD3C4' },
+      file: { bg: '#261F3A', fg: '#B49CFF' }
+    };
+    const inputs = [
+      { id: 'rp', name: 'Radio Paradise', kind: 'stream', sub: 'Stream · stream.radioparadise.com' },
+      { id: 'jazz', name: 'Jazz24', kind: 'stream', sub: 'Stream · jazz24.org' },
+      { id: 'turntable', name: 'Turntable', kind: 'line', sub: 'Line-in · USB audio' },
+      { id: 'morning', name: 'Morning playlist', kind: 'file', sub: 'File · morning.flac' }
+    ].map((x, i, arr) => Object.assign(row(x, i, arr), {
+      tileBg: kinds[x.kind].bg, tileFg: kinds[x.kind].fg,
+      isStream: x.kind === 'stream', isLine: x.kind === 'line', isFile: x.kind === 'file'
+    }));
+    const badge = {
+      Active: ['#12302E', '#5FD3C4'],
+      Disabled: ['#22252B', '#9A9DA6'],
+      Rejected: ['#3A1A16', '#FF8A7A']
+    };
+    const extensions = [
+      { name: 'REST API', status: 'Active', conn: 'No connection needed' },
+      { name: 'Home Assistant (MQTT)', status: 'Active', conn: 'Connected to broker' },
+      { name: 'DLNA renderer', status: 'Active', conn: 'No connection needed' },
+      { name: 'Chromecast autoroute', status: 'Active', conn: 'Disconnected' },
+      { name: 'TTS announcements', status: 'Disabled', conn: 'Turned off in configuration' }
+    ].map((x, i, arr) => Object.assign({}, x, {
+      badgeBg: badge[x.status][0], badgeFg: badge[x.status][1],
+      divider: i < arr.length - 1 ? DIV : 'none'
+    }));
+    return {
+      tabs, outputs, groups, inputs, extensions,
+      showRooms: s.tab === 'rooms',
+      showGroups: s.tab === 'groups',
+      showSources: s.tab === 'sources',
+      showExtensions: s.tab === 'extensions',
+      hasRuntime: s.runtime,
+      noRuntime: !s.runtime,
+      removeRuntime: () => this.setState({ runtime: false })
+    };
+  }
+}
+</script>
+</body>
+</html>

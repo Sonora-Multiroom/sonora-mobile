@@ -1,0 +1,23 @@
+# Gradle / Kotlin
+.gradle/
+build/
+.kotlin/
+local.properties
+*.apk
+*.aab
+
+# IDE
+.idea/
+*.iml
+.DS_Store
+
+# Xcode
+iosApp/**/xcuserdata/
+iosApp/**/*.xcworkspace/xcuserdata/
+DerivedData/
+
+# Spec Kit tooling is generated per machine, not shared: PowerShell scripts locally,
+# sh scripts in cloud sessions (see scripts/cloud-speckit-init.sh). Only memory/ is shared.
+.claude/skills/speckit-*/
+.specify/*
+!.specify/memory/
