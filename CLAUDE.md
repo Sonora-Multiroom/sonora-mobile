@@ -65,7 +65,7 @@ pass. The user installs the APK and tries it against the real hub locally.
 | Screen | Calls |
 |---|---|
 | Rooms | `GET /api/v2/outputs`, `/groups`, `/routes`, `/inputs`, `GET/PUT /api/v2/master-mute` |
-| Volume / mute | `PUT /api/v2/outputs/{id}/volume` `{volume}`, `.../mute` `{muted}`; same under `/groups/{id}` |
+| Volume / mute | `PUT /api/v2/outputs/{id}/volume` `{volume}`, `.../mute` `{muted}`; group mute under `/groups/{id}/mute`. Group volume = per-member output PUTs (see Hub gaps) |
 | Stop | `DELETE /api/v2/routes/{routeId}` |
 | Pause / resume | `PUT /api/v2/routes/{routeId}/pause` `{paused}`, **only when `RouteResponse.pauseable`** |
 | Start playback (link) | `POST /api/v2/play` `{uri, targetId, targetType, displayName?, volume?}` |
@@ -94,6 +94,11 @@ pass. The user installs the APK and tries it against the real hub locally.
 - No push channel: poll every ~2.5 s while the app is in the foreground, stop in background.
 - No input kind field (see above).
 - No mDNS announcement of the REST API: the hub address is a manual setting.
+- No group volume: `GroupResponse` has no `volume`, and `PUT /api/v2/groups/{id}/volume` sets every
+  member to the same absolute value, destroying the balance between rooms. **Never call it.** A
+  group pill shows the loudest member; dragging scales each member by new/old loudest (rounded,
+  clamped 0–100) via `PUT /api/v2/outputs/{id}/volume`, throttled; if all members are 0, each is
+  set to the new value.
 
 ## Design
 
