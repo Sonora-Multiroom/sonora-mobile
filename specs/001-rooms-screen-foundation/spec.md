@@ -22,6 +22,7 @@ for the logic that turns hub data into Rooms cards.
 - Q: What single action does a pauseable card show while Starting…, Stopping… or Unknown? → A: The Pause button, disabled; it becomes active once the route is Playing or Paused (FR-016).
 - Q: How long should the app wait for a hub response before treating a refresh or action as failed? → A: 3 seconds per request (FR-005, Edge Cases).
 - Q: When a room or group is muted, should dragging its volume pill also unmute it? → A: No; the pill cannot be dragged while its target is muted (individually or via master mute) (FR-014a, Edge Cases).
+- Q: Is an internet radio added at runtime (ephemeral, `http(s)` address, not pauseable) shown as "Live stream"? → A: Yes. "Live stream" depends only on the route being non-pauseable and the input address being `http(s)`, regardless of where the input came from; the tile kind stays "link" for runtime inputs (FR-008, FR-009).
 
 ## User Scenarios & Testing *(mandatory)*
 
@@ -205,10 +206,14 @@ screen; each shows the correct destination or placeholder, and Back returns to R
   when they do not fit. Cards MUST be sorted alphabetically by target name, case-insensitive,
   so the order does not change between refreshes.
 - **FR-008**: The status line MUST reflect the hub's route state: Playing, Paused, Starting…,
-  Stopping…, Couldn't play, or Unknown. For a non-pauseable stream it reads "Live stream".
+  Stopping…, Couldn't play, or Unknown. A playing route that is not pauseable and whose input
+  address starts with `http://` or `https://` reads "Live stream", whether the input is configured
+  or added at runtime. Other non-pauseable sources (e.g. line-in) read "<kind> · Playing".
 - **FR-009**: The app MUST derive a source's kind in one place: added at runtime (ephemeral) →
   link; address starting with `http://` or `https://` → stream; `file:` or a file path → file;
-  anything else → line-in. Each kind uses its own tile colours from the design.
+  anything else → line-in. Each kind uses its own tile colours from the design. Kind (origin
+  first) decides the tile; whether a route is a live stream is decided separately from the
+  address (FR-008), in the same place.
 - **FR-010**: The app MUST list unoccupied rooms in an "Idle" section with one of three states:
   available and enabled → "Nothing playing" with a play action; disabled → "Turned off" with an
   "Off" label; hardware not connected → "Not connected". Disabled takes precedence when both apply.
@@ -309,6 +314,9 @@ screen; each shows the correct destination or placeholder, and Back returns to R
   room…" action, Now Playing, Start Playback, Sources and the full Settings tabs are later features.
 - Inputs added at runtime are shown with the "link" kind, matching the Settings design; this is
   the single place kind is decided (hub gap: no kind field).
+- A played link (SoundCloud/YouTube) is assumed to be either pauseable or stored under a
+  non-`http(s)` address; if the hub keeps its `https://` page URL and reports it non-pauseable, its
+  card will read "Live stream". To be checked against the real hub.
 - The hub has no push updates (hub gap), so refreshing on a timer is the only way to stay current.
 - The hub has no group volume value and its group-volume action flattens member volumes (hub
   gap, see FR-013a–c); the loudest member is shown and changes scale members proportionally.

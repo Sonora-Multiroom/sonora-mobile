@@ -58,6 +58,11 @@ Three layers. Only the middle one is shared by screens and logic:
    `X:\…` / `X:/…`, or a `\\` UNC path) → `File`
 4. anything else, including null/blank → `LineIn`
 
+`isLiveStream(pauseable: Boolean, uri: String?): Boolean` in the same file is the **only** place
+a route is judged live (FR-008): `!pauseable` and `uri` starts with `http://` or `https://`
+(case-insensitive). Origin is ignored, so an internet radio added at runtime is live while its
+tile kind stays `Link`.
+
 A route whose input the hub no longer lists is drawn with `inferSourceKind(Configured, null)` =
 `LineIn` and the input id as name (spec Edge Cases). This follows FR-009 rule 4 literally.
 
@@ -129,7 +134,7 @@ See [contracts/hub-repository.md](contracts/hub-repository.md).
 
 ### CardStatus
 
-Derived from `(route.status, route.paused, route.pauseable, kind)`:
+Derived from `(route.status, route.paused, route.pauseable, source.uri, kind)`:
 
 | Route status | Condition | Status | Text (single room) |
 |---|---|---|---|
@@ -138,7 +143,7 @@ Derived from `(route.status, route.paused, route.pauseable, kind)`:
 | Failed | | `Failed` | "Couldn't play" |
 | Unknown | | `Unknown` | "Unknown" |
 | Active | `pauseable && paused` | `Paused` | "<Kind> · Paused" |
-| Active | `!pauseable && kind == Stream` | `LiveStream` | "Live stream" |
+| Active | `isLiveStream(pauseable, source.uri)` | `LiveStream` | "Live stream" |
 | Active | otherwise | `Playing` | "<Kind> · Playing" |
 
 `<Kind>` = "Stream", "Line-in", "File", "Link". Group cards replace the kind prefix with member names:
