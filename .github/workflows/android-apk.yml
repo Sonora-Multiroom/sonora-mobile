@@ -48,30 +48,37 @@ jobs:
           if-no-files-found: error
           retention-days: 14
 
-      # Needs the APPETIZE_API_TOKEN secret. Set the APPETIZE_PUBLIC_KEY variable to
-      # update one app in place; without it every upload creates a new app.
+  # A separate job so a failed upload can be re-run without rebuilding.
+  # Needs the APPETIZE_API_TOKEN secret. Set the APPETIZE_PUBLIC_KEY variable (the id in
+  # https://appetize.io/app/<publicKey>) to update one app in place; without it every
+  # upload creates a new app.
+  deploy-appetize:
+    needs: assemble-debug
+    if: inputs.upload_to_appetize
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/download-artifact@v8
+        with:
+          name: sonora-debug-apk
+          path: apk
+
       - name: Upload to Appetize.io
-        if: inputs.upload_to_appetize
+        id: appetize
+        uses: appetizeio/github-action-appetize@v1.1.0
+        with:
+          apiToken: ${{ secrets.APPETIZE_API_TOKEN }}
+          publicKey: ${{ vars.APPETIZE_PUBLIC_KEY }}
+          appFile: apk/androidApp-debug.apk
+          platform: android
+          note: ${{ github.sha }} (${{ github.ref_name }})
+
+      - name: Report Appetize link
         env:
-          APPETIZE_API_TOKEN: ${{ secrets.APPETIZE_API_TOKEN }}
-          APPETIZE_PUBLIC_KEY: ${{ vars.APPETIZE_PUBLIC_KEY }}
+          PUBLIC_KEY: ${{ steps.appetize.outputs.publicKey }}
+          CONFIGURED_KEY: ${{ vars.APPETIZE_PUBLIC_KEY }}
         run: |
-          if [ -z "$APPETIZE_API_TOKEN" ]; then
-            echo "::error::APPETIZE_API_TOKEN secret is not set"
-            exit 1
-          fi
-          apk=$(ls androidApp/build/outputs/apk/debug/*.apk | head -n 1)
-          if ! response=$(curl --silent --show-error --fail-with-body \
-            -X POST "https://api.appetize.io/v1/apps${APPETIZE_PUBLIC_KEY:+/$APPETIZE_PUBLIC_KEY}" \
-            -H "X-API-KEY: $APPETIZE_API_TOKEN" \
-            -F "file=@$apk" \
-            -F "platform=android" \
-            -F "note=${GITHUB_SHA::7} ($GITHUB_REF_NAME)"); then
-            echo "::error::Appetize upload failed: $response"
-            exit 1
-          fi
-          public_key=$(echo "$response" | jq -r .publicKey)
-          echo "Appetize app: https://appetize.io/app/$public_key" >> "$GITHUB_STEP_SUMMARY"
-          if [ -z "$APPETIZE_PUBLIC_KEY" ]; then
-            echo "New app created. Set the APPETIZE_PUBLIC_KEY variable to $public_key to update it next time." >> "$GITHUB_STEP_SUMMARY"
+          echo "Appetize app: https://appetize.io/app/$PUBLIC_KEY" >> "$GITHUB_STEP_SUMMARY"
+          if [ -z "$CONFIGURED_KEY" ]; then
+            echo "New app created. Set the APPETIZE_PUBLIC_KEY variable to $PUBLIC_KEY to update it next time." >> "$GITHUB_STEP_SUMMARY"
           fi
