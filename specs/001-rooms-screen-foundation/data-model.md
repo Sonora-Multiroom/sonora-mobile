@@ -118,12 +118,17 @@ See [contracts/hub-repository.md](contracts/hub-repository.md).
    - `status` = `CardStatus` (below)
    - `volume: Int?` = room volume (single) or `max(member volumes)` over known members, 0 if none
      (FR-013a). `Target.Unknown` → `null`: the card has no volume pill, since the app can neither
-     read nor set a volume it doesn't understand
+     read nor set a volume it doesn't understand. A `Target.Room` whose room the hub no longer lists → `0` (like a group with no known members)
+   - `volumeAdjustable: Boolean` = the pill has something to set: a listed room, or a group with
+     at least one known member. False for an unlisted room or group, a group with no known
+     members, and `Target.Unknown`. A non-adjustable pill shows its value but can't be dragged
+     (FR-014a)
    - `memberVolumes: Map<String, Int>` (group only), the base for scaling
    - `muted` = `masterMuted || target.muted`. Room: `room.muted`, group: `group.muted`. Unknown
-     target → `masterMuted` only.
+     target, or a room/group the hub no longer lists → `masterMuted` only.
    - `notConnected` = single room with `available == false`. Group: any listed member room with
-     `available == false` (spec Clarifications). `Target.Unknown` → false.
+     `available == false` (spec Clarifications). `Target.Unknown` or an unlisted room/group →
+     false.
    - `action` = `CardAction` (below)
 6. Idle row fields: `roomId`, `name`, `state`:
    - `!enabled` → `TurnedOff` (takes precedence)
@@ -166,8 +171,8 @@ function. `CardStatus` stays text-free so tests assert on the enum.
 
 ### Volume drag permission (FR-014a)
 
-`canDrag = !muted` (muted already includes master mute). The ViewModel also requires
-`connection == Live`.
+`canDrag = !muted && volumeAdjustable` (muted already includes master mute). The ViewModel also
+requires `connection == Live`.
 
 ## View-model state: `RoomsUiState`
 

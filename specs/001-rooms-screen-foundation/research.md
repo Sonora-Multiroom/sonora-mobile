@@ -136,7 +136,9 @@ test feeds an unknown `status` and an unknown field to prove it.
 - **Foreground only**: the loop runs inside `repeatOnLifecycle(Lifecycle.State.STARTED)` on the
   Compose `LocalLifecycleOwner` (JetBrains lifecycle-runtime-compose, multiplatform). Leaving
   STARTED cancels the loop and any in-flight refresh (SC-006). Returning restarts it with an
-  immediate refresh.
+  immediate refresh. The lifecycle owner is the Rooms screen's, so polling also pauses while
+  another screen (Settings, a placeholder) is on top and resumes with an immediate refresh when
+  Rooms shows again. Nothing else displays hub state in this feature, so FR-005 is met.
 
 **Alternatives considered**: Android `ProcessLifecycleOwner` (Android-only, would leak into
 `commonMain`), a ticker flow (harder to guarantee no overlap).
@@ -184,8 +186,8 @@ this CMP line), a hand-rolled `when(screen)` (would need its own back handling p
 
 **Decision**: JetBrains `lifecycle-viewmodel-compose` `ViewModel`s (`RoomsViewModel`,
 `SettingsViewModel`) exposing `StateFlow<UiState>`. Dependencies are wired by hand in a small
-`AppGraph`: no DI library, five or six objects in total. Android passes `applicationContext`
-from `MainActivity`.
+`AppGraph`: no DI library, five or six objects in total. Platforms pass only the DataStore file
+path (`AppGraph(dataStorePath: String)`), so `commonMain` never sees an Android `Context`.
 
 **Rationale**: multiplatform `viewModelScope` survives configuration changes on Android. Manual
 wiring avoids a dependency (Constitution VII).
@@ -223,21 +225,29 @@ wiring avoids a dependency (Constitution VII).
     for it to complete, then clear the override and trigger a refresh.
 - Single room: `PUT /outputs/{id}/volume`. Group: compute member targets with
   `GroupVolume.scale(base, newValue)` and send one `PUT /outputs/{memberId}/volume` per member
-  whose value changed, concurrently. **`PUT /groups/{id}/volume` is never called** (FR-013c). The
-  repository does not even expose it.
+  whose target differs from the **last value sent to it in this drag** (the drag-start base if
+  nothing was sent yet), concurrently. Comparing with the base alone would skip the final send
+  after dragging down and back to the start, leaving the hub at the lowered values. The
+  throttle limits these batches to ≤ 4/s. **`PUT /groups/{id}/volume` is never called**
+  (FR-013c). The repository does not even expose it.
+- Cards with `volumeAdjustable = false` (unlisted room/group, group without known members) ignore
+  drags (FR-014a).
 - Rounding (FR-013b): `floor(v * new / top + 0.5)` clamped to 0..100. With `top == 0`, every
   member gets `new`. Integer arithmetic only, so all platforms give the same result.
 
 ## R11. Error presentation
 
+The binding definitions are in [contracts/hub-repository.md](contracts/hub-repository.md)
+("Interface", "Error mapping", "User-facing messages"); this section only records the decision.
+
 - `HubResult<T>` = `Ok(T)` | `Err(HubError)`, where `HubError` is one of `Unreachable`
-  (connect/timeout/IO), `Rejected(status, problemType, title)` (RFC 7807 body parsed into the
-  generated `ErrorResponse`), `Unexpected` (bad JSON, other).
-- Messages are written in one function `actionErrorMessage(action, target, error)`. Examples:
-  "Couldn't stop Downstairs: can't reach the hub", "Couldn't pause Office: the hub refused",
-  "Kitchen is no longer on the hub" (404). The problem's `title`/`detail` is never shown
-  verbatim (Constitution V). It is logged for debugging only.
-- Shown through a snackbar, one at a time, newest wins.
+  (connect/timeout/IO), `Rejected(status, problemType)` (`problemType` from the RFC 7807 body
+  when it decodes into the generated `ErrorResponse`), `Unexpected` (bad JSON, other).
+- Messages are written in one function `actionErrorMessage(action, target, error)` with the exact
+  texts from the contract table, e.g. "Couldn't stop Downstairs. Can't reach the hub." and
+  "Kitchen is no longer on the hub.". The problem's `title`/`detail` never enters `HubError`, so
+  it can't reach the UI (Constitution V).
+- Shown through a snackbar, one at a time.
 
 ## R12. Test tooling
 

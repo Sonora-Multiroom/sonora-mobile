@@ -85,9 +85,13 @@ The problem `title`/`detail` is never part of `HubError`, so it cannot reach the
 | Pause/Resume X | "Couldn't pause X. Can't reach the hub." / "…resume…" | "That playback has already ended." | "Couldn't pause X." / "Couldn't resume X." |
 | Master mute | "Couldn't mute all rooms. Can't reach the hub." / "…unmute…" | | "Couldn't mute all rooms." / "Couldn't unmute all rooms." |
 
+Master mute has no target that can disappear, so a 404 uses the "other `Rejected`" text.
 For a group volume change, the first failing member determines the message and X is the group name.
 
-## Contract tests (`commonTest/.../data/KtorHubRepositoryTest.kt`, `MockEngine`)
+## Contract tests (`MockEngine`, in `commonTest/.../data/`)
+
+Split across `KtorHubRepositorySnapshotTest.kt` (1, 2, 3, 6), `KtorHubRepositoryActionsTest.kt`
+(4, 5), `HttpClientsTest.kt` (error mapping for 5, 6) and `RoomsViewModelControlsTest.kt` (7).
 
 1. Snapshot decodes example payloads shaped by `openapi.json` into the expected domain values.
 2. Unknown JSON field ignored. Unknown `status` → `RouteStatus.Unknown`. Unknown or null

@@ -125,8 +125,9 @@ composeApp/                         # KMP library: com.android.kotlin.multiplatf
     │           └── Messages.kt     # actionErrorMessage
     ├── commonTest/kotlin/ai/sonora/mobile/
     │   ├── domain/                 # SourceKindTest, RoomsBuilderTest, GroupVolumeTest, HubAddressTest
-    │   ├── data/                   # KtorHubRepositoryTest (MockEngine), Fixtures.kt
-    │   └── ui/rooms/               # RoomsViewModelTest (fake repository, virtual time)
+    │   ├── data/                   # HttpClientsTest, KtorHubRepositorySnapshotTest, KtorHubRepositoryActionsTest (MockEngine), Fixtures.kt
+    │   ├── ui/                     # MessagesTest; nav/AppBackStackTest; settings/SettingsViewModelTest; theme/ContrastTest
+    │   └── ui/rooms/               # RoomsViewModelAddressTest, RoomsViewModelPollingTest, RoomsViewModelControlsTest, StatusTextTest
     ├── androidMain/kotlin/ai/sonora/mobile/   # httpEngine() = OkHttp
     └── iosMain/kotlin/ai/sonora/mobile/       # httpEngine() = Darwin, MainViewController (stub, passes the DataStore path)
 
@@ -134,7 +135,7 @@ androidApp/                         # com.android.application, applicationId ai.
 ├── build.gradle.kts
 └── src/main/
     ├── AndroidManifest.xml         # INTERNET, networkSecurityConfig, MainActivity
-    ├── kotlin/ai/sonora/mobile/android/MainActivity.kt   # setContent { App(AppGraph(applicationContext…)) }
+    ├── kotlin/ai/sonora/mobile/android/MainActivity.kt   # setContent { App(AppGraph(dataStorePath = filesDir…)) }
     └── res/                        # xml/network_security_config.xml (cleartextTrafficPermitted=true), launcher icon, themes
 
 iosApp/                             # Xcode project stub, not built

@@ -23,8 +23,13 @@ Test suites that must exist and pass (see [data-model.md](data-model.md) and
 | `RoomsBuilderTest` | single route, group route (members not idle), stopped ignored, failed counted, missing input/room/group, room in several groups, sorting, idle state precedence, "N of M", no rooms, muted incl. master mute, action per status |
 | `GroupVolumeTest` | 70/35 → 35 gives 35/18, all-zero → new value, rounding halves up, clamp 0..100, drag down/up restores balance (FR-013d) |
 | `HubAddressTest` | prefixing, default port 8080, explicit 80 kept, https default port 8443, spaces/empty rejected |
-| `KtorHubRepositoryTest` | contract tests 1–7 |
-| `RoomsViewModelTest` | no address → no requests; poll every 2.5 s without overlap; 3 s timeout → Unreachable; stale disables controls; drag override beats refresh; ≤ 4 volume sends/s + final send; in-flight blocks repeats; failures produce plain message; group drag never hits `/groups/{id}/volume` |
+| `HttpClientsTest` | IO/timeout → Unreachable, RFC 7807 → Rejected(status, type), bad body → Unexpected, cancellation rethrown |
+| `KtorHubRepositorySnapshotTest` / `KtorHubRepositoryActionsTest` | contract tests 1–6 |
+| `SettingsViewModelTest` | save valid/invalid, pre-fill, error clearing |
+| `RoomsViewModelAddressTest` | no address → no requests (FR-003) |
+| `RoomsViewModelPollingTest` | poll every 2.5 s without overlap; 3 s timeout → Unreachable; stale keeps content; background → no calls; `requestRefresh` never overlaps |
+| `RoomsViewModelControlsTest` | stale disables controls; drag override beats refresh; ≤ 4 volume sends/s + final send; group drag back to start restores the hub; in-flight blocks repeats; failures produce plain message; group drag never hits `/groups/{id}/volume` (contract test 7) |
+| `MessagesTest`, `StatusTextTest`, `AppBackStackTest`, `ContrastTest` | message table, status lines, back stack, token contrast |
 
 ## 2. On a device against the real hub (user, locally)
 

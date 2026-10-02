@@ -248,12 +248,15 @@ screen; each shows the correct destination or placeholder, and Back returns to R
 - **FR-013d**: The scaling rule in FR-013b MUST be covered by automated tests, including the
   all-members-at-0% case, rounding, and clamping to 0–100.
 - **FR-014**: While the user drags a volume pill, the local value MUST win over refreshes; volume
-  MUST be sent at a limited rate during the drag (no more than about 4 times per second) and once
+  MUST be sent at a limited rate during the drag (no more than about 4 times per second; for a
+  group, 4 rounds of member updates per second) and once
   more when the drag ends; after the request completes, the next refresh reconciles the value.
 - **FR-014a**: A volume pill MUST NOT be draggable while its target is muted: a single-room pill
   when that room is muted, a group pill when the group is muted, and every pill while master mute
   is on. It still shows the percentage with a muted speaker icon. Dragging never unmutes; unmuting
-  is done with master mute (per-room mute controls are out of scope).
+  is done with master mute (per-room mute controls are out of scope). A pill whose room or group
+  the hub no longer lists, or a group pill with no known member rooms, is not draggable either,
+  because there is no room to set.
 - **FR-015**: Pause/Resume MUST be offered only for routes the hub marks pauseable; it MUST NOT be
   offered for other routes.
 - **FR-016**: Stop MUST be offered on every non-pauseable card and on cards in the "Couldn't play"
