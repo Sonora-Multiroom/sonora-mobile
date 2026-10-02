@@ -48,6 +48,11 @@ group/room mute setters (out of scope), transfer, play, create route, enabled to
 | `setRoutePaused` | `RoutesApi.setPauseState` | `PUT /api/v2/routes/{id}/pause` | `{"paused": b}` | 200 |
 | `setMasterMute` | `MasterMuteApi.setMasterMute` | `PUT /api/v2/master-mute` | `{"muted": b}` | 200 |
 
+`listOutputs`, `listGroups` and `listInputs` are called with `includeDisabled=true`: the hub omits
+disabled items by default, but Rooms must show a disabled room as "Off" (FR-010) and still name the
+source of a route whose input is disabled. (Found at implementation; the generated operations default
+the parameter to `false`.)
+
 `listRoutes` takes no filter parameters here. STOPPED routes are filtered in `RoomsBuilder`, not by
 query, so the rule is tested in one place. Response bodies of the four actions are ignored: the next
 refresh is the confirmation (FR-018).

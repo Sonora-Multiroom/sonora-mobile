@@ -1,1 +1,0 @@
-package ai.sonora.mobile
