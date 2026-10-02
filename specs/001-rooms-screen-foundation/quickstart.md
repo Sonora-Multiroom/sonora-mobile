@@ -44,7 +44,7 @@ Prerequisites: phone on the home LAN, hub running at e.g. `http://multiroom.lan:
    access log. No `/api/v2` requests arrive. Return: refresh is immediate.
 8. **Controls (US3)**: drag a single-room pill and a group pill (members keep their balance). Pause
    and resume a pauseable source, stop a live stream, toggle master mute (pills become non-draggable).
-9. **Hub down (Edge Cases, SC-005)**: stop the hub. Within 5 s you see the stale banner with
-   disabled controls. Start it again: live within 5 s.
+9. **Hub down (Edge Cases, SC-005)**: stop the hub. Within 6 s you see the stale banner with
+   disabled controls. Start it again: live within 6 s.
 10. **Navigation (US4)**: tap each tab, a card, a room's play button and "Play something". Each
     placeholder shows and Back returns.

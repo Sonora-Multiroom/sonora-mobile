@@ -37,7 +37,7 @@ implementation time). iOS targets declared, not built.
 
 **Project Type**: mobile app (KMP: shared `composeApp` library + `androidApp` + `iosApp` stub)
 
-**Performance Goals**: hub change visible ≤ 3 s (SC-002). Unreachable state ≤ 5 s (SC-005).
+**Performance Goals**: hub change visible ≤ 3 s (SC-002). Unreachable state ≤ 6 s (SC-005).
 Volume drag at 60 fps with ≤ 4 requests/s.
 
 **Constraints**: 3 s timeout per request. No overlapping polls. Zero requests in the background.

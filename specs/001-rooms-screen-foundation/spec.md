@@ -303,7 +303,8 @@ screen; each shows the correct destination or placeholder, and Back returns to R
 - **SC-004**: Volume, Pause/Resume, Stop and master mute each take effect on the hub on the first
   attempt in 95% of tries on a healthy home network.
 - **SC-005**: With the hub switched off, the app stays responsive, shows the unreachable state
-  within 5 seconds, and shows live data again within 5 seconds of the hub coming back.
+  within 6 seconds, and shows live data again within 6 seconds of the hub coming back. (Worst
+  case: a 2.5 s wait plus a 3 s timeout = 5.5 s, when the hub stops answering silently.)
 - **SC-006**: While the app is in the background it makes no requests to the hub.
 - **SC-007**: The installable Android app builds and all automated checks of the card-building
   logic pass before the feature is considered done.
