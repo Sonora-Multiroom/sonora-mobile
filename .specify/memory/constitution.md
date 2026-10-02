@@ -31,7 +31,11 @@ fails silently on a device the developer cannot debug from the cloud.
 - The UI MUST show only what the hub actually knows. No progress bars, playback position, track
   metadata or artwork (the hub provides none). The only sliders are volume.
 - Pause/Resume MUST appear only when `RouteResponse.pauseable` is true; "Move to room…" only when
-  `transferable` is true. Non-pauseable (live) routes show Stop plus "Live streams can't be paused".
+  `transferable` is true. Non-pauseable routes show Stop and no Pause/Resume. A route is a live
+  stream when it is not pauseable and its input address is `http(s)`, whatever its origin
+  (decided in one function, hub gap: no kind field). On Now Playing a live stream also shows the
+  line "Live streams can't be paused"; compact Rooms cards show the status "Live stream" instead.
+  Other non-pauseable sources (e.g. line-in) are never labelled as live streams.
 - States the hub distinguishes MUST be visually distinct: disabled (`enabled = false`, shown as
   "Off") vs unavailable (`available = false`, hardware not connected) vs idle vs playing vs paused
   vs failed (route `status = FAILED`).
@@ -65,8 +69,8 @@ assumptions spread.
 - The repository layer MUST be tested against a fake HTTP engine (Ktor `MockEngine`) with
   responses shaped by `api/openapi.json`, including RFC 7807 error bodies and network failures.
 - Compose UI tests are optional until a feature spec asks for them.
-- A change is done only when `./gradlew :composeApp:assembleDebug` succeeds and all tests pass
-  (`:composeApp:testDebugUnitTest`, `:composeApp:allTests`).
+- A change is done only when `./gradlew :androidApp:assembleDebug` succeeds and all tests pass
+  (`:composeApp:testAndroidHostTest`, `:composeApp:allTests`).
 
 Rationale: there is no emulator or hub in the cloud; unit tests are the only verification an
 implementing session has before the user installs the APK.
@@ -146,4 +150,4 @@ Rationale: each dependency is a multiplatform compatibility risk and a future iO
 - Reviews of specs, plans and implementations MUST check compliance with every principle;
   unjustified complexity or deviation is a blocking finding.
 
-**Version**: 1.1.0 | **Ratified**: 2026-10-01 | **Last Amended**: 2026-10-01
+**Version**: 1.1.1 | **Ratified**: 2026-10-01 | **Last Amended**: 2026-10-02

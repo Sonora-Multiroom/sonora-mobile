@@ -55,15 +55,13 @@ stub + 3 placeholders.
 | I. API Contract Fidelity | ✅ | Client generated at build time with `FILTER=path:/api/v2`, output in `build/` (not committed, never edited). Generated package is `internal` and banned from `ui/`/`domain/` by `verifyLayering`. All hub access goes through `HubRepository` ([contract](contracts/hub-repository.md)). No group-volume call. Hub gaps (no group volume, no kind, no push, no mDNS) are already in spec + CLAUDE.md |
 | II. Truthful UI | ✅ (see note) | No progress/position/metadata. Pause/Resume only when `pauseable`. Distinct Off / Not connected / Idle / Playing / Paused / Couldn't play. Local value wins while dragging, refresh reconciles. Throttled volume. Kind derived only in `inferSourceKind` |
 | III. Shared-First | ✅ | Everything in `commonMain`. `androidMain` only has the OkHttp engine + DataStore path. `androidApp` has the activity, manifest and network config. iOS stub keeps targets compiling-ready |
-| IV. Test-First | ✅ | Pure logic suites + `MockEngine` repository tests + ViewModel tests with virtual time, written before implementation ([quickstart](quickstart.md) §1). Done = assemble + all tests green. Command names change, see Complexity Tracking |
+| IV. Test-First | ✅ | Pure logic suites + `MockEngine` repository tests + ViewModel tests with virtual time, written before implementation ([quickstart](quickstart.md) §1). Done = `:androidApp:assembleDebug` + all tests green (commands per constitution 1.1.1) |
 | V. Resilient LAN | ✅ | 3 s timeouts, sequential poll loop, STARTED-only lifecycle, lenient JSON with unknown-enum coercion → `Unknown`, RFC 7807 mapped to plain messages, cleartext app-wide, address user-entered with no default |
 | VI. Design Fidelity & A11y | ✅ | Tokens in `SonoraTheme`. Pill per design (not a progress bar). States the design does not draw reuse the card/row styles (spec Assumptions). ≥ 44 dp, labels per [rooms-ui contract](contracts/rooms-ui.md) |
 | VII. Minimal Dependencies | ✅ | Each dependency justified in research R1–R9. Only JetBrains/AndroidX/Ktor/kotlinx + build-time OpenAPI Generator. No DI, icon pack or Turbine |
 
-**Note on II**: the constitution says non-pauseable routes show Stop plus "Live streams can't be
-paused". On Rooms cards the agreed design shows Stop with the status "Live stream" (spec FR-008).
-The full sentence belongs to the Now Playing screen (later feature), where a pause control would
-otherwise be expected. Rooms follows the design. This is not a deviation from the spec.
+**Note on II**: Rooms follows Principle II as amended in constitution 1.1.1 ("Live stream" status
+on cards; the full "Live streams can't be paused" line belongs to Now Playing).
 
 **Post-design re-check (after Phase 1)**: still passing. The data model keeps generated types in
 `data/` only. The repository contract omits group volume. The UI contract keeps the pill and the
@@ -161,6 +159,5 @@ stub. All logic and UI live in `composeApp/src/commonMain`.
 
 ## Complexity Tracking
 
-| Violation | Why Needed | Simpler Alternative Rejected Because |
-|---|---|---|
-| Build/test commands differ from those listed in Constitution IV and CLAUDE.md (`:androidApp:assembleDebug`, `:composeApp:testAndroidHostTest` instead of `:composeApp:assembleDebug`, `:composeApp:testDebugUnitTest`) | AGP 9 (current stable) forbids the app plugin in a KMP module, so the Android entry point moves to `androidApp` | Pinning AGP 8.13.2 keeps the old commands but starts on a superseded major that needs the same split before AGP 10. User chose AGP 9 on 2026-10-02. Resolved by the constitution PATCH amendment + CLAUDE.md sync as the first task |
+None. The AGP 9 command change (`androidApp` module, see research R2) was folded into constitution
+1.1.1 and CLAUDE.md on 2026-10-02.

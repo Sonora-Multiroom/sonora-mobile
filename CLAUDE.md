@@ -28,8 +28,9 @@ composeApp/
   src/commonMain/kotlin/               # theme, API client wrapper, repository, screens
   src/commonMain/composeResources/font # sora.ttf, dm_sans.ttf (already committed, variable fonts)
   src/commonTest/kotlin/
-  src/androidMain/                     # MainActivity, AndroidManifest, network_security_config
+  src/androidMain/                     # platform drivers only (HTTP engine, storage path)
   src/iosMain/                         # stub
+androidApp/                            # MainActivity, AndroidManifest, network_security_config
 iosApp/                                # Xcode project stub (not built)
 design/screens/*.dc.html               # design source, see "Design"
 docs/licenses/                         # OFL licences for the bundled fonts
@@ -41,8 +42,8 @@ not rely on memory. The cloud environment provides JDK 17+ and the Android SDK v
 ## Commands
 
 ```bash
-./gradlew :composeApp:assembleDebug        # build the Android APK
-./gradlew :composeApp:testDebugUnitTest     # Android unit tests
+./gradlew :androidApp:assembleDebug         # build the Android APK
+./gradlew :composeApp:testAndroidHostTest   # Android host tests (task name to be confirmed by T009)
 ./gradlew :composeApp:allTests              # all KMP tests (iOS targets skipped on Linux)
 ```
 
@@ -136,7 +137,10 @@ else (16/15/14/13/12 sp). Radii: cards 22, tiles 12–14, pills fully rounded. T
 Agreed details — keep them:
 - Volume is a **pill**: a 44 dp rounded bar that fills with `accentContainer`, speaker icon left,
   percentage right. It must never look like a progress bar.
-- Live streams can't be paused: show **Stop** only, plus the line "Live streams can't be paused".
+- Non-pauseable routes show **Stop** only. A live stream = not pauseable + `http(s)` input address
+  (any origin, decided in one function). Now Playing adds the line "Live streams can't be paused";
+  Rooms cards show the status "Live stream". Non-stream sources (e.g. line-in) are never labelled
+  live.
 - The transfer action is labelled **"Move to room…"**.
 - Starting playback on a busy target shows what will stop ("Radio Paradise will stop in Bedroom").
 
@@ -168,7 +172,8 @@ whose reference copy is [scripts/cloud-setup.sh](scripts/cloud-setup.sh)). If
    screens are placeholders.
 5. Unit tests in `commonTest` for the logic that joins outputs + groups + routes + inputs into
    Rooms cards (group routes, members, disabled outputs, input kind inference).
-6. Build with `./gradlew :composeApp:assembleDebug` and run the tests before finishing.
+6. Build with `./gradlew :androidApp:assembleDebug` and run the tests
+   (`:composeApp:testAndroidHostTest`, `:composeApp:allTests`) before finishing.
 
 ## Spec Kit
 
