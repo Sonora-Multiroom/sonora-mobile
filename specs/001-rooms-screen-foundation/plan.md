@@ -114,7 +114,7 @@ composeApp/                         # KMP library: com.android.kotlin.multiplatf
     │       │   ├── KtorHubRepository.kt   # uses generated *Api classes
     │       │   ├── ApiMapping.kt          # generated → domain
     │       │   ├── HttpClients.kt         # HttpClient config; expect fun httpEngine()
-    │       │   └── HubAddressStore.kt     # interface + DataStore impl; expect fun dataStorePath()
+    │       │   └── HubAddressStore.kt     # interface + DataStore impl; path passed in via AppGraph
     │       └── ui/
     │           ├── theme/          # Tokens.kt, Type.kt, Shapes.kt, Theme.kt, Icons.kt
     │           ├── nav/            # Destinations.kt, AppNavigation.kt (Navigation 3), BottomBar.kt
@@ -127,8 +127,8 @@ composeApp/                         # KMP library: com.android.kotlin.multiplatf
     │   ├── domain/                 # SourceKindTest, RoomsBuilderTest, GroupVolumeTest, HubAddressTest
     │   ├── data/                   # KtorHubRepositoryTest (MockEngine), Fixtures.kt
     │   └── ui/rooms/               # RoomsViewModelTest (fake repository, virtual time)
-    ├── androidMain/kotlin/ai/sonora/mobile/   # httpEngine() = OkHttp, dataStorePath(context)
-    └── iosMain/kotlin/ai/sonora/mobile/       # httpEngine() = Darwin, dataStorePath(), MainViewController (stub)
+    ├── androidMain/kotlin/ai/sonora/mobile/   # httpEngine() = OkHttp
+    └── iosMain/kotlin/ai/sonora/mobile/       # httpEngine() = Darwin, MainViewController (stub, passes the DataStore path)
 
 androidApp/                         # com.android.application, applicationId ai.sonora.mobile
 ├── build.gradle.kts
