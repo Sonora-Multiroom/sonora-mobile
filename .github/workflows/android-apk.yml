@@ -4,6 +4,11 @@ on:
   push:
     branches: [main]
   workflow_dispatch:
+    inputs:
+      upload_to_appetize:
+        description: Upload the APK to Appetize.io
+        type: boolean
+        default: false
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -42,3 +47,31 @@ jobs:
           path: androidApp/build/outputs/apk/debug/*.apk
           if-no-files-found: error
           retention-days: 14
+
+      # Needs the APPETIZE_API_TOKEN secret. Set the APPETIZE_PUBLIC_KEY variable to
+      # update one app in place; without it every upload creates a new app.
+      - name: Upload to Appetize.io
+        if: inputs.upload_to_appetize
+        env:
+          APPETIZE_API_TOKEN: ${{ secrets.APPETIZE_API_TOKEN }}
+          APPETIZE_PUBLIC_KEY: ${{ vars.APPETIZE_PUBLIC_KEY }}
+        run: |
+          if [ -z "$APPETIZE_API_TOKEN" ]; then
+            echo "::error::APPETIZE_API_TOKEN secret is not set"
+            exit 1
+          fi
+          apk=$(ls androidApp/build/outputs/apk/debug/*.apk | head -n 1)
+          if ! response=$(curl --silent --show-error --fail-with-body \
+            -X POST "https://api.appetize.io/v1/apps${APPETIZE_PUBLIC_KEY:+/$APPETIZE_PUBLIC_KEY}" \
+            -H "X-API-KEY: $APPETIZE_API_TOKEN" \
+            -F "file=@$apk" \
+            -F "platform=android" \
+            -F "note=${GITHUB_SHA::7} ($GITHUB_REF_NAME)"); then
+            echo "::error::Appetize upload failed: $response"
+            exit 1
+          fi
+          public_key=$(echo "$response" | jq -r .publicKey)
+          echo "Appetize app: https://appetize.io/app/$public_key" >> "$GITHUB_STEP_SUMMARY"
+          if [ -z "$APPETIZE_PUBLIC_KEY" ]; then
+            echo "New app created. Set the APPETIZE_PUBLIC_KEY variable to $public_key to update it next time." >> "$GITHUB_STEP_SUMMARY"
+          fi
