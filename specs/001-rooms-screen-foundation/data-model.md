@@ -122,8 +122,8 @@ See [contracts/hub-repository.md](contracts/hub-repository.md).
    - `memberVolumes: Map<String, Int>` (group only), the base for scaling
    - `muted` = `masterMuted || target.muted`. Room: `room.muted`, group: `group.muted`. Unknown
      target → `masterMuted` only.
-   - `notConnected` = single room with `available == false`. Group: false. The groups API has no
-     availability flag, and the member list already shows which rooms are in it.
+   - `notConnected` = single room with `available == false`. Group: any listed member room with
+     `available == false` (spec Clarifications). `Target.Unknown` → false.
    - `action` = `CardAction` (below)
 6. Idle row fields: `roomId`, `name`, `state`:
    - `!enabled` → `TurnedOff` (takes precedence)

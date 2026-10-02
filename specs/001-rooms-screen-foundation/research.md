@@ -161,9 +161,8 @@ coroutine-native.
 2. No scheme → prefix `http://`. A scheme other than `http`/`https` → invalid.
 3. Parse with Ktor `Url`/`URLBuilder`. Empty host → invalid. A query or fragment → invalid
    ("Enter just the address, e.g. multiroom.lan:8080").
-4. `http` without an explicit port → port 8080. An explicit port (including 80) is kept.
-   `https` is used **as typed**: no port is added, so the scheme default applies. This is how this
-   plan reads FR-002's "https is used as typed".
+4. Without an explicit port: `http` → port 8080, `https` → port 8443 (spec FR-002, clarified
+   2026-10-02). An explicit port (including 80 and 443) is always kept.
 5. Trailing `/` removed. A non-root path is kept as a base path prefix.
 6. Stored value = the normalised URL string, e.g. `http://multiroom.lan:8080`.
 

@@ -23,6 +23,8 @@ for the logic that turns hub data into Rooms cards.
 - Q: How long should the app wait for a hub response before treating a refresh or action as failed? → A: 3 seconds per request (FR-005, Edge Cases).
 - Q: When a room or group is muted, should dragging its volume pill also unmute it? → A: No; the pill cannot be dragged while its target is muted (individually or via master mute) (FR-014a, Edge Cases).
 - Q: Is an internet radio added at runtime (ephemeral, `http(s)` address, not pauseable) shown as "Live stream"? → A: Yes. "Live stream" depends only on the route being non-pauseable and the input address being `http(s)`, regardless of where the input came from; the tile kind stays "link" for runtime inputs (FR-008, FR-009).
+- Q: When a group is playing and one or more of its rooms has no speaker hardware connected, what should the group's card show? → A: The group's status line gets " · Not connected" appended if any listed member room is not connected (e.g. "Living Room + Kitchen · Live stream · Not connected") (Edge Cases, FR-008).
+- Q: If someone types a hub address that starts with `https://` and has no port, which port should the app use? → A: 8443; an explicitly typed port is always kept (FR-002).
 
 ## User Scenarios & Testing *(mandatory)*
 
@@ -156,7 +158,8 @@ screen; each shows the correct destination or placeholder, and Back returns to R
 - **Route failed**: the card shows "Couldn't play" with a Stop control to clear it.
 - **Disabled room or group that is still playing**: keeps its now-playing card; "Off" applies only
   to idle rooms, because disabled means "cannot start new playback".
-- **Room playing but hardware not connected**: the card stays, marked "Not connected".
+- **Room playing but hardware not connected**: the card stays, marked "Not connected". A group
+  card is marked the same way when any of its listed member rooms is not connected.
 - **Muted room or group**: the volume pill shows a muted speaker icon; the percentage stays, and
   the pill cannot be dragged until the target is unmuted (FR-014a).
 - **Master mute active**: the hub's master mute marks every room as muted, so the header button
@@ -182,10 +185,11 @@ screen; each shows the correct destination or placeholder, and Back returns to R
 
 - **FR-001**: The app MUST let the user enter, edit and save a hub address in Settings and keep it
   on the device across restarts. There is no default address.
-- **FR-002**: The app MUST accept an address with or without the `http://` prefix; an address
-  typed with `https://` is used as typed. When no port
-  is given (e.g. "multiroom.lan"), the app MUST use port 8080, the hub's usual port; any other
-  port, including 80, is used only when typed explicitly.
+- **FR-002**: The app MUST accept an address with or without the `http://` prefix, and also with
+  `https://`. When no port is given, the app MUST use port 8080 (the hub's usual port) for plain
+  addresses and `http://`, and port 8443 for `https://` (e.g. "multiroom.lan" →
+  `http://multiroom.lan:8080`, "https://multiroom.lan" → `https://multiroom.lan:8443`). Any other
+  port, including 80 and 443, is used only when typed explicitly.
 - **FR-003**: Until an address is saved, Rooms MUST show a "Set your hub address" state linking to
   Settings and MUST NOT attempt any network request.
 - **FR-004**: The app MUST show a distinct connection state when the hub cannot be reached and MUST

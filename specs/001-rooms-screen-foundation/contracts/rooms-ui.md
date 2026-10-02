@@ -29,8 +29,8 @@ Card (surface, radius 22). Tapping the card body opens the **Now Playing placeho
 - Kind tile (radius 12–14, kind colours) · title (Sora 17 sp) · "Group" badge for groups
 - Source name
 - Status line. For groups: member names joined with " + ", single line, ellipsis, then
-  " · " + status. Texts per [data-model.md](../data-model.md) CardStatus. Single rooms that are not
-  connected append " · Not connected".
+  " · " + status. Texts per [data-model.md](../data-model.md) CardStatus. Cards with `notConnected`
+  (a single room, or a group with any member not connected) append " · Not connected".
 - Volume pill (full width) + one action button (44 dp):
   - `Stop`: label "Stop <title>"
   - `Pause` / `Resume`: label "Pause <title>" / "Resume <title>". A disabled Pause is dimmed and
