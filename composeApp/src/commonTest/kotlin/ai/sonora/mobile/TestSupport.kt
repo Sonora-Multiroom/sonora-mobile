@@ -14,6 +14,9 @@ fun runViewModelTest(block: suspend TestScope.() -> Unit) = runTest {
     Dispatchers.setMain(StandardTestDispatcher(testScheduler))
     try {
         block()
+        // Let short-lived jobs (a throttle wait, say) finish before Main goes away.
+        testScheduler.advanceTimeBy(1_000)
+        testScheduler.runCurrent()
     } finally {
         Dispatchers.resetMain()
     }

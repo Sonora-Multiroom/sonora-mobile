@@ -17,11 +17,15 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.Icon
+import androidx.compose.material3.Snackbar
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.semantics.Role
@@ -30,6 +34,19 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.repeatOnLifecycle
 import kotlinx.coroutines.awaitCancellation
+
+/** Everything the Rooms screen can ask for, so the stateless view stays easy to preview. */
+class RoomsActions(
+    val onOpenSettings: () -> Unit = {},
+    val onOpenCard: (String) -> Unit = {},
+    val onPlayInRoom: (String) -> Unit = {},
+    val onPlaySomething: () -> Unit = {},
+    val onVolumeDragStart: (String) -> Unit = {},
+    val onVolumeDrag: (String, Int) -> Unit = { _, _ -> },
+    val onVolumeDragEnd: (String, Int) -> Unit = { _, _ -> },
+    val onCardAction: (String) -> Unit = {},
+    val onMasterMuteToggle: () -> Unit = {},
+)
 
 @Composable
 fun RoomsScreen(
@@ -41,6 +58,16 @@ fun RoomsScreen(
     modifier: Modifier = Modifier,
 ) {
     val state by viewModel.state.collectAsState()
+    val snackbar = remember { SnackbarHostState() }
+
+    // One message at a time; consumed once shown (FR-018).
+    val message = (state as? RoomsUiState.Connected)?.message
+    LaunchedEffect(message) {
+        if (message != null) {
+            snackbar.showSnackbar(message)
+            viewModel.consumeMessage()
+        }
+    }
 
     // Poll only while this screen is visible and the app is in the foreground (FR-005, SC-006).
     val lifecycleOwner = LocalLifecycleOwner.current
@@ -55,34 +82,51 @@ fun RoomsScreen(
         }
     }
 
-    RoomsContentView(
-        state = state,
-        onOpenSettings = onOpenSettings,
-        onOpenCard = onOpenCard,
-        onPlayInRoom = onPlayInRoom,
-        onPlaySomething = onPlaySomething,
-        modifier = modifier,
-    )
+    Box(modifier = modifier.fillMaxSize()) {
+        RoomsContentView(
+            state = state,
+            actions = RoomsActions(
+                onOpenSettings = onOpenSettings,
+                onOpenCard = onOpenCard,
+                onPlayInRoom = onPlayInRoom,
+                onPlaySomething = onPlaySomething,
+                onVolumeDragStart = viewModel::onVolumeDragStart,
+                onVolumeDrag = viewModel::onVolumeDrag,
+                onVolumeDragEnd = viewModel::onVolumeDragEnd,
+                onCardAction = viewModel::onCardAction,
+                onMasterMuteToggle = viewModel::onMasterMuteToggle,
+            ),
+        )
+        SnackbarHost(
+            hostState = snackbar,
+            modifier = Modifier.align(Alignment.BottomCenter).padding(16.dp),
+        ) { data ->
+            Snackbar(
+                snackbarData = data,
+                containerColor = SonoraTheme.colors.surfaceRaised,
+                contentColor = SonoraTheme.colors.text,
+            )
+        }
+    }
 }
 
 @Composable
 fun RoomsContentView(
     state: RoomsUiState,
-    onOpenSettings: () -> Unit,
-    onOpenCard: (String) -> Unit,
-    onPlayInRoom: (String) -> Unit,
-    onPlaySomething: () -> Unit,
+    actions: RoomsActions,
     modifier: Modifier = Modifier,
 ) {
     val colors = SonoraTheme.colors
     val type = SonoraTheme.type
     Column(modifier = modifier.fillMaxSize()) {
-        val content = (state as? RoomsUiState.Connected)?.content as? RoomsContent.Rooms
+        val connected = state as? RoomsUiState.Connected
+        val content = connected?.content as? RoomsContent.Rooms
         Header(
             subtitle = content?.let { roomsInUse(it.inUse, it.total) },
             masterMuted = content?.masterMuted ?: false,
-            muteEnabled = false, // wired in US3
-            onToggleMute = {},
+            muteEnabled = connected != null && connected.connection == Connection.Live &&
+                ActionKey.MasterMute !in connected.inFlight,
+            onToggleMute = actions.onMasterMuteToggle,
         )
 
         when (state) {
@@ -91,7 +135,7 @@ fun RoomsContentView(
                 title = "Set your hub address",
                 body = "Rooms will appear here once the app knows where your hub is.",
                 actionLabel = "Open Settings",
-                onAction = onOpenSettings,
+                onAction = actions.onOpenSettings,
             )
 
             is RoomsUiState.Connected -> {
@@ -102,7 +146,7 @@ fun RoomsContentView(
                         title = "Can't reach the hub",
                         body = "Tried ${state.address.baseUrl}. Retrying…",
                         actionLabel = "Open Settings",
-                        onAction = onOpenSettings,
+                        onAction = actions.onOpenSettings,
                     )
 
                     state.content == null -> Text(
@@ -125,9 +169,7 @@ fun RoomsContentView(
                             content = state.content,
                             state = state,
                             stale = stale,
-                            onOpenCard = onOpenCard,
-                            onPlayInRoom = onPlayInRoom,
-                            onPlaySomething = onPlaySomething,
+                            actions = actions,
                         )
                     }
                 }
@@ -225,9 +267,7 @@ private fun RoomsList(
     content: RoomsContent.Rooms,
     state: RoomsUiState.Connected,
     stale: Boolean,
-    onOpenCard: (String) -> Unit,
-    onPlayInRoom: (String) -> Unit,
-    onPlaySomething: () -> Unit,
+    actions: RoomsActions,
 ) {
     val colors = SonoraTheme.colors
     LazyColumn(
@@ -242,9 +282,12 @@ private fun RoomsList(
                     card = card,
                     volume = state.volumeOverrides[card.key] ?: card.volume,
                     stale = stale,
-                    actionInFlight = false,
-                    onOpen = { onOpenCard(card.key) },
-                    onAction = {}, // wired in US3
+                    actionInFlight = state.inFlight.any { it is ActionKey.Card && it.cardKey == card.key },
+                    onOpen = { actions.onOpenCard(card.key) },
+                    onAction = { actions.onCardAction(card.key) },
+                    onVolumeDragStart = { actions.onVolumeDragStart(card.key) },
+                    onVolumeDrag = { actions.onVolumeDrag(card.key, it) },
+                    onVolumeDragEnd = { actions.onVolumeDragEnd(card.key, it) },
                 )
             }
         }
@@ -258,7 +301,7 @@ private fun RoomsList(
                         .padding(horizontal = 14.dp, vertical = 4.dp),
                 ) {
                     content.idle.forEachIndexed { index, row ->
-                        IdleRow(row, onPlay = { onPlayInRoom(row.roomId) })
+                        IdleRow(row, onPlay = { actions.onPlayInRoom(row.roomId) })
                         if (index < content.idle.lastIndex) {
                             Box(Modifier.fillMaxWidth().height(1.dp).background(colors.surfaceRaised))
                         }
@@ -271,7 +314,7 @@ private fun RoomsList(
                         .fillMaxWidth()
                         .height(56.dp)
                         .background(colors.accent, SonoraTheme.shapes.pill)
-                        .clickable(role = Role.Button, onClick = onPlaySomething),
+                        .clickable(role = Role.Button, onClick = actions.onPlaySomething),
                     horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.CenterHorizontally),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {

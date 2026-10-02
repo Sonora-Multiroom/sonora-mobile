@@ -7,6 +7,9 @@ import ai.sonora.mobile.hub.generated.apis.InputsApi
 import ai.sonora.mobile.hub.generated.apis.MasterMuteApi
 import ai.sonora.mobile.hub.generated.apis.OutputsApi
 import ai.sonora.mobile.hub.generated.apis.RoutesApi
+import ai.sonora.mobile.hub.generated.models.MuteRequest
+import ai.sonora.mobile.hub.generated.models.PauseRequest
+import ai.sonora.mobile.hub.generated.models.VolumeRequest
 import io.ktor.client.HttpClient
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
@@ -44,11 +47,20 @@ class KtorHubRepository(address: HubAddress, client: HttpClient) : HubRepository
         )
     }
 
-    // Actions arrive with US3 (T046).
-    override suspend fun setRoomVolume(roomId: String, volume: Int): HubResult<Unit> = TODO()
-    override suspend fun stopRoute(routeId: String): HubResult<Unit> = TODO()
-    override suspend fun setRoutePaused(routeId: String, paused: Boolean): HubResult<Unit> = TODO()
-    override suspend fun setMasterMute(muted: Boolean): HubResult<Unit> = TODO()
+    // Response bodies are ignored: the next refresh is the confirmation. There is deliberately no
+    // call to GroupsApi.setGroupVolume anywhere (it would flatten the balance between rooms).
+
+    override suspend fun setRoomVolume(roomId: String, volume: Int): HubResult<Unit> =
+        hubCallUnit { outputs.setOutputVolume(roomId, VolumeRequest(volume.coerceIn(0, 100))) }
+
+    override suspend fun stopRoute(routeId: String): HubResult<Unit> =
+        hubCallUnit { routes.deleteRoute(routeId) }
+
+    override suspend fun setRoutePaused(routeId: String, paused: Boolean): HubResult<Unit> =
+        hubCallUnit { routes.setPauseState(routeId, PauseRequest(paused)) }
+
+    override suspend fun setMasterMute(muted: Boolean): HubResult<Unit> =
+        hubCallUnit { masterMute.setMasterMute(MuteRequest(muted)) }
 }
 
 class KtorHubRepositoryFactory(private val client: HttpClient) : HubRepositoryFactory {

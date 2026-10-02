@@ -38,6 +38,8 @@ data class NowPlayingCard(
     val notConnected: Boolean,
     val action: CardAction,
     val actionEnabled: Boolean,
+    /** A single listed room's id, the target of its volume; null for groups and unknown targets. */
+    val roomId: String? = null,
 )
 
 data class IdleRow(val roomId: String, val name: String, val state: IdleState)
@@ -76,6 +78,7 @@ object RoomsBuilder {
                 notConnected = target.notConnected,
                 action = action,
                 actionEnabled = actionEnabled,
+                roomId = target.roomId,
             )
         }.sortedWith(compareBy({ it.title.lowercase() }, { it.key }))
 
@@ -110,6 +113,7 @@ object RoomsBuilder {
         val muted: Boolean,
         val notConnected: Boolean,
         val occupies: Set<String>,
+        val roomId: String? = null,
     )
 
     private fun describe(
@@ -130,6 +134,7 @@ object RoomsBuilder {
                 muted = masterMuted || room?.muted == true,
                 notConnected = room?.available == false,
                 occupies = if (room != null) setOf(room.id) else emptySet(),
+                roomId = room?.id,
             )
         }
 

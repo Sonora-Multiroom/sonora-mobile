@@ -36,15 +36,10 @@ fun NowPlayingCard(
     actionInFlight: Boolean,
     onOpen: () -> Unit,
     onAction: () -> Unit,
+    onVolumeDragStart: () -> Unit,
+    onVolumeDrag: (Int) -> Unit,
+    onVolumeDragEnd: (Int) -> Unit,
     modifier: Modifier = Modifier,
-    pill: @Composable (volume: Int) -> Unit = { v ->
-        VolumePill(
-            value = v,
-            muted = card.muted,
-            enabled = card.volumeAdjustable && !card.muted && !stale,
-            contentDescription = "${card.title} volume",
-        )
-    },
 ) {
     val colors = SonoraTheme.colors
     val type = SonoraTheme.type
@@ -103,7 +98,17 @@ fun NowPlayingCard(
             }
             ActionButton(card, stale = stale, inFlight = actionInFlight, onClick = onAction)
         }
-        if (volume != null) pill(volume)
+        if (volume != null) {
+            VolumePill(
+                value = volume,
+                muted = card.muted,
+                enabled = card.volumeAdjustable && !stale,
+                contentDescription = "${card.title} volume",
+                onDragStart = onVolumeDragStart,
+                onDrag = onVolumeDrag,
+                onDragEnd = onVolumeDragEnd,
+            )
+        }
     }
 }
 

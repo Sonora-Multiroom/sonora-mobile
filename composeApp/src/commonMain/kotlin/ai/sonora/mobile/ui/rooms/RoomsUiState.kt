@@ -1,5 +1,6 @@
 package ai.sonora.mobile.ui.rooms
 
+import ai.sonora.mobile.domain.CardAction
 import ai.sonora.mobile.domain.HubAddress
 import ai.sonora.mobile.domain.RoomsContent
 
@@ -11,6 +12,12 @@ sealed interface Connection {
 
     /** The last refresh failed; [lastSuccessAt] is epoch millis of the last good one, if any. */
     data class Unreachable(val lastSuccessAt: Long?) : Connection
+}
+
+/** A request the user started that is still running: its control stays disabled (FR-019). */
+sealed interface ActionKey {
+    data class Card(val cardKey: String, val action: CardAction) : ActionKey
+    data object MasterMute : ActionKey
 }
 
 sealed interface RoomsUiState {
@@ -27,6 +34,7 @@ sealed interface RoomsUiState {
         val content: RoomsContent? = null,
         /** Volume the user is dragging to, per card key: wins over refreshed values. */
         val volumeOverrides: Map<String, Int> = emptyMap(),
+        val inFlight: Set<ActionKey> = emptySet(),
         /** One-shot snackbar text. */
         val message: String? = null,
     ) : RoomsUiState

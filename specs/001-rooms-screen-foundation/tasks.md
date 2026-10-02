@@ -185,7 +185,7 @@ FR-013d. Every test task comes before its implementation task and MUST be seen f
 
 ### Tests for User Story 3 ⚠️ write first, see them fail
 
-- [ ] T041 [P] [US3] Write `composeApp/src/commonTest/kotlin/ai/sonora/mobile/domain/GroupVolumeTest.kt` for `GroupVolume.scale(base: Map<String, Int>, newValue: Int): Map<String, Int>` (FR-013b, FR-013d, research R10), using the formula `floor(v * new / top + 0.5)` clamped 0..100, where top = max(base). Cases:
+- [X] T041 [P] [US3] Write `composeApp/src/commonTest/kotlin/ai/sonora/mobile/domain/GroupVolumeTest.kt` for `GroupVolume.scale(base: Map<String, Int>, newValue: Int): Map<String, Int>` (FR-013b, FR-013d, research R10), using the formula `floor(v * new / top + 0.5)` clamped 0..100, where top = max(base). Cases:
   - {a:70, b:35} → 35 gives {a:35, b:18} (17.5 rounds up)
   - {a:70, b:35} → 70 gives unchanged
   - {a:0, b:0} → 40 gives {a:40, b:40}
@@ -194,9 +194,9 @@ FR-013d. Every test task comes before its implementation task and MUST be seen f
   - drag down then back up from the same base restores {a:70, b:35}
   - newValue outside 0..100 is clamped first
   - empty base → empty
-- [ ] T042 [P] [US3] Write `composeApp/src/commonTest/kotlin/ai/sonora/mobile/data/KtorHubRepositoryActionsTest.kt` (MockEngine), contract test 4: `setRoomVolume("kitchen", 42)` → `PUT /api/v2/outputs/kitchen/volume` body `{"volume":42}`; `setRoomVolume(x, 130)` sends 100; `stopRoute("r1")` → `DELETE /api/v2/routes/r1` (204 → Ok); `setRoutePaused("r1", true)` → `PUT /api/v2/routes/r1/pause` `{"paused":true}`; `setMasterMute(true)` → `PUT /api/v2/master-mute` `{"muted":true}`. Contract test 5: a 404/422 RFC 7807 response → `Rejected(status, type)` for each action.
-- [ ] T043 [P] [US3] Write `composeApp/src/commonTest/kotlin/ai/sonora/mobile/ui/MessagesTest.kt` for `actionErrorMessage(action, targetName, error)` with every cell of the contracts/hub-repository.md "User-facing messages" table, e.g. `(Stop, "Downstairs", Unreachable)` → "Couldn't stop Downstairs. Can't reach the hub."; `(Volume, "Kitchen", Rejected(404))` → "Kitchen is no longer on the hub."; `(MasterMute(on=false), _, Unexpected)` → "Couldn't unmute all rooms.". Assert no message contains the problem `title`/`detail`.
-- [ ] T044 [P] [US3] Write `composeApp/src/commonTest/kotlin/ai/sonora/mobile/ui/rooms/RoomsViewModelControlsTest.kt` (fake repository recording calls with virtual timestamps). Cases:
+- [X] T042 [P] [US3] Write `composeApp/src/commonTest/kotlin/ai/sonora/mobile/data/KtorHubRepositoryActionsTest.kt` (MockEngine), contract test 4: `setRoomVolume("kitchen", 42)` → `PUT /api/v2/outputs/kitchen/volume` body `{"volume":42}`; `setRoomVolume(x, 130)` sends 100; `stopRoute("r1")` → `DELETE /api/v2/routes/r1` (204 → Ok); `setRoutePaused("r1", true)` → `PUT /api/v2/routes/r1/pause` `{"paused":true}`; `setMasterMute(true)` → `PUT /api/v2/master-mute` `{"muted":true}`. Contract test 5: a 404/422 RFC 7807 response → `Rejected(status, type)` for each action.
+- [X] T043 [P] [US3] Write `composeApp/src/commonTest/kotlin/ai/sonora/mobile/ui/MessagesTest.kt` for `actionErrorMessage(action, targetName, error)` with every cell of the contracts/hub-repository.md "User-facing messages" table, e.g. `(Stop, "Downstairs", Unreachable)` → "Couldn't stop Downstairs. Can't reach the hub."; `(Volume, "Kitchen", Rejected(404))` → "Kitchen is no longer on the hub."; `(MasterMute(on=false), _, Unexpected)` → "Couldn't unmute all rooms.". Assert no message contains the problem `title`/`detail`.
+- [X] T044 [P] [US3] Write `composeApp/src/commonTest/kotlin/ai/sonora/mobile/ui/rooms/RoomsViewModelControlsTest.kt` (fake repository recording calls with virtual timestamps). Cases:
   - **Drag ownership (FR-014, US3-2)**: during a drag a refresh with a different volume does not change the displayed value. After drag end and request completion the override clears and a refresh runs.
   - **Throttle**: 40 drag events over 2 s → at most 4 sends per rolling second (for a group, at most 4 batches of member calls), the last sent value equals the latest, and drag end sends the final value once immediately.
   - **Group drag**: Downstairs {living:70, kitchen:35} dragged to 35 → `setRoomVolume(living,35)` + `setRoomVolume(kitchen,18)`. All-zero members dragged to 40 → both 40. A member is sent only when its target differs from the last value sent to it in this drag (the drag-start base if none was sent yet). The base is taken at drag start: dragging down to 35 (throttle sends 35/18), then back up to 70 and releasing sends 70/35, so the hub ends at 70/35.
@@ -212,21 +212,21 @@ FR-013d. Every test task comes before its implementation task and MUST be seen f
 
 ### Implementation for User Story 3
 
-- [ ] T045 [P] [US3] Implement `GroupVolume.scale` in `composeApp/src/commonMain/kotlin/ai/sonora/mobile/domain/GroupVolume.kt` (integer arithmetic only) until T041 passes.
-- [ ] T046 [US3] Implement `setRoomVolume` (clamp 0..100), `stopRoute`, `setRoutePaused` and `setMasterMute` in `composeApp/src/commonMain/kotlin/ai/sonora/mobile/data/KtorHubRepository.kt` via generated `OutputsApi.setOutputVolume`, `RoutesApi.deleteRoute`, `RoutesApi.setPauseState` and `MasterMuteApi.setMasterMute`, ignoring response bodies and wrapped in `hubCall`, until T042 passes. Do not call `GroupsApi.setGroupVolume` anywhere.
-- [ ] T047 [P] [US3] Implement `composeApp/src/commonMain/kotlin/ai/sonora/mobile/ui/Messages.kt` (`sealed UserAction { Volume; Stop; Pause; Resume; MasterMute(on) }`, `actionErrorMessage`) until T043 passes.
-- [ ] T048 [US3] Implement the controls in `composeApp/src/commonMain/kotlin/ai/sonora/mobile/ui/rooms/RoomsViewModel.kt` (research R10, data-model.md "Transitions"), until T044 passes:
+- [X] T045 [P] [US3] Implement `GroupVolume.scale` in `composeApp/src/commonMain/kotlin/ai/sonora/mobile/domain/GroupVolume.kt` (integer arithmetic only) until T041 passes.
+- [X] T046 [US3] Implement `setRoomVolume` (clamp 0..100), `stopRoute`, `setRoutePaused` and `setMasterMute` in `composeApp/src/commonMain/kotlin/ai/sonora/mobile/data/KtorHubRepository.kt` via generated `OutputsApi.setOutputVolume`, `RoutesApi.deleteRoute`, `RoutesApi.setPauseState` and `MasterMuteApi.setMasterMute`, ignoring response bodies and wrapped in `hubCall`, until T042 passes. Do not call `GroupsApi.setGroupVolume` anywhere.
+- [X] T047 [P] [US3] Implement `composeApp/src/commonMain/kotlin/ai/sonora/mobile/ui/Messages.kt` (`sealed UserAction { Volume; Stop; Pause; Resume; MasterMute(on) }`, `actionErrorMessage`) until T043 passes.
+- [X] T048 [US3] Implement the controls in `composeApp/src/commonMain/kotlin/ai/sonora/mobile/ui/rooms/RoomsViewModel.kt` (research R10, data-model.md "Transitions"), until T044 passes:
   - `onVolumeDragStart(key)`, `onVolumeDrag(key, value)`, `onVolumeDragEnd(key, value)` with a per-card throttled sender (≤ 1 send / 250 ms, latest value wins, final value sent immediately on end)
   - group targets computed by `GroupVolume.scale(card.memberVolumes-at-drag-start, value)`, one `setRoomVolume` per member whose target differs from the last value sent to it in this drag (drag-start base if none), sent concurrently; the throttle limits batches to ≤ 4/s
   - `onCardAction(key)` (Stop / Pause / Resume per `card.action`) and `onMasterMuteToggle()`
   - `inFlight` guarding, `requestRefresh()` after each completion (never a direct `refreshOnce()`, research R5), `message` on failure, `consumeMessage()`
   - every control a no-op when `connection != Live`, the card is muted or `!volumeAdjustable` (drag only), or `!actionEnabled`
-- [ ] T049 [US3] Make `composeApp/src/commonMain/kotlin/ai/sonora/mobile/ui/rooms/VolumePill.kt` interactive:
+- [X] T049 [US3] Make `composeApp/src/commonMain/kotlin/ai/sonora/mobile/ui/rooms/VolumePill.kt` interactive:
   - `pointerInput` with horizontal drag + tap-to-set. The value comes from the x position over the width, clamped 0..100, and the fill follows the finger.
   - callbacks `onDragStart`/`onDrag`/`onDragEnd`; disabled when `muted || !enabled` (the card passes `enabled = volumeAdjustable && !stale`)
   - semantics: `contentDescription = "<title> volume"`, `progressBarRangeInfo(0..100)`, and `setProgress` only when enabled, so TalkBack can adjust it
   - minimum height 44 dp
-- [ ] T050 [US3] Wire the controls in `NowPlayingCard.kt` and `RoomsScreen.kt` (`composeApp/src/commonMain/kotlin/ai/sonora/mobile/ui/rooms/`):
+- [X] T050 [US3] Wire the controls in `NowPlayingCard.kt` and `RoomsScreen.kt` (`composeApp/src/commonMain/kotlin/ai/sonora/mobile/ui/rooms/`):
   - pill callbacks → view model
   - action button → `onCardAction`, disabled while `(key, action)` is in `inFlight` or stale
   - master mute button → `onMasterMuteToggle`, disabled while in flight or stale, accent state when muted
