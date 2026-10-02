@@ -48,15 +48,35 @@ class RoomsViewModel(
     private var pollJob: Job? = null
     private var lastSuccessAt: Long? = null
 
-    /** One per card being dragged: the base volumes and what was last sent (research R10). */
-    private class Drag(val title: String, val base: Map<String, Int>, val repository: HubRepository) {
-        val lastSent: MutableMap<String, Int> = base.toMutableMap()
-        val lock = Mutex()
+    /**
+     * One per card being dragged: the base volumes and what was last sent (research R10). [lastSent]
+     * and [lock] are shared with the card's previous drag, so a drag started right after a release
+     * neither repeats nor skips what that drag sent, and its requests queue behind it.
+     */
+    private class Drag(
+        val title: String,
+        val base: Map<String, Int>,
+        val repository: HubRepository,
+        val lastSent: MutableMap<String, Int>,
+        val lock: Mutex,
+    ) {
         var latest: Int = 0
         var sender: Job? = null
     }
 
     private val drags = mutableMapOf<String, Drag>()
+
+    /**
+     * A released drag whose numbers the hub has not confirmed yet. Until a refresh that *started
+     * after* the final send succeeds, its value stays on screen (no snap back to stale numbers) and
+     * its [targets] are the base of the card's next drag.
+     */
+    private class Settled(val targets: Map<String, Int>, val lastSent: MutableMap<String, Int>, val lock: Mutex) {
+        var finishedAtRefresh: Long? = null
+    }
+
+    private val settled = mutableMapOf<String, Settled>()
+    private var refreshSeq = 0L
 
     /**
      * Ends the poll loop's wait early. It never starts a refresh itself: if one is running the
@@ -73,6 +93,7 @@ class RoomsViewModel(
     private fun onAddress(address: HubAddress?) {
         drags.values.forEach { it.sender?.cancel() }
         drags.clear()
+        settled.clear()
         repository = address?.let(repositoryFactory::create)
         lastSuccessAt = null
         _state.value = if (address == null) RoomsUiState.NoAddress else RoomsUiState.Connected(address)
@@ -122,11 +143,20 @@ class RoomsViewModel(
         val card = liveCard(key) ?: return
         if (card.muted || !card.volumeAdjustable) return
         val repo = repository ?: return
-        val base = if (card.isGroup) card.memberVolumes else card.roomId?.let { mapOf(it to (card.volume ?: 0)) }
+        val prior = settled[key]
+        val base = prior?.targets
+            ?: if (card.isGroup) card.memberVolumes else card.roomId?.let { mapOf(it to (card.volume ?: 0)) }
         if (base.isNullOrEmpty()) return
         drags.remove(key)?.sender?.cancel()
-        drags[key] = Drag(card.title, base, repo).also { it.latest = card.volume ?: 0 }
-        setOverride(key, card.volume ?: 0)
+        val shown = (_state.value as? RoomsUiState.Connected)?.volumeOverrides?.get(key) ?: card.volume ?: 0
+        drags[key] = Drag(
+            title = card.title,
+            base = base,
+            repository = repo,
+            lastSent = prior?.lastSent ?: base.toMutableMap(),
+            lock = prior?.lock ?: Mutex(),
+        ).also { it.latest = shown }
+        setOverride(key, shown)
     }
 
     fun onVolumeDrag(key: String, value: Int) {
@@ -158,9 +188,19 @@ class RoomsViewModel(
         drag.sender?.cancel()
         drag.latest = value.coerceIn(0, 100)
         setOverride(key, drag.latest)
+        val mine = Settled(GroupVolume.scale(drag.base, drag.latest), drag.lastSent, drag.lock)
+        settled[key] = mine
         viewModelScope.launch {
-            sendVolume(drag, drag.latest)
-            setOverride(key, null)
+            val ok = sendVolume(drag, drag.latest)
+            // Only if no newer drag has taken over the card meanwhile.
+            if (settled[key] === mine) {
+                if (ok) {
+                    mine.finishedAtRefresh = refreshSeq
+                } else if (key !in drags) {
+                    settled.remove(key)
+                    setOverride(key, null)
+                }
+            }
             requestRefresh()
         }
     }
@@ -170,7 +210,7 @@ class RoomsViewModel(
      * its target differs from what was last sent to it, so dragging back to the start still restores
      * it. `PUT /groups/{id}/volume` is never used (FR-013c).
      */
-    private suspend fun sendVolume(drag: Drag, value: Int) {
+    private suspend fun sendVolume(drag: Drag, value: Int): Boolean {
         val failure = withContext(NonCancellable) {
             drag.lock.withLock {
                 val changed = GroupVolume.scale(drag.base, value).filter { (id, target) -> drag.lastSent[id] != target }
@@ -188,6 +228,7 @@ class RoomsViewModel(
             }
         }
         if (failure != null) reportFailure(UserAction.Volume, drag.title, failure)
+        return failure == null
     }
 
     fun onCardAction(key: String) {
@@ -250,12 +291,28 @@ class RoomsViewModel(
     }
 
     private suspend fun refreshOnce(repo: HubRepository) {
+        val seq = ++refreshSeq
         when (val result = repo.snapshot()) {
             is HubResult.Ok -> {
                 lastSuccessAt = now()
                 val content = RoomsBuilder.build(result.value)
+                // This refresh began after those drags' final sends, so it carries the hub's truth.
+                val confirmed = settled.filter { (key, s) ->
+                    key !in drags && s.finishedAtRefresh.let { it != null && it < seq }
+                }.keys
+                settled.keys.removeAll(confirmed)
+                val shownKeys = (content as? RoomsContent.Rooms)?.cards?.map { it.key }.orEmpty().toSet()
+                val gone = settled.keys.filter { it !in shownKeys && it !in drags }
+                settled.keys.removeAll(gone.toSet())
+                val drop = confirmed + gone
                 _state.update { s ->
-                    if (s is RoomsUiState.Connected) s.copy(connection = Connection.Live, content = content) else s
+                    if (s is RoomsUiState.Connected) {
+                        s.copy(
+                            connection = Connection.Live,
+                            content = content,
+                            volumeOverrides = s.volumeOverrides - drop,
+                        )
+                    } else s
                 }
             }
 

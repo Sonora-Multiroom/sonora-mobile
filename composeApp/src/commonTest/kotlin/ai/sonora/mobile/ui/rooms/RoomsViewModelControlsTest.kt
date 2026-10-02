@@ -212,6 +212,52 @@ class RoomsViewModelControlsTest {
         s.vm.stopPolling()
     }
 
+    // ---- Releasing a drag before the hub confirms (review findings) ------------------------
+
+    @Test
+    fun aDragRightAfterReleaseStartsFromWhatWasSentNotFromStaleNumbers() = runViewModelTest {
+        val s = live(snapshot(livingVolume = 40, kitchenVolume = 80))
+        s.repo.snapshotDelayMs = 60_000 // the confirming refresh does not arrive in time
+        s.vm.onVolumeDragStart("r1")
+        s.vm.onVolumeDragEnd("r1", 40) // 40/80 -> 20/40
+        runCurrent()
+        assertEquals(40, s.connected().volumeOverrides["r1"], "the released value must not snap back")
+
+        s.vm.onVolumeDragStart("r1")
+        s.vm.onVolumeDragEnd("r1", 80) // back up: must really send 40/80
+        runCurrent()
+        val lastPerRoom = s.repo.calls.filter { it.name == "setRoomVolume" }
+            .groupBy { it.args[0] }.mapValues { (_, v) -> v.last().args[1] }
+        assertEquals(mapOf<Any, Any>("living" to 40, "kitchen" to 80), lastPerRoom)
+        s.vm.stopPolling()
+    }
+
+    @Test
+    fun aFinishingDragNeverResetsTheNextDragsDisplay() = runViewModelTest {
+        val s = live()
+        s.repo.actionDelayMs = 1000
+        s.vm.onVolumeDragStart("r2")
+        s.vm.onVolumeDragEnd("r2", 50) // its request takes 1 s
+        runCurrent()
+        s.vm.onVolumeDragStart("r2")
+        s.vm.onVolumeDrag("r2", 60)
+        advanceTimeBy(1500); runCurrent() // the first release finishes meanwhile
+        assertEquals(60, s.connected().volumeOverrides["r2"])
+        s.vm.onVolumeDragEnd("r2", 60)
+        advanceTimeBy(3000); runCurrent()
+        s.vm.stopPolling()
+    }
+
+    @Test
+    fun theReleasedValueIsDroppedOnceARefreshAfterTheSendConfirmsIt() = runViewModelTest {
+        val s = live()
+        s.vm.onVolumeDragStart("r2")
+        s.vm.onVolumeDragEnd("r2", 50)
+        runCurrent()
+        assertTrue(s.connected().volumeOverrides.isEmpty())
+        s.vm.stopPolling()
+    }
+
     // ---- Guards ----------------------------------------------------------------------------
 
     @Test

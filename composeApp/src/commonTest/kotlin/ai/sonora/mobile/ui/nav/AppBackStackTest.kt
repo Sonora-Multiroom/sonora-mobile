@@ -81,4 +81,32 @@ class AppBackStackTest {
         s.selectTab(Destination.Sources)
         assertEquals(Destination.Sources, s.currentTab)
     }
+
+    @Test
+    fun everyDestinationSurvivesSaveAndRestore() {
+        val all = listOf(
+            Destination.Rooms,
+            Destination.Sources,
+            Destination.Settings,
+            Destination.NowPlaying("route:with:colons"),
+            Destination.StartPlayback(null),
+            Destination.StartPlayback("bedroom"),
+        )
+        for (d in all) assertEquals(d, decodeDestination(encodeDestination(d)), d.toString())
+    }
+
+    @Test
+    fun aRestoredStackKeepsItsScreens() {
+        val saved = listOf(Destination.Rooms, Destination.Settings, Destination.StartPlayback("a"))
+            .map(::encodeDestination)
+        val restored = AppBackStack(saved.mapNotNull(::decodeDestination))
+        assertEquals(listOf(Destination.Rooms, Destination.Settings, Destination.StartPlayback("a")), restored.contents())
+        assertEquals(Destination.Settings, restored.currentTab)
+    }
+
+    @Test
+    fun anEmptyOrGarbledRestoreFallsBackToRooms() {
+        assertEquals(listOf<Destination>(Destination.Rooms), AppBackStack(emptyList()).contents())
+        assertEquals(null, decodeDestination("nonsense"))
+    }
 }

@@ -1,6 +1,8 @@
 package ai.sonora.mobile.ui.nav
 
 import androidx.compose.runtime.mutableStateListOf
+import androidx.compose.runtime.saveable.Saver
+import androidx.compose.runtime.saveable.listSaver
 import androidx.compose.runtime.snapshots.SnapshotStateList
 
 sealed interface Destination {
@@ -19,8 +21,9 @@ sealed interface Destination {
  * The app's back stack, owned by the app so it is plain, testable state. Top-level tabs replace the
  * stack; detail destinations are pushed on top.
  */
-class AppBackStack {
-    val stack: SnapshotStateList<Destination> = mutableStateListOf(Destination.Rooms)
+class AppBackStack(initial: List<Destination> = listOf(Destination.Rooms)) {
+    val stack: SnapshotStateList<Destination> =
+        mutableStateListOf<Destination>().also { it.addAll(initial.ifEmpty { listOf(Destination.Rooms) }) }
 
     val top: Destination get() = stack.last()
 
@@ -52,4 +55,30 @@ class AppBackStack {
         stack.add(Destination.Rooms)
         if (tab != Destination.Rooms) stack.add(tab)
     }
+
+    companion object {
+        /** Survives rotation and other activity recreation (used with `rememberSaveable`). */
+        val Saver: Saver<AppBackStack, Any> = listSaver(
+            save = { backStack -> backStack.stack.map(::encodeDestination) },
+            restore = { saved -> AppBackStack(saved.mapNotNull(::decodeDestination)) },
+        )
+    }
+}
+
+internal fun encodeDestination(d: Destination): String = when (d) {
+    Destination.Rooms -> "rooms"
+    Destination.Sources -> "sources"
+    Destination.Settings -> "settings"
+    is Destination.NowPlaying -> "now:${d.routeId}"
+    is Destination.StartPlayback -> if (d.targetId == null) "play" else "play:${d.targetId}"
+}
+
+internal fun decodeDestination(s: String): Destination? = when {
+    s == "rooms" -> Destination.Rooms
+    s == "sources" -> Destination.Sources
+    s == "settings" -> Destination.Settings
+    s.startsWith("now:") -> Destination.NowPlaying(s.removePrefix("now:"))
+    s == "play" -> Destination.StartPlayback(null)
+    s.startsWith("play:") -> Destination.StartPlayback(s.removePrefix("play:"))
+    else -> null
 }
