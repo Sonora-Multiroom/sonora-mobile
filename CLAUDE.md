@@ -43,7 +43,7 @@ not rely on memory. The cloud environment provides JDK 17+ and the Android SDK v
 
 ```bash
 ./gradlew :androidApp:assembleDebug         # build the Android APK
-./gradlew :composeApp:testAndroidHostTest   # Android host tests (task name to be confirmed by T009)
+./gradlew :composeApp:testAndroidHostTest   # Android host tests
 ./gradlew :composeApp:allTests              # all KMP tests (iOS targets skipped on Linux)
 ```
 
@@ -65,7 +65,7 @@ pass. The user installs the APK and tries it against the real hub locally.
 
 | Screen | Calls |
 |---|---|
-| Rooms | `GET /api/v2/outputs`, `/groups`, `/routes`, `/inputs`, `GET/PUT /api/v2/master-mute` |
+| Rooms | `GET /api/v2/outputs`, `/groups`, `/routes`, `/inputs`, `GET/PUT /api/v2/master-mute`. Outputs, groups and inputs are requested with `includeDisabled=true`; the hub omits disabled ones by default, and Rooms must show them as "Off" |
 | Volume / mute | `PUT /api/v2/outputs/{id}/volume` `{volume}`, `.../mute` `{muted}`; group mute under `/groups/{id}/mute`. Group volume = per-member output PUTs (see Hub gaps) |
 | Stop | `DELETE /api/v2/routes/{routeId}` |
 | Pause / resume | `PUT /api/v2/routes/{routeId}/pause` `{paused}`, **only when `RouteResponse.pauseable`** |

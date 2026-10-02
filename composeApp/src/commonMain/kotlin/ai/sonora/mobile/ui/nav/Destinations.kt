@@ -24,6 +24,14 @@ class AppBackStack {
 
     val top: Destination get() = stack.last()
 
+    /** The top-level tab the user is in: the last tab destination on the stack. */
+    val currentTab: Destination
+        get() = stack.last { it == Destination.Rooms || it == Destination.Sources || it == Destination.Settings }
+
+    /** Only the three tabs show the bottom bar; detail destinations cover it. */
+    val showsBottomBar: Boolean
+        get() = top == Destination.Rooms || top == Destination.Sources || top == Destination.Settings
+
     fun push(destination: Destination) {
         stack.add(destination)
     }

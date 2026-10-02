@@ -244,7 +244,7 @@ FR-013d. Every test task comes before its implementation task and MUST be seen f
 
 ### Tests for User Story 4 ⚠️ write first, see them fail
 
-- [ ] T051 [P] [US4] Write `composeApp/src/commonTest/kotlin/ai/sonora/mobile/ui/nav/AppBackStackTest.kt`. Cases:
+- [X] T051 [P] [US4] Write `composeApp/src/commonTest/kotlin/ai/sonora/mobile/ui/nav/AppBackStackTest.kt`. Cases:
   - starts at `[Rooms]`
   - `selectTab(Settings)` → `[Rooms, Settings]`; then `selectTab(Sources)` → `[Rooms, Sources]`; `selectTab(Rooms)` → `[Rooms]`
   - selecting the current tab is a no-op
@@ -255,10 +255,10 @@ FR-013d. Every test task comes before its implementation task and MUST be seen f
 
 ### Implementation for User Story 4
 
-- [ ] T052 [US4] Finish `AppBackStack` in `composeApp/src/commonMain/kotlin/ai/sonora/mobile/ui/nav/Destinations.kt` (add `currentTab`) until T051 passes.
-- [ ] T053 [P] [US4] Implement `composeApp/src/commonMain/kotlin/ai/sonora/mobile/ui/nav/BottomBar.kt` per contracts/rooms-ui.md "Bottom navigation" and `design/screens/Main.dc.html`: three items (Rooms, Sources, Settings) with icons from T012 and labels, the selected item in accent, each item ≥ 44 dp, and the bar on `surface`.
-- [ ] T054 [P] [US4] Implement `composeApp/src/commonMain/kotlin/ai/sonora/mobile/ui/placeholder/PlaceholderScreen.kt` (title, "Coming soon", one-line description, and a back arrow labelled "Back" when opened from a card/row). Descriptions: Sources — "Your saved stations, line-ins and files will be listed here."; Now Playing — "Full controls for this room will be here, including Move to room…"; Start Playback — "Pick a source to play here."
-- [ ] T055 [US4] Wire navigation in `composeApp/src/commonMain/kotlin/ai/sonora/mobile/ui/nav/AppNavigation.kt` and `RoomsScreen.kt`. Render the `BottomBar` on top-level destinations. Map `Sources`/`NowPlaying`/`StartPlayback` to `PlaceholderScreen`. Card body tap → `push(NowPlaying(card.key))`, idle play button → `push(StartPlayback(roomId))`, "Play something" → `push(StartPlayback(null))`. Handle system Back through `NavDisplay`'s `onBack` = `pop()`, finishing the activity when it returns false.
+- [X] T052 [US4] Finish `AppBackStack` in `composeApp/src/commonMain/kotlin/ai/sonora/mobile/ui/nav/Destinations.kt` (add `currentTab`) until T051 passes.
+- [X] T053 [P] [US4] Implement `composeApp/src/commonMain/kotlin/ai/sonora/mobile/ui/nav/BottomBar.kt` per contracts/rooms-ui.md "Bottom navigation" and `design/screens/Main.dc.html`: three items (Rooms, Sources, Settings) with icons from T012 and labels, the selected item in accent, each item ≥ 44 dp, and the bar on `surface`.
+- [X] T054 [P] [US4] Implement `composeApp/src/commonMain/kotlin/ai/sonora/mobile/ui/placeholder/PlaceholderScreen.kt` (title, "Coming soon", one-line description, and a back arrow labelled "Back" when opened from a card/row). Descriptions: Sources — "Your saved stations, line-ins and files will be listed here."; Now Playing — "Full controls for this room will be here, including Move to room…"; Start Playback — "Pick a source to play here."
+- [X] T055 [US4] Wire navigation in `composeApp/src/commonMain/kotlin/ai/sonora/mobile/ui/nav/AppNavigation.kt` and `RoomsScreen.kt`. Render the `BottomBar` on top-level destinations. Map `Sources`/`NowPlaying`/`StartPlayback` to `PlaceholderScreen`. Card body tap → `push(NowPlaying(card.key))`, idle play button → `push(StartPlayback(roomId))`, "Play something" → `push(StartPlayback(null))`. Handle system Back through `NavDisplay`'s `onBack` = `pop()`, finishing the activity when it returns false.
 
 **Checkpoint**: all user stories are functional.
 
@@ -266,14 +266,14 @@ FR-013d. Every test task comes before its implementation task and MUST be seen f
 
 ## Phase 7: Polish & Cross-Cutting Concerns
 
-- [ ] T056 [P] Accessibility pass over `composeApp/src/commonMain/kotlin/ai/sonora/mobile/ui/` (FR-023, contracts/rooms-ui.md "Accessibility"):
+- [X] T056 [P] Accessibility pass over `composeApp/src/commonMain/kotlin/ai/sonora/mobile/ui/` (FR-023, contracts/rooms-ui.md "Accessibility"):
   - every clickable ≥ 44 dp (`Modifier.minimumInteractiveComponentSize()` or explicit size)
   - every icon-only control has the exact label from the contract
   - verify contrast for each token pair used: text ≥ 4.5:1 (text/textMuted/warningText on background/surface/surfaceRaised, onAccent on accent, the pill's percentage text on both `accentContainer` and `surfaceRaised`) and non-text icons ≥ 3:1 (WCAG 1.4.11: kind icon colours on their tiles, pill speaker icon), with a small `composeApp/src/commonTest/kotlin/ai/sonora/mobile/ui/theme/ContrastTest.kt` computing WCAG relative luminance from the token values
-- [ ] T057 [P] Compare the Rooms screen with `design/screens/Main.dc.html` (sizes, spacing, radii, font sizes, colours) and fix drift in `composeApp/src/commonMain/kotlin/ai/sonora/mobile/ui/rooms/`. Add `@Preview`s (Compose Multiplatform `org.jetbrains.compose.ui.tooling.preview` if available in CMP 1.12.1, else skip) with the design sample data in `composeApp/src/commonMain/kotlin/ai/sonora/mobile/ui/rooms/RoomsPreviews.kt`.
-- [ ] T058 Confirm FR-012 / Constitution II by searching `composeApp/src/` for `LinearProgressIndicator`, `Slider` and `CircularProgressIndicator`; none may appear. Confirm the string `groups/` + `volume` appears only in the generated client and the T044 negative test.
-- [ ] T059 Run the [quickstart.md](quickstart.md) §1 commands: `./gradlew :androidApp:assembleDebug`, `./gradlew :composeApp:testAndroidHostTest` (or the name confirmed in T009), `./gradlew :composeApp:allTests`, `./gradlew :composeApp:check`. All must be green, and `git status` must show no generated files. Record the final versions actually used in research.md R1 if any differ.
-- [ ] T060 Update `CLAUDE.md` if anything implemented differs from what it states (commands, layout, versions), and mark the spec `**Status**: Implemented` in `specs/001-rooms-screen-foundation/spec.md`.
+- [X] T057 [P] Compare the Rooms screen with `design/screens/Main.dc.html` (sizes, spacing, radii, font sizes, colours) and fix drift in `composeApp/src/commonMain/kotlin/ai/sonora/mobile/ui/rooms/`. Add `@Preview`s (Compose Multiplatform `org.jetbrains.compose.ui.tooling.preview` if available in CMP 1.12.1, else skip) with the design sample data in `composeApp/src/commonMain/kotlin/ai/sonora/mobile/ui/rooms/RoomsPreviews.kt`.
+- [X] T058 Confirm FR-012 / Constitution II by searching `composeApp/src/` for `LinearProgressIndicator`, `Slider` and `CircularProgressIndicator`; none may appear. Confirm the string `groups/` + `volume` appears only in the generated client and the T044 negative test.
+- [X] T059 Run the [quickstart.md](quickstart.md) §1 commands: `./gradlew :androidApp:assembleDebug`, `./gradlew :composeApp:testAndroidHostTest` (or the name confirmed in T009), `./gradlew :composeApp:allTests`, `./gradlew :composeApp:check`. All must be green, and `git status` must show no generated files. Record the final versions actually used in research.md R1 if any differ.
+- [X] T060 Update `CLAUDE.md` if anything implemented differs from what it states (commands, layout, versions), and mark the spec `**Status**: Implemented` in `specs/001-rooms-screen-foundation/spec.md`.
 
 ---
 

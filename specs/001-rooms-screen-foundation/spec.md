@@ -4,7 +4,7 @@
 
 **Created**: 2026-10-01
 
-**Status**: Draft
+**Status**: Implemented
 
 **Input**: User description: "Scope of the first feature" — the section of that name in CLAUDE.md:
 scaffold the app with the bundled fonts and design tokens, use a client generated from the hub's

@@ -20,7 +20,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.sp
 import androidx.compose.ui.unit.dp
 
 /**
@@ -51,7 +53,7 @@ fun NowPlayingCard(
             .fillMaxWidth()
             .background(colors.surface, SonoraTheme.shapes.card)
             .padding(PaddingValues(start = 14.dp, top = 14.dp, end = 14.dp, bottom = 14.dp)),
-        verticalArrangement = Arrangement.spacedBy(12.dp),
+        verticalArrangement = Arrangement.spacedBy(10.dp),
     ) {
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             Row(
@@ -78,7 +80,7 @@ fun NowPlayingCard(
                         if (card.isGroup) {
                             Text(
                                 "Group",
-                                style = type.label12.copy(fontSize = type.label12.fontSize * 11 / 12),
+                                style = type.label12.copy(fontSize = 11.sp, fontWeight = FontWeight.SemiBold),
                                 color = colors.badgeText,
                                 modifier = Modifier
                                     .background(colors.badge, SonoraTheme.shapes.badge)
