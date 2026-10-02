@@ -42,7 +42,7 @@ Three layers. Only the middle one is shared by screens and logic:
 | id | `String` | `inputId` | null/blank → dropped |
 | name | `String` | `displayName` | fallback `id` |
 | uri | `String?` | `uri` | |
-| origin | `SourceOrigin` | `source` | `STATIC` → Configured, `EPHEMERAL` → Runtime, null/unknown → Configured |
+| origin | `SourceOrigin` | `source` | `STATIC` → Configured, `EPHEMERAL` → Runtime, null/unknown → `Unknown` (Constitution V) |
 | pauseable | `Boolean` | `pauseable` | null → false |
 | enabled | `Boolean` | `enabled` | null → true |
 | kind | `SourceKind` | derived | `inferSourceKind(origin, uri)`, see below |
@@ -52,7 +52,7 @@ Three layers. Only the middle one is shared by screens and logic:
 `inferSourceKind(origin: SourceOrigin, uri: String?): SourceKind` in `domain/SourceKind.kt` is the
 **only** place kind is decided (FR-009, Constitution II):
 
-1. `origin == Runtime` → `Link`
+1. `origin == Runtime` → `Link` (`Unknown` origin is treated like `Configured` from here on)
 2. `uri` starts with `http://` or `https://` (case-insensitive) → `Stream`
 3. `uri` starts with `file:`, or is a path (`/…`, `./…`, `../…`, `~/…`, a Windows drive path
    `X:\…` / `X:/…`, or a `\\` UNC path) → `File`
@@ -72,7 +72,7 @@ A route whose input the hub no longer lists is drawn with `inferSourceKind(Confi
 |---|---|---|---|
 | id | `String` | `routeId` | null/blank → dropped |
 | inputId | `String` | `inputId` | null → `""` |
-| target | `Target` | `targetId` + `targetType` | `SINGLE_OUTPUT` → `Target.Room(id)`, `OUTPUT_GROUP` → `Target.Group(id)`. Null/unknown type → route dropped (can't place it) |
+| target | `Target` | `targetId` + `targetType` | `SINGLE_OUTPUT` → `Target.Room(id)`, `OUTPUT_GROUP` → `Target.Group(id)`, null/unknown type → `Target.Unknown(id)` (Constitution V; the route is kept, see Algorithm) |
 | status | `RouteStatus` | `status` | `Starting, Active, Stopping, Stopped, Failed, Unknown` (null/unknown → `Unknown`) |
 | paused | `Boolean` | `paused` | null → false |
 | pauseable | `Boolean` | `pauseable` | null → false |
@@ -101,6 +101,8 @@ See [contracts/hub-repository.md](contracts/hub-repository.md).
 2. For each live route, resolve occupied room ids:
    - `Target.Room(id)` → `{id}`
    - `Target.Group(id)` → that group's `memberIds` if the group is listed, else `{}`
+   - `Target.Unknown(id)` → `{}`: the app can't tell which rooms it covers, so it occupies none,
+     but it still gets a card (SC-003)
 3. `occupied = union of all occupied sets ∩ known room ids`.
 4. One `NowPlayingCard` per live route (step 5). One `IdleRow` per room not in `occupied`
    (step 6). A room that is in a group listed as a member of a *non-routed* group is unaffected
@@ -108,14 +110,15 @@ See [contracts/hub-repository.md](contracts/hub-repository.md).
 5. Card fields:
    - `key` = route id
    - `title` = room/group name, fallback target id
-   - `isGroup` = target is a group
+   - `isGroup` = target is a group (`Target.Unknown` → false)
    - `memberNames` = names of the group's listed member rooms in group order; unknown members
      skipped. Joined with `" + "` in the UI and truncated with an ellipsis.
    - `sourceName` = source name, fallback `inputId`
    - `kind` = source kind (above)
    - `status` = `CardStatus` (below)
-   - `volume` = room volume (single) or `max(member volumes)` over known members, 0 if none
-     (FR-013a)
+   - `volume: Int?` = room volume (single) or `max(member volumes)` over known members, 0 if none
+     (FR-013a). `Target.Unknown` → `null`: the card has no volume pill, since the app can neither
+     read nor set a volume it doesn't understand
    - `memberVolumes: Map<String, Int>` (group only), the base for scaling
    - `muted` = `masterMuted || target.muted`. Room: `room.muted`, group: `group.muted`. Unknown
      target → `masterMuted` only.

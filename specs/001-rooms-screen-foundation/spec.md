@@ -168,6 +168,9 @@ screen; each shows the correct destination or placeholder, and Back returns to R
   the identifier as the name, and a missing member room is skipped.
 - **A room belongs to several groups**: it is occupied only by the group that actually has a route.
 - **No rooms at all**: Rooms shows an empty state saying the hub has no rooms configured.
+- **A route addresses a target type the app doesn't recognise** (newer hub): the route still gets
+  a card titled with the target id, with its status and action but no volume pill; it occupies no
+  room, because the app can't tell which rooms it covers.
 - **Newer hub with unknown fields or values**: they are ignored or shown as "Unknown" and never
   break the screen.
 

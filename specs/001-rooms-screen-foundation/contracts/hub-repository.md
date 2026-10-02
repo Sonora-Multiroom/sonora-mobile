@@ -90,8 +90,9 @@ For a group volume change, the first failing member determines the message and X
 ## Contract tests (`commonTest/.../data/KtorHubRepositoryTest.kt`, `MockEngine`)
 
 1. Snapshot decodes example payloads shaped by `openapi.json` into the expected domain values.
-2. Unknown JSON field ignored. Unknown `status` → `RouteStatus.Unknown`. Unknown `targetType` →
-   route dropped. Unknown `source` → `Configured`.
+2. Unknown JSON field ignored. Unknown `status` → `RouteStatus.Unknown`. Unknown or null
+   `targetType` → route kept with `Target.Unknown(targetId)`. Unknown `source` →
+   `SourceOrigin.Unknown`.
 3. Null/missing optional fields take the defaults in [data-model.md](../data-model.md).
 4. Each action sends the exact method, path and JSON body in the table above.
 5. RFC 7807 body on 404/422 → `Rejected(status, type)`. Non-JSON error body → `Rejected(status, null)`.

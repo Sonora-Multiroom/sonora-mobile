@@ -36,6 +36,8 @@ Card (surface, radius 22). Tapping the card body opens the **Now Playing placeho
   - `Pause` / `Resume`: label "Pause <title>" / "Resume <title>". A disabled Pause is dimmed and
     not focusable as an action
 - Pill: label "<title> volume". Muted → muted-speaker icon, percentage kept, not draggable.
+- A card whose target type the app doesn't recognise (`volume == null`) has no pill: title = target
+  id, no "Group" badge, status line as for a single room, action button as usual.
 
 ## "Idle" section (hidden when no idle rooms)
 
