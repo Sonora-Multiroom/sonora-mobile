@@ -25,6 +25,11 @@ exists (Constitution VII). It MUST NOT take a newer major/minor without noting i
 | `androidx.activity:activity-compose` | 1.13.0 | androidApp only |
 | OpenAPI Generator Gradle plugin | 7.14.0 | |
 | JDK | 17+ | required by AGP 9 |
+| Android `compileSdk` / `targetSdk` | 37 | Compose 1.12.1 AAR metadata requires compileSdk ≥ 37 (checked 2026-10-02). SDK package `platforms;android-37.0`, which Gradle can download |
+
+**Implementation check (2026-10-02)**: Kotlin, AGP, Compose, Ktor, OpenAPI Generator plugin and Gradle
+were re-checked against Maven Central / Google Maven / services.gradle.org. No newer stable
+version existed, so every version above is used unchanged.
 
 **Decision**: pin these in `gradle/libs.versions.toml`.
 **Rationale**: CLAUDE.md requires current stable versions, looked up, not recalled.
@@ -72,9 +77,9 @@ generated **sources** are used; the generated `build.gradle.kts` and wrapper are
 | Option | Value | Why |
 |---|---|---|
 | `inputSpec` | `$rootDir/api/openapi.json` | single source of truth |
-| `openapiNormalizer` | `FILTER=path:/api/v2` | generate only v2 operations (Constitution I). Supported by the FILTER normalizer (`path:` criterion) |
+| `openapiNormalizer` | `FILTER=tag:Routes\|Outputs\|Inputs\|Groups\|Master Mute\|Playback\|Extensions` | generate only v2 operations (Constitution I). **Changed at implementation**: generator 7.14.0's FILTER normalizer has no `path:` rule (only `operationId:`, `method:`, `tag:`) and silently generated v1 and TTS operations too. Every `/api/v2` operation carries one of these tags, while v1 (`*-controller`) and TTS operations carry others |
 | `packageName` | `ai.sonora.mobile.hub.generated` | one package screens must never import |
-| `serializationLibrary` | `kotlinx_serialization` | multiplatform |
+| `serializationLibrary` | *(not set)* | **Changed at implementation**: the multiplatform library already implies kotlinx.serialization. Setting `kotlinx_serialization` as well makes the 7.14.0 template emit `@Serializable@Serializable` on every model, which does not compile |
 | `dateLibrary` | `string` | timestamps are not used by this feature. Avoids pinning kotlinx-datetime to the generator's expected version |
 | `enumUnknownDefaultCase` | `false` | the multiplatform library does not decode into it. Unknown enums are handled by the JSON config (R4) |
 | `nonPublicApi` | `true` | generated types are `internal` to `composeApp` |
