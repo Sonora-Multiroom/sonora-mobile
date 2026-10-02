@@ -122,9 +122,17 @@ test feeds an unknown `status` and an unknown field to prove it.
 - **Refresh**: one refresh = the five GETs (`outputs`, `groups`, `routes`, `inputs`,
   `master-mute`) run concurrently inside `coroutineScope`. All five must succeed for the
   snapshot to count, because a partial snapshot would misplace rooms.
-- **Loop**: `while (isActive) { refreshOnce(); delay(2500) }`. Sequential by construction, so a
-  slow refresh delays the next one instead of overlapping (FR-005 "polls never pile up"). A
-  refresh is also triggered right after an action completes, and right after a hub address change.
+- **Loop**: `while (isActive) { refreshOnce(); withTimeoutOrNull(2500) { refreshNow.receive() } }`.
+  The loop is the **only** caller of `refreshOnce()`. Sequential by construction, so a slow refresh
+  delays the next one instead of overlapping (FR-005 "polls never pile up").
+- **Refresh after an action**: "trigger a refresh" everywhere (R10, data-model.md Transitions)
+  means `refreshNow.trySend(Unit)` on a `Channel<Unit>(Channel.CONFLATED)`. It ends the loop's
+  current wait early; it never starts a refresh itself. If a refresh is running, the signal is
+  picked up right after it, so at most one extra refresh follows. If the loop is stopped
+  (background), nothing runs; the immediate refresh on return covers it (SC-006). A signal left
+  in the channel while stopped is drained when the loop starts, since that start refreshes anyway.
+- **Address change**: cancels the loop (and any in-flight refresh against the old address) and
+  starts a new one against the new repository, which refreshes immediately.
 - **Foreground only**: the loop runs inside `repeatOnLifecycle(Lifecycle.State.STARTED)` on the
   Compose `LocalLifecycleOwner` (JetBrains lifecycle-runtime-compose, multiplatform). Leaving
   STARTED cancels the loop and any in-flight refresh (SC-006). Returning restarts it with an
