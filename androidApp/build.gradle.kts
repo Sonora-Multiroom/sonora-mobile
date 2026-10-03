@@ -5,11 +5,11 @@ plugins {
 }
 
 android {
-    namespace = "ai.sonora.mobile"
+    namespace = "sonora.multiroom.mobile"
     compileSdk = 37
 
     defaultConfig {
-        applicationId = "ai.sonora.mobile"
+        applicationId = "sonora.multiroom.mobile"
         minSdk = 26
         targetSdk = 37
         versionCode = providers.gradleProperty("sonora.versionCode").get().toInt()

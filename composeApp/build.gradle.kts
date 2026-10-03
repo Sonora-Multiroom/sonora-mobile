@@ -21,11 +21,11 @@ abstract class GenerateAppVersion : DefaultTask() {
 
     @TaskAction
     fun generate() {
-        val file = outputDir.file("ai/sonora/mobile/domain/AppVersionName.kt").get().asFile
+        val file = outputDir.file("sonora/multiroom/mobile/domain/AppVersionName.kt").get().asFile
         file.parentFile.mkdirs()
         file.writeText(
             """
-            |package ai.sonora.mobile.domain
+            |package sonora.multiroom.mobile.domain
             |
             |/** Generated from gradle.properties `sonora.versionName`; do not edit. */
             |const val APP_VERSION_NAME: String = "${versionName.get()}"
@@ -43,7 +43,7 @@ val generateAppVersion by tasks.registering(GenerateAppVersion::class) {
 
 kotlin {
     android {
-        namespace = "ai.sonora.mobile.shared"
+        namespace = "sonora.multiroom.mobile.shared"
         compileSdk = 37
         minSdk = 26
         withHostTest {}
@@ -94,7 +94,7 @@ kotlin {
 }
 
 compose.resources {
-    packageOfResClass = "ai.sonora.mobile.resources"
+    packageOfResClass = "sonora.multiroom.mobile.resources"
 }
 
 // Hub client generation (research R3): v2 operations only, output in build/, never committed.
@@ -106,7 +106,7 @@ openApiGenerate {
     // As a file: URI, because a Windows path (D:\...) is not a valid spec location.
     inputSpec.set(rootProject.file("api/openapi.json").toURI().toString())
     outputDir.set(openApiOutput.map { it.asFile.absolutePath })
-    packageName.set("ai.sonora.mobile.hub.generated")
+    packageName.set("sonora.multiroom.mobile.hub.generated")
     // The FILTER normalizer has no `path:` rule in 7.14.0; every /api/v2 operation carries one of
     // these tags, while v1 (`*-controller`) and TTS operations carry others.
     openapiNormalizer.set(
@@ -143,16 +143,16 @@ abstract class VerifyLayering : DefaultTask() {
     @TaskAction
     fun verify() {
         val offenders = sources.files
-            .filter { it.isFile && it.extension == "kt" && it.readText().contains("ai.sonora.mobile.hub.generated") }
+            .filter { it.isFile && it.extension == "kt" && it.readText().contains("sonora.multiroom.mobile.hub.generated") }
             .map { it.name }
         check(offenders.isEmpty()) {
-            "ui/ and domain/ must not reference ai.sonora.mobile.hub.generated: $offenders"
+            "ui/ and domain/ must not reference sonora.multiroom.mobile.hub.generated: $offenders"
         }
     }
 }
 
 val verifyLayering by tasks.registering(VerifyLayering::class) {
-    val base = layout.projectDirectory.dir("src/commonMain/kotlin/ai/sonora/mobile")
+    val base = layout.projectDirectory.dir("src/commonMain/kotlin/sonora/multiroom/mobile")
     sources.from(
         fileTree(base.dir("ui")) { include("**/*.kt") },
         fileTree(base.dir("domain")) { include("**/*.kt") },

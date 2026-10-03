@@ -51,7 +51,7 @@ point. AGP 9 has Kotlin support built in, so `androidApp` does not apply `kotlin
 - `composeApp/`: all shared code (domain, data, UI) in `commonMain`, platform drivers in
   `androidMain` / `iosMain`, tests in `commonTest`.
 - `androidApp/`: `MainActivity`, `AndroidManifest.xml` (INTERNET permission, application id
-  `ai.sonora.mobile`), `res/xml/network_security_config.xml`, launcher resources.
+  `sonora.multiroom.mobile`), `res/xml/network_security_config.xml`, launcher resources.
 - Commands become:
   - `./gradlew :androidApp:assembleDebug` (APK)
   - `./gradlew :composeApp:testAndroidHostTest` (Android host tests. Enable host tests with
@@ -78,7 +78,7 @@ generated **sources** are used; the generated `build.gradle.kts` and wrapper are
 |---|---|---|
 | `inputSpec` | `$rootDir/api/openapi.json` | single source of truth |
 | `openapiNormalizer` | `FILTER=tag:Routes\|Outputs\|Inputs\|Groups\|Master Mute\|Playback\|Extensions` | generate only v2 operations (Constitution I). **Changed at implementation**: generator 7.14.0's FILTER normalizer has no `path:` rule (only `operationId:`, `method:`, `tag:`) and silently generated v1 and TTS operations too. Every `/api/v2` operation carries one of these tags, while v1 (`*-controller`) and TTS operations carry others |
-| `packageName` | `ai.sonora.mobile.hub.generated` | one package screens must never import |
+| `packageName` | `sonora.multiroom.mobile.hub.generated` | one package screens must never import |
 | `serializationLibrary` | *(not set)* | **Changed at implementation**: the multiplatform library already implies kotlinx.serialization. Setting `kotlinx_serialization` as well makes the 7.14.0 template emit `@Serializable@Serializable` on every model, which does not compile |
 | `dateLibrary` | `string` | timestamps are not used by this feature. Avoids pinning kotlinx-datetime to the generator's expected version |
 | `enumUnknownDefaultCase` | `false` | the multiplatform library does not decode into it. Unknown enums are handled by the JSON config (R4) |
@@ -100,7 +100,7 @@ Fabrikt / other generators (no multiplatform Ktor output).
 
 **Enforcing "screens never touch generated types"**: a Gradle `verifyLayering` task in `composeApp`
 (wired into `check`) fails if any file under `ui/` or `domain/` contains
-`ai.sonora.mobile.hub.generated`. This is cheaper than a separate module and keeps the rule
+`sonora.multiroom.mobile.hub.generated`. This is cheaper than a separate module and keeps the rule
 mechanical.
 
 ## R4. JSON tolerance for a newer hub

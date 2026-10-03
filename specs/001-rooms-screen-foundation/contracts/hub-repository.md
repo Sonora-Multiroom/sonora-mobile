@@ -3,7 +3,7 @@
 The only boundary between the app and the hub (Constitution I). Screens and view models depend on
 this interface. Only its Ktor implementation touches generated types.
 
-## Interface (commonMain, `ai.sonora.mobile.data`)
+## Interface (commonMain, `sonora.multiroom.mobile.data`)
 
 ```kotlin
 interface HubRepository {

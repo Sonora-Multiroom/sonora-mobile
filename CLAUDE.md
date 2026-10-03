@@ -15,7 +15,8 @@ repo: [api/openapi.json](api/openapi.json) and this file.
   later on a GitHub Actions macOS runner. Nothing Android-only goes in `commonMain`.
 - **No backend changes from this repo.** If the API lacks something, note it under
   "Hub gaps" below and work around it.
-- Package / applicationId: `ai.sonora.mobile` (change only if the user asks).
+- Package / applicationId: `sonora.multiroom.mobile`, after the product name Sonora Multiroom
+  (renamed from `ai.sonora.mobile` on 2026-10-03; change only if the user asks).
 
 ## Project layout (target)
 

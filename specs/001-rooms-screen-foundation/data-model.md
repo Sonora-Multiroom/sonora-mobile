@@ -4,12 +4,12 @@
 
 Three layers. Only the middle one is shared by screens and logic:
 
-1. **Generated wire types** (`ai.sonora.mobile.hub.generated.*`): `OutputResponse`,
+1. **Generated wire types** (`sonora.multiroom.mobile.hub.generated.*`): `OutputResponse`,
    `GroupResponse`, `RouteResponse`, `InputResponse`, `MasterMuteResponse`, `ErrorResponse`, …
    They are visible only to `data/`.
-2. **Domain types** (`ai.sonora.mobile.domain`): immutable, non-null where the app needs a value.
+2. **Domain types** (`sonora.multiroom.mobile.domain`): immutable, non-null where the app needs a value.
    Produced by the repository's mapping functions.
-3. **UI state** (`ai.sonora.mobile.ui.rooms`): what the Rooms screen draws. Produced by
+3. **UI state** (`sonora.multiroom.mobile.ui.rooms`): what the Rooms screen draws. Produced by
    `RoomsBuilder` (pure) and decorated by `RoomsViewModel` (overrides, in-flight flags, connection).
 
 ## Domain types

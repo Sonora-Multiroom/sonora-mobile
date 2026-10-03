@@ -12,7 +12,7 @@
         android:theme="@style/Theme.Sonora"
         android:usesCleartextTraffic="true">
         <activity
-            android:name="ai.sonora.mobile.android.MainActivity"
+            android:name="sonora.multiroom.mobile.android.MainActivity"
             android:exported="true"
             android:windowSoftInputMode="adjustResize">
             <intent-filter>

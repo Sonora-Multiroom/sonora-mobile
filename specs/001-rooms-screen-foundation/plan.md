@@ -100,7 +100,7 @@ composeApp/                         # KMP library: com.android.kotlin.multiplatf
 └── src/
     ├── commonMain/
     │   ├── composeResources/font/  # sora.ttf, dm_sans.ttf (existing)
-    │   └── kotlin/ai/sonora/mobile/
+    │   └── kotlin/sonora/multiroom/mobile/
     │       ├── App.kt              # SonoraTheme + navigation root
     │       ├── AppGraph.kt         # manual wiring: store, repository factory, view models
     │       ├── domain/
@@ -123,19 +123,19 @@ composeApp/                         # KMP library: com.android.kotlin.multiplatf
     │           ├── settings/       # SettingsViewModel.kt, SettingsScreen.kt
     │           ├── placeholder/    # PlaceholderScreen.kt
     │           └── Messages.kt     # actionErrorMessage
-    ├── commonTest/kotlin/ai/sonora/mobile/
+    ├── commonTest/kotlin/sonora/multiroom/mobile/
     │   ├── domain/                 # SourceKindTest, RoomsBuilderTest, GroupVolumeTest, HubAddressTest
     │   ├── data/                   # HttpClientsTest, KtorHubRepositorySnapshotTest, KtorHubRepositoryActionsTest (MockEngine), Fixtures.kt
     │   ├── ui/                     # MessagesTest; nav/AppBackStackTest; settings/SettingsViewModelTest; theme/ContrastTest
     │   └── ui/rooms/               # RoomsViewModelAddressTest, RoomsViewModelPollingTest, RoomsViewModelControlsTest, StatusTextTest
-    ├── androidMain/kotlin/ai/sonora/mobile/   # httpEngine() = OkHttp
-    └── iosMain/kotlin/ai/sonora/mobile/       # httpEngine() = Darwin, MainViewController (stub, passes the DataStore path)
+    ├── androidMain/kotlin/sonora/multiroom/mobile/   # httpEngine() = OkHttp
+    └── iosMain/kotlin/sonora/multiroom/mobile/       # httpEngine() = Darwin, MainViewController (stub, passes the DataStore path)
 
-androidApp/                         # com.android.application, applicationId ai.sonora.mobile
+androidApp/                         # com.android.application, applicationId sonora.multiroom.mobile
 ├── build.gradle.kts
 └── src/main/
     ├── AndroidManifest.xml         # INTERNET, networkSecurityConfig, MainActivity
-    ├── kotlin/ai/sonora/mobile/android/MainActivity.kt   # setContent { App(AppGraph(dataStorePath = filesDir…)) }
+    ├── kotlin/sonora/multiroom/mobile/android/MainActivity.kt   # setContent { App(AppGraph(dataStorePath = filesDir…)) }
     └── res/                        # xml/network_security_config.xml (cleartextTrafficPermitted=true), launcher icon, themes
 
 iosApp/                             # Xcode project stub, not built
