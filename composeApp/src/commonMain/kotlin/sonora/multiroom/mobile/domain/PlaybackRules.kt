@@ -95,7 +95,7 @@ internal fun occupancy(snapshot: HubSnapshot): Map<String, Route> {
     val result = linkedMapOf<String, Route>()
     for (route in liveRoutes(snapshot)) {
         for (id in describeTarget(route.target, rooms, groups, masterMuted = false).occupies) {
-            result.putIfAbsent(id, route)
+            if (id !in result) result[id] = route
         }
     }
     return result

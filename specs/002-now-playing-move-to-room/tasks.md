@@ -314,7 +314,7 @@ another client (quickstart §2 steps 2–5).
   - Exposes `onStop()`, `onPauseResume()`, `consumeMessage()` and `consumeExit()`.
 
   Make T017 pass.
-- [ ] T020 [P] [US1] Implement `main/ui/nowplaying/KindPanel.kt` per contracts/now-playing-ui.md
+- [X] T020 [P] [US1] Implement `main/ui/nowplaying/KindPanel.kt` per contracts/now-playing-ui.md
   "Layout" 2:
   - 248 dp, radius 28, three concentric 1 dp rings (380/276/176 dp) and a 92 dp disc with a 42 dp
     kind icon (`iconForKind`).
@@ -323,7 +323,7 @@ another client (quickstart §2 steps 2–5).
     `forKind(kind).icon`, icon `background`.
   - "Live stream" badge when `live`.
   - Wrapped in `clearAndSetSemantics {}`.
-- [ ] T021 [US1] Implement `main/ui/nowplaying/NowPlayingScreen.kt` (stateless
+- [X] T021 [US1] Implement `main/ui/nowplaying/NowPlayingScreen.kt` (stateless
   `NowPlayingContentView(state, actions)` + a stateful wrapper) per contracts/now-playing-ui.md:
   - back control "Rooms"
   - screen states Loading / Can't reach / Stale (banner + dimmed + all controls disabled) / Live
@@ -341,7 +341,7 @@ another client (quickstart §2 steps 2–5).
   `repeatOnLifecycle(STARTED) { onVisible(); try { awaitCancellation() } finally { onHidden() } }`.
   When `exit` is non-null, call `onExit()` then `consumeExit()`. No progress bar, position or
   artwork (FR-008).
-- [ ] T022 [US1] Wire navigation in `main/ui/nav/AppNavigation.kt` and `main/AppGraph.kt`:
+- [X] T022 [US1] Wire navigation in `main/ui/nav/AppNavigation.kt` and `main/AppGraph.kt`:
   - `AppGraph.nowPlayingViewModel(routeId, savedState: SavedStateHandle)`.
   - The `entry<Destination.NowPlaying>` renders `NowPlayingScreen(viewModel { graph.nowPlayingViewModel(key.routeId, createSavedStateHandle()) }, onBack = { backStack.pop() }, onExit = { backStack.pop() })`,
     replacing the placeholder (FR-001). The view model is per entry via T002's decorator.
@@ -400,7 +400,7 @@ then each room pill, then mute and unmute the group, comparing each value with t
   - Call `controller.onRefresh` on each successful session refresh.
 
   Make T025 pass.
-- [ ] T027 [US2] Implement `main/ui/nowplaying/VolumeSection.kt` per contracts/now-playing-ui.md
+- [X] T027 [US2] Implement `main/ui/nowplaying/VolumeSection.kt` per contracts/now-playing-ui.md
   "Layout" 7, reusing `main/ui/rooms/VolumePill.kt`. Add `height`, `showIcon` and `labelStyle`
   parameters if needed, keeping Rooms' look unchanged.
   - Main row: 52 dp pill (speaker icon, label 14 sp 600, percentage), plus a 52 dp mute button
@@ -510,7 +510,7 @@ member via "<Room> only" (quickstart §2 steps 7–10).
   - while `Move` is in flight, never set `exit` for a missing route (research R3)
 
   Make T030 pass.
-- [ ] T034 [US3] **Design gate (FR-026, research R12)**, met on 2026-10-03 (canvas version 13 and
+- [X] T034 [US3] **Design gate (FR-026, research R12)**, met on 2026-10-03 (canvas version 13 and
   the offline copy draw the Groups section); just confirm it. Confirm the canvas
   https://claude.ai/artifact/R7e4yABDYUuytc64XxNNKK (`project/Transfer.dc.html`) and
   `design/screens/Transfer.dc.html` contain a "Groups" section: a legend in the "Move to" style,
@@ -520,7 +520,7 @@ member via "<Room> only" (quickstart §2 steps 7–10).
     Bedroom + Office" with "Morning playlist will stop", and "Outdoor · Patio + Garden" with
     "Turned off"), then sync the offline copy.
   - Otherwise **stop and ask the user** before T035. Everything up to T033 is done regardless.
-- [ ] T035 [US3] Implement `main/ui/nowplaying/MoveSheet.kt` per contracts/now-playing-ui.md "Move
+- [X] T035 [US3] Implement `main/ui/nowplaying/MoveSheet.kt` per contracts/now-playing-ui.md "Move
   playback sheet" and the updated `Transfer.dc.html`:
   - Material 3 `ModalBottomSheet` with tokens (container `surface`, top radius 28, handle 36×4
     `#3A3E46`, scrim `rgba(5,6,8,0.72)`)
@@ -535,7 +535,7 @@ member via "<Room> only" (quickstart §2 steps 7–10).
     disabled while stale or in flight), and Cancel (44 dp)
   - rows use `selectable(role = Role.RadioButton)` with the description "<label>, <note>"
   - swipe, scrim and Back call `onDismissMove()`
-- [ ] T036 [US3] Add "Move to room…" to the actions row in `main/ui/nowplaying/NowPlayingScreen.kt`:
+- [X] T036 [US3] Add "Move to room…" to the actions row in `main/ui/nowplaying/NowPlayingScreen.kt`:
   76 dp `surface` round button, arrow icon, caption "Move to room…", label "Move to room". Shown
   only when `moveVisible`, disabled while stale. Show `MoveSheet` when `state.sheet != null`.
   System Back closes the sheet before popping.
@@ -546,7 +546,7 @@ member via "<Room> only" (quickstart §2 steps 7–10).
 
 ## Phase 6: Polish & Cross-Cutting Concerns
 
-- [ ] T037 [P] Accessibility pass over `main/ui/nowplaying/` (FR-027, contracts/now-playing-ui.md
+- [X] T037 [P] Accessibility pass over `main/ui/nowplaying/` (FR-027, contracts/now-playing-ui.md
   "Accessibility summary"):
   - every clickable ≥ 44 dp
   - exact labels per the table
@@ -557,19 +557,21 @@ member via "<Room> only" (quickstart §2 steps 7–10).
   40 % over `#2A1F10`), accent on `#2A1F10` (chip), and `onAccent` on `accent`. Text ≥ 4.5:1,
   icons ≥ 3:1. Dimmed text of disabled controls and unselectable rows is exempt (Constitution VI
   1.2.1, spec FR-027); do not add contrast cases for it.
-- [ ] T038 [P] Compare Now Playing and the sheet with `design/screens/NowPlaying.dc.html` and
+- [X] T038 [P] Compare Now Playing and the sheet with `design/screens/NowPlaying.dc.html` and
   `Transfer.dc.html` (sizes, spacing, radii, fonts, colours) and fix drift. Add previews in
   `main/ui/nowplaying/NowPlayingPreviews.kt` with the design sample data: the stream on Downstairs
   with the sheet's five rooms plus groups, a pauseable file source, and a line-in. Use the same
   preview mechanism as `RoomsPreviews.kt`, if one exists.
-- [ ] T039 Search `composeApp/src/` for `LinearProgressIndicator`, `Slider` and
+  *(Done without previews: the repository has no `RoomsPreviews.kt` or other preview mechanism, so none
+  were added. Sizes, spacing, radii, fonts and colours were matched to the two design files.)*
+- [X] T039 Search `composeApp/src/` for `LinearProgressIndicator`, `Slider` and
   `CircularProgressIndicator`; none may appear (FR-008). The string `groups/` + `volume` may appear
   only in the generated client and the negative tests. `setGroupMute` is the only group call
   besides listing.
-- [ ] T040 Run the [quickstart.md](quickstart.md) §1 commands: `./gradlew :androidApp:assembleDebug`,
+- [X] T040 Run the [quickstart.md](quickstart.md) §1 commands: `./gradlew :androidApp:assembleDebug`,
   `:composeApp:testAndroidHostTest`, `:composeApp:allTests`, `:composeApp:check`. All must be
   green, every suite in the §1 table must exist, and `git status` must show no generated files.
-- [ ] T041 Update `AGENTS.md` where the implementation differs from what it states (e.g. the
+- [X] T041 Update `AGENTS.md` where the implementation differs from what it states (e.g. the
   "Project layout" mention of `ui/session/` if useful, and the new dependencies if versions
   are listed), and mark `specs/002-now-playing-move-to-room/spec.md` `**Status**: Implemented`.
 

@@ -1,6 +1,7 @@
 package sonora.multiroom.mobile.ui.nav
 
 import sonora.multiroom.mobile.AppGraph
+import sonora.multiroom.mobile.ui.nowplaying.NowPlayingScreen
 import sonora.multiroom.mobile.ui.placeholder.PlaceholderScreen
 import sonora.multiroom.mobile.ui.rooms.RoomsScreen
 import sonora.multiroom.mobile.ui.settings.SettingsScreen
@@ -9,6 +10,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.safeDrawingPadding
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.lifecycle.createSavedStateHandle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.lifecycle.viewmodel.navigation3.rememberViewModelStoreNavEntryDecorator
 import androidx.navigation3.runtime.entryProvider
@@ -47,11 +49,12 @@ fun AppNavigation(graph: AppGraph, backStack: AppBackStack, onExit: () -> Unit) 
                         description = "Your saved stations, line-ins and files will be listed here.",
                     )
                 }
-                entry<Destination.NowPlaying> {
-                    PlaceholderScreen(
-                        title = "Now Playing",
-                        description = "Full controls for this room will be here, including Move to room…",
+                entry<Destination.NowPlaying> { key ->
+                    NowPlayingScreen(
+                        // One view model per entry (the decorators above), with its own saved state.
+                        viewModel = viewModel { graph.nowPlayingViewModel(key.routeId, createSavedStateHandle()) },
                         onBack = { backStack.pop() },
+                        onExit = { backStack.pop() },
                     )
                 }
                 entry<Destination.StartPlayback> {

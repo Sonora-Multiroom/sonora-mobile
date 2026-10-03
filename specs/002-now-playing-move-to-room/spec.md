@@ -4,7 +4,7 @@
 
 **Created**: 2026-10-03
 
-**Status**: Draft
+**Status**: Implemented
 
 **Input**: User description: "002: Now Playing + 'Move to room…'" — the Now Playing screen
 (`design/screens/NowPlaying.dc.html`) and the Move to room bottom sheet

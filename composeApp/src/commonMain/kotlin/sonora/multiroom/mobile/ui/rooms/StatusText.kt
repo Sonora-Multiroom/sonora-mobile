@@ -4,7 +4,7 @@ import sonora.multiroom.mobile.domain.CardStatus
 import sonora.multiroom.mobile.domain.NowPlayingCard
 import sonora.multiroom.mobile.domain.kindLabel
 
-private fun statusWord(status: CardStatus): String = when (status) {
+internal fun statusWord(status: CardStatus): String = when (status) {
     CardStatus.Playing -> "Playing"
     CardStatus.Paused -> "Paused"
     CardStatus.LiveStream -> "Live stream"

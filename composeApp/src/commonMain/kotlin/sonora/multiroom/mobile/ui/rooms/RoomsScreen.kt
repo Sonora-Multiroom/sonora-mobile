@@ -216,7 +216,7 @@ private fun Header(subtitle: String?, masterMuted: Boolean, muteEnabled: Boolean
 }
 
 @Composable
-private fun StaleBanner() {
+internal fun StaleBanner() {
     Text(
         "Can't reach the hub · showing last known state",
         style = SonoraTheme.type.body13Semi,

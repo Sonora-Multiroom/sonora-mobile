@@ -86,4 +86,66 @@ class ContrastTest {
         assertGraphic("idle play icon", c.accent, c.badge)
         assertGraphic("off-room icon", c.offTileIcon, c.offTile)
     }
+
+    // ---- Now Playing and the Move sheet (002, FR-027). Dimmed text of disabled controls and
+    // unselectable rows is exempt (Constitution VI 1.2.1) and not listed here. -----------------
+
+    /** [fg] at [alpha] composited over opaque [bg]. */
+    private fun over(fg: Color, alpha: Float, bg: Color) = Color(
+        red = fg.red * alpha + bg.red * (1 - alpha),
+        green = fg.green * alpha + bg.green * (1 - alpha),
+        blue = fg.blue * alpha + bg.blue * (1 - alpha),
+    )
+
+    @Test
+    fun nowPlayingSecondaryText() {
+        for ((bgName, bg) in listOf("background" to c.background, "surface" to c.surface)) {
+            assertText("textSoft on $bgName", c.textSoft, bg)
+            assertText("textBright on $bgName", c.textBright, bg)
+        }
+        // Member pill labels and percentages sit on both halves of the pill.
+        assertText("member label on surfaceRaised", c.textBright, c.surfaceRaised)
+        assertText("member label on accentContainer", c.textBright, c.accentContainer)
+        // textMuted would be 4.33:1 on accentContainer, so a muted member's number is textSoft.
+        assertText("muted member % on surfaceRaised", c.textSoft, c.surfaceRaised)
+        assertText("muted member % on accentContainer", c.textSoft, c.accentContainer)
+    }
+
+    @Test
+    fun liveBadgeAndStatusChips() {
+        // The badge is black 40 % over the stream panel.
+        assertText("live badge", c.warningText, over(Color.Black, 0.4f, c.streamPanel))
+        assertText("Playing chip", c.accent, c.streamPanel)
+        assertText("Paused chip", c.textSoft, c.surfaceRaised)
+        assertText("other chips", c.textMuted, c.surfaceRaised)
+        assertText("Failed chip", c.warningText, c.accentContainer)
+    }
+
+    @Test
+    fun moveSheetRows() {
+        for ((bgName, bg) in listOf("surface" to c.surface, "selected row" to c.selectedBg)) {
+            assertText("label on $bgName", c.text, bg)
+            assertText("note on $bgName", c.textMuted, bg)
+            assertText("warning note on $bgName", c.warningText, bg)
+        }
+        assertText("legend on surface", c.textMuted, c.surface)
+        assertText("Cancel on surface", c.textSoft, c.surface)
+        assertText("button label", c.onAccent, c.accent)
+    }
+
+    @Test
+    fun nowPlayingIcons() {
+        assertGraphic("tile icon on surfaceRaised", c.textSoft, c.surfaceRaised)
+        assertGraphic("radio on surface", c.textMuted, c.surface)
+        assertGraphic("radio selected on selected row", c.accent, c.selectedBg)
+        assertGraphic("keeps-playing check on surface", c.kindLineIn.icon, c.surface)
+        assertGraphic("action icon on surface", c.text, c.surface)
+        assertGraphic("mute icon on surface", c.textSoft, c.surface)
+        assertGraphic("stop icon on accent", c.onAccent, c.accent)
+        // The panel disc: kind icon colour behind the background-coloured glyph.
+        for (k in listOf(c.kindLineIn, c.kindFile, c.kindLink)) assertGraphic("disc glyph", c.background, k.icon)
+        assertGraphic("stream disc glyph", c.onAccent, c.accent)
+        // The selected row's #6B4C1F outline (2.24:1) is a redundant cue drawn as in the design:
+        // the selection is also carried by the accent radio dot above and by the row's semantics.
+    }
 }

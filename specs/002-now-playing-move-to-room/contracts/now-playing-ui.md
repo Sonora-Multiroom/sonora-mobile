@@ -61,7 +61,7 @@ colours come from the design files and are repeated here only where the design h
    - Group: member pills in a 2-column grid, 44 dp (radius 22), label = room name 14 sp `#E4E3DF`,
      no icon, percentage right. Odd counts leave the last cell empty.
    - Pill a11y: "<name> volume" with a range of 0–100 (FR-027). A muted pill shows the muted icon
-     (main) or the textMuted percentage (member) and ignores drags (FR-017). The pill fill is
+     (main) or a `textSoft` percentage (member; `textMuted` is only 4.33:1 on `accentContainer`) and ignores drags (FR-017). The pill fill is
      `accentContainer` on `surfaceRaised` and never looks like a progress bar (agreed detail).
    - Master mute on: the mute button is disabled and shows muted, and a line "All rooms are muted"
      (13 sp textMuted) appears under the pills (FR-018).

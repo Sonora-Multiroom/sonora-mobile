@@ -6,10 +6,12 @@ import sonora.multiroom.mobile.data.HubRepositoryFactory
 import sonora.multiroom.mobile.data.KtorHubRepositoryFactory
 import sonora.multiroom.mobile.data.createHubHttpClient
 import sonora.multiroom.mobile.data.httpEngine
+import sonora.multiroom.mobile.ui.nowplaying.NowPlayingViewModel
 import sonora.multiroom.mobile.ui.rooms.RoomsViewModel
 import sonora.multiroom.mobile.ui.session.AppMessages
 import sonora.multiroom.mobile.ui.session.HubSession
 import sonora.multiroom.mobile.ui.settings.SettingsViewModel
+import androidx.lifecycle.SavedStateHandle
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -29,6 +31,9 @@ class AppGraph(
     val messages = AppMessages()
 
     fun settingsViewModel() = SettingsViewModel(addressStore)
+
+    fun nowPlayingViewModel(routeId: String, savedState: SavedStateHandle) =
+        NowPlayingViewModel(routeId, savedState, session, messages)
 
     fun roomsViewModel() = RoomsViewModel(session, messages)
 }

@@ -30,7 +30,12 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.progressBarRangeInfo
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.setProgress
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import kotlin.math.roundToInt
 
 /**
@@ -47,6 +52,13 @@ fun VolumePill(
     enabled: Boolean,
     contentDescription: String,
     modifier: Modifier = Modifier,
+    /** Bar height; Rooms uses the touch-target minimum, Now Playing draws 52 dp and 44 dp pills. */
+    height: Dp = minTouchTarget,
+    /** Text between the icon and the percentage (Now Playing); Rooms draws none. */
+    label: String? = null,
+    labelStyle: TextStyle = SonoraTheme.type.body14.copy(fontWeight = FontWeight.SemiBold),
+    labelColor: Color = SonoraTheme.colors.text,
+    showIcon: Boolean = true,
     onDragStart: () -> Unit = {},
     onDrag: (Int) -> Unit = {},
     onDragEnd: (Int) -> Unit = {},
@@ -61,7 +73,7 @@ fun VolumePill(
     Box(
         modifier = modifier
             .fillMaxWidth()
-            .height(minTouchTarget)
+            .height(height)
             .clip(SonoraTheme.shapes.pill)
             .background(colors.surfaceRaised)
             .pointerInput(interactive) {
@@ -112,16 +124,29 @@ fun VolumePill(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.SpaceBetween,
         ) {
-            Icon(
-                imageVector = if (muted) SonoraIcons.SpeakerMuted else SonoraIcons.Speaker,
-                contentDescription = null,
-                tint = if (interactive || muted) colors.accent else colors.textMuted,
-                modifier = Modifier.size(20.dp),
-            )
+            Row(
+                modifier = Modifier.weight(1f),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                if (showIcon) {
+                    Icon(
+                        imageVector = if (muted) SonoraIcons.SpeakerMuted else SonoraIcons.Speaker,
+                        contentDescription = null,
+                        tint = if (interactive || muted) colors.accent else colors.textMuted,
+                        modifier = Modifier.size(20.dp),
+                    )
+                }
+                if (label != null) {
+                    Text(label, style = labelStyle, color = labelColor, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                }
+            }
             Text(
                 text = "$shown%",
                 style = SonoraTheme.type.body13Semi.copy(fontFeatureSettings = "tnum"),
-                color = colors.text,
+                // A muted pill without an icon says so through its softer number. textSoft rather than
+                // textMuted: the number sits on accentContainer, where textMuted is only 4.33:1.
+                color = if (muted && !showIcon) colors.textSoft else colors.text,
             )
         }
     }
