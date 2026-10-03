@@ -56,6 +56,13 @@ class NowPlayingViewModel(
     private var fenceSeq: Long? = null
 
     private var lastTargetName: String? = null
+
+    /**
+     * Set once the screen is over (stopped here or ended elsewhere). Unlike [NowPlayingUiState.exit],
+     * which the screen consumes, it stays set while the popped entry lives through its exit animation,
+     * so a late refresh lacking the route cannot announce "ended" again.
+     */
+    private var finished = false
     private var address: sonora.multiroom.mobile.domain.HubAddress? = null
 
     private val volume = VolumeDragController(
@@ -110,12 +117,13 @@ class NowPlayingViewModel(
         // The answer to a Stop or a Move decides, never a refresh that merely lacks the route.
         if (NowPlayingAction.Stop in current.inFlight || NowPlayingAction.Move in current.inFlight) return
         if (fenceSeq?.let { refreshSeq <= it } == true) return
-        if (current.exit != null) return
         end(lastTargetName)
     }
 
     /** It ended elsewhere: leave and tell Rooms (FR-002). */
     private fun end(targetName: String?) {
+        if (finished) return
+        finished = true
         messages.post(if (targetName != null) "Playback on $targetName ended" else "Playback ended")
         _state.update { it.copy(exit = Exit.Ended(targetName), sheet = null) }
     }
@@ -160,7 +168,10 @@ class NowPlayingViewModel(
             val result = repo.stopRoute(id)
             finishAction(NowPlayingAction.Stop)
             when {
-                result is HubResult.Ok -> _state.update { it.copy(exit = Exit.Stopped) }
+                result is HubResult.Ok -> {
+                    finished = true
+                    _state.update { it.copy(exit = Exit.Stopped) }
+                }
                 // Already gone: it ended elsewhere, so the usual notice rather than an error.
                 result is HubResult.Err && result.error is HubError.Rejected && result.error.status == 404 ->
                     end(content.target.name)

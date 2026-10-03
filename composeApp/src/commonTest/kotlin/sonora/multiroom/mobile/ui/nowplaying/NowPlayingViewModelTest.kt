@@ -175,6 +175,30 @@ class NowPlayingViewModelTest {
     }
 
     @Test
+    fun aRefreshLackingTheRouteAfterAStopWasConsumedStaysSilent() = runViewModelTest {
+        val s = live()
+        s.vm.onStop(); runCurrent()
+        // The screen pops and consumes the exit; the entry lives on through its exit animation.
+        s.vm.consumeExit()
+        s.refresh(snapshot(r1 = false)); runCurrent()
+        assertNull(s.ui.exit)
+        assertEquals(emptyList(), s.posted)
+        s.vm.onHidden()
+    }
+
+    @Test
+    fun theEndedMessageIsPostedOnceEvenAfterTheExitWasConsumed() = runViewModelTest {
+        val s = live()
+        s.repo.actionResult = { HubResult.Err(HubError.Rejected(404, null)) }
+        s.vm.onStop(); runCurrent()
+        s.vm.consumeExit()
+        s.refresh(snapshot(r1 = false)); runCurrent()
+        assertNull(s.ui.exit)
+        assertEquals(listOf("Playback on Downstairs ended"), s.posted)
+        s.vm.onHidden()
+    }
+
+    @Test
     fun aFailedStopStaysOpenWithAMessage() = runViewModelTest {
         val s = live()
         s.repo.actionResult = { unreachable }
