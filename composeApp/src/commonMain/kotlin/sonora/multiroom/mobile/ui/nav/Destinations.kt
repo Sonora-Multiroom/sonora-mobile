@@ -51,8 +51,8 @@ class AppBackStack(initial: List<Destination> = listOf(Destination.Rooms)) {
         require(tab == Destination.Rooms || tab == Destination.Sources || tab == Destination.Settings)
         if (stack.size == 1 && stack.single() == tab) return
         if (stack.size == 2 && stack.last() == tab && tab != Destination.Rooms) return
-        stack.clear()
-        stack.add(Destination.Rooms)
+        // The Rooms root is never removed, so its entry (and view model) survives tab switches.
+        while (stack.size > 1) stack.removeAt(stack.lastIndex)
         if (tab != Destination.Rooms) stack.add(tab)
     }
 

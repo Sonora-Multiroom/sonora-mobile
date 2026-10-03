@@ -45,11 +45,11 @@ FR-025. Every test task comes before its implementation task and MUST be seen fa
 
 **Purpose**: version bump and the two new dependencies.
 
-- [ ] T001 Bump the app version as the **first commit** of this feature (AGENTS.md "Workflow"): in
+- [X] T001 Bump the app version as the **first commit** of this feature (AGENTS.md "Workflow"): in
   `gradle.properties` set `sonora.versionName=0.2.0-alpha` and `sonora.versionCode=2`. Run
   `./gradlew :androidApp:assembleDebug` and check that `AppVersionTest` still passes (it must not
   hard-code 0.1.0).
-- [ ] T002 Add `lifecycle-viewmodel-navigation3 = { module = "org.jetbrains.androidx.lifecycle:lifecycle-viewmodel-navigation3", version.ref = "lifecycle" }`
+- [X] T002 Add `lifecycle-viewmodel-navigation3 = { module = "org.jetbrains.androidx.lifecycle:lifecycle-viewmodel-navigation3", version.ref = "lifecycle" }`
   and `lifecycle-viewmodel-savedstate = { module = "org.jetbrains.androidx.lifecycle:lifecycle-viewmodel-savedstate", version.ref = "lifecycle" }`
   to `gradle/libs.versions.toml` (2.11.0, research R2; re-check Maven Central for a newer **stable**
   2.11.x patch and record any change in research.md R2). Add both to `commonMain` dependencies in

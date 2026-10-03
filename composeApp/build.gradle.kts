@@ -70,6 +70,8 @@ kotlin {
                 implementation(libs.compose.components.resources)
                 implementation(libs.lifecycle.viewmodel.compose)
                 implementation(libs.lifecycle.runtime.compose)
+                implementation(libs.lifecycle.viewmodel.navigation3)
+                implementation(libs.lifecycle.viewmodel.savedstate)
                 implementation(libs.navigation3.ui)
                 implementation(libs.ktor.client.core)
                 implementation(libs.ktor.client.content.negotiation)

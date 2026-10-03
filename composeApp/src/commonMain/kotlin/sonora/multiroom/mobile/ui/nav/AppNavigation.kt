@@ -10,7 +10,9 @@ import androidx.compose.foundation.layout.safeDrawingPadding
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.lifecycle.viewmodel.navigation3.rememberViewModelStoreNavEntryDecorator
 import androidx.navigation3.runtime.entryProvider
+import androidx.navigation3.runtime.rememberSaveableStateHolderNavEntryDecorator
 import androidx.navigation3.ui.NavDisplay
 
 @Composable
@@ -20,6 +22,12 @@ fun AppNavigation(graph: AppGraph, backStack: AppBackStack, onExit: () -> Unit) 
             backStack = backStack.stack,
             onBack = { if (!backStack.pop()) onExit() },
             modifier = Modifier.weight(1f),
+            // View models live in their entry's store, so each Now Playing entry gets its own and
+            // it is cleared when the entry is popped (research R2).
+            entryDecorators = listOf(
+                rememberSaveableStateHolderNavEntryDecorator(),
+                rememberViewModelStoreNavEntryDecorator(),
+            ),
             entryProvider = entryProvider<Destination> {
                 entry<Destination.Rooms> {
                     RoomsScreen(
