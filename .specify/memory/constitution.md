@@ -101,6 +101,10 @@ Rationale: a home LAN hub restarts, sleeps and changes address; the app must tre
   stop" notice when starting on a busy target) MUST be kept.
 - Touch targets MUST be ≥ 44 dp, text contrast ≥ 4.5:1 against its background, and every
   icon-only control MUST have a content description.
+- The contrast rule applies to active content. Text of disabled or inactive controls and of
+  unselectable list rows, dimmed as the design draws them (e.g. opacity 0.5), is exempt, as
+  inactive UI components are in WCAG 2.x SC 1.4.3. Such controls MUST still carry their content
+  description and be announced as disabled.
 
 Rationale: the design was agreed deliberately; drift and inaccessible controls are both defects.
 
@@ -156,4 +160,4 @@ Rationale: each dependency is a multiplatform compatibility risk and a future iO
 - Reviews of specs, plans and implementations MUST check compliance with every principle;
   unjustified complexity or deviation is a blocking finding.
 
-**Version**: 1.2.0 | **Ratified**: 2026-10-01 | **Last Amended**: 2026-10-03
+**Version**: 1.2.1 | **Ratified**: 2026-10-01 | **Last Amended**: 2026-10-03
