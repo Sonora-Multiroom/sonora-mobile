@@ -71,7 +71,8 @@ val openApiOutput = layout.buildDirectory.dir("generated/openapi")
 openApiGenerate {
     generatorName.set("kotlin")
     library.set("multiplatform")
-    inputSpec.set("$rootDir/api/openapi.json")
+    // As a file: URI, because a Windows path (D:\...) is not a valid spec location.
+    inputSpec.set(rootProject.file("api/openapi.json").toURI().toString())
     outputDir.set(openApiOutput.map { it.asFile.absolutePath })
     packageName.set("ai.sonora.mobile.hub.generated")
     // The FILTER normalizer has no `path:` rule in 7.14.0; every /api/v2 operation carries one of
