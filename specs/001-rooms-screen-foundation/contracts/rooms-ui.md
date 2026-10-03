@@ -1,7 +1,7 @@
 # Contract: Rooms screen and app shell (UI)
 
 Visual reference: [design/screens/Main.dc.html](../../../design/screens/Main.dc.html) (390×844).
-Tokens: CLAUDE.md "Design". This contract fixes texts, states and accessibility labels. Sizes and
+Tokens: AGENTS.md "Design". This contract fixes texts, states and accessibility labels. Sizes and
 colours come from the design file.
 
 ## Screen states (top to bottom priority)
@@ -78,5 +78,5 @@ will be there. Placeholders opened from cards/rows have a back arrow labelled "B
 
 - All interactive elements ≥ 44 dp.
 - Every icon-only control has the labels listed above.
-- Text on its background ≥ 4.5:1 with the CLAUDE.md tokens. Dimmed (stale/off) content uses
+- Text on its background ≥ 4.5:1 with the AGENTS.md tokens. Dimmed (stale/off) content uses
   `textMuted` on `surface`, not alpha below that ratio.

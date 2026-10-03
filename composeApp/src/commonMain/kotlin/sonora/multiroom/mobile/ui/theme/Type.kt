@@ -12,7 +12,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.sp
 import org.jetbrains.compose.resources.Font
 
-/** Sora for titles, DM Sans for everything else (CLAUDE.md "Design"). */
+/** Sora for titles, DM Sans for everything else (AGENTS.md "Design"). */
 data class SonoraType(
     val screenTitle: TextStyle,
     val cardTitle: TextStyle,

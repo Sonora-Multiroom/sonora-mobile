@@ -5,7 +5,7 @@ import androidx.compose.ui.graphics.Color
 /** A kind tile: background and icon colour. */
 data class KindColors(val tile: Color, val icon: Color)
 
-/** Every colour of the design (CLAUDE.md "Design" tokens, plus the few extras in Main.dc.html). */
+/** Every colour of the design (AGENTS.md "Design" tokens, plus the few extras in Main.dc.html). */
 data class SonoraColors(
     val background: Color = Color(0xFF0E0F12),
     val surface: Color = Color(0xFF17191E),

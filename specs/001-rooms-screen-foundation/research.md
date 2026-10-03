@@ -32,7 +32,7 @@ were re-checked against Maven Central / Google Maven / services.gradle.org. No n
 version existed, so every version above is used unchanged.
 
 **Decision**: pin these in `gradle/libs.versions.toml`.
-**Rationale**: CLAUDE.md requires current stable versions, looked up, not recalled.
+**Rationale**: AGENTS.md requires current stable versions, looked up, not recalled.
 **Alternatives considered**: Kotlin 2.5.0-Beta1, CMP 1.13.0-alpha01, AGP 9.5.0-alpha08 were rejected
 because they are pre-releases.
 
@@ -56,11 +56,11 @@ point. AGP 9 has Kotlin support built in, so `androidApp` does not apply `kotlin
   - `./gradlew :androidApp:assembleDebug` (APK)
   - `./gradlew :composeApp:testAndroidHostTest` (Android host tests. Enable host tests with
     `withHostTest {}` in `kotlin { android { } }`. Confirm the exact task name with
-    `./gradlew :composeApp:tasks --all` and record it here and in CLAUDE.md)
+    `./gradlew :composeApp:tasks --all` and record it here and in AGENTS.md)
   - `./gradlew :composeApp:allTests` (all KMP tests; iOS skipped off macOS)
-- CLAUDE.md ("Project layout", "Commands") and Constitution IV (which lists
+- AGENTS.md ("Project layout", "Commands") and Constitution IV (which lists
   `:composeApp:assembleDebug` / `:composeApp:testDebugUnitTest`) MUST be updated as the first
-  implementation task (constitution PATCH bump to 1.1.1 via `/speckit-constitution`, CLAUDE.md
+  implementation task (constitution PATCH bump to 1.1.1 via `/speckit-constitution`, AGENTS.md
   synced in the same commit). This is tracked in the plan's Complexity Tracking.
 
 **Alternatives considered**: pinning AGP 8.13.2 to keep a single module. Rejected by the user: it

@@ -6,7 +6,7 @@
 
 **Status**: Implemented
 
-**Input**: User description: "Scope of the first feature" — the section of that name in CLAUDE.md:
+**Input**: User description: "Scope of the first feature" — the section of that name in AGENTS.md:
 scaffold the app with the bundled fonts and design tokens, use a client generated from the hub's
 API description, a Settings stub with a persisted "Hub address", the Rooms screen against the real
 hub with polling (now-playing cards with volume pill, Stop, Pause/Resume when pauseable; Idle

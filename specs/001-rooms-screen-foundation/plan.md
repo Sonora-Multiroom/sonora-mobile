@@ -52,7 +52,7 @@ stub + 3 placeholders.
 
 | Principle | Status | How |
 |---|---|---|
-| I. API Contract Fidelity | ✅ | Client generated at build time with `FILTER=path:/api/v2`, output in `build/` (not committed, never edited). Generated package is `internal` and banned from `ui/`/`domain/` by `verifyLayering`. All hub access goes through `HubRepository` ([contract](contracts/hub-repository.md)). No group-volume call. Hub gaps (no group volume, no kind, no push, no mDNS) are already in spec + CLAUDE.md |
+| I. API Contract Fidelity | ✅ | Client generated at build time with `FILTER=path:/api/v2`, output in `build/` (not committed, never edited). Generated package is `internal` and banned from `ui/`/`domain/` by `verifyLayering`. All hub access goes through `HubRepository` ([contract](contracts/hub-repository.md)). No group-volume call. Hub gaps (no group volume, no kind, no push, no mDNS) are already in spec + AGENTS.md |
 | II. Truthful UI | ✅ (see note) | No progress/position/metadata. Pause/Resume only when `pauseable`. Distinct Off / Not connected / Idle / Playing / Paused / Couldn't play. Local value wins while dragging, refresh reconciles. Throttled volume. Kind derived only in `inferSourceKind` |
 | III. Shared-First | ✅ | Everything in `commonMain`. `androidMain` only has the OkHttp engine + DataStore path. `androidApp` has the activity, manifest and network config. iOS stub keeps targets compiling-ready |
 | IV. Test-First | ✅ | Pure logic suites + `MockEngine` repository tests + ViewModel tests with virtual time, written before implementation ([quickstart](quickstart.md) §1). Done = `:androidApp:assembleDebug` + all tests green (commands per constitution 1.1.1) |
@@ -147,7 +147,7 @@ stub. All logic and UI live in `composeApp/src/commonMain`.
 
 ## Implementation notes for tasks
 
-1. **First task**: update CLAUDE.md "Project layout" + "Commands" and amend Constitution IV
+1. **First task**: update AGENTS.md "Project layout" + "Commands" and amend Constitution IV
    commands (PATCH → 1.1.1, `/speckit-constitution`) to the AGP 9 layout, in one commit.
 2. Write test suites before each logic unit: SourceKind → GroupVolume → HubAddress → RoomsBuilder →
    KtorHubRepository → RoomsViewModel. Watch each one fail first (Constitution IV).
@@ -161,4 +161,4 @@ stub. All logic and UI live in `composeApp/src/commonMain`.
 ## Complexity Tracking
 
 None. The AGP 9 command change (`androidApp` module, see research R2) was folded into constitution
-1.1.1 and CLAUDE.md on 2026-10-02.
+1.1.1 and AGENTS.md on 2026-10-02.

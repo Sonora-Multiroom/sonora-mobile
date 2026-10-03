@@ -49,7 +49,7 @@ kotlin {
         withHostTest {}
     }
 
-    // iOS targets are declared but never built in the cloud (CLAUDE.md "Decisions").
+    // iOS targets are declared but never built in the cloud (AGENTS.md "Decisions").
     listOf(iosArm64(), iosSimulatorArm64()).forEach { target ->
         target.binaries.framework {
             baseName = "ComposeApp"
