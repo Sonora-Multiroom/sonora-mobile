@@ -82,7 +82,7 @@ Playing
 <span style="display: flex; align-items: center; gap: 8px; font-size: 14px; font-weight: 600"><svg class="i" style="color: #F2A541" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9h4l5-4v14l-5-4H4z"></path><path d="M17 9a4 4 0 0 1 0 6"></path></svg>Downstairs</span>
 <span style="font-size: 13px; font-weight: 600; font-variant-numeric: tabular-nums">{{group}}%</span>
 </div>
-<input type="range" aria-label="Downstairs volume" min="0" max="100" value="{{group}}" onChange="{{setGroup}}" style="position: absolute; inset: 0; width: 100%; height: 100%; margin: 0; opacity: 0; cursor: ew-resize">
+<input type="range" aria-label="Downstairs volume" min="0" max="100" value="{{group}}" onChange="{{setGroup}}" onPointerUp="{{endGroup}}" onKeyUp="{{endGroup}}" style="position: absolute; inset: 0; width: 100%; height: 100%; margin: 0; opacity: 0; cursor: ew-resize">
 </div>
 <button aria-label="{{muteLabel}}" onClick="{{toggleMute}}" style="width: 52px; height: 52px; border-radius: 26px; flex-shrink: 0; background: #17191E; color: #C9CBD1; display: flex; align-items: center; justify-content: center">
 <sc-if value="{{muted}}" hint-placeholder-val="{{ false }}">
@@ -118,13 +118,25 @@ Playing
 class Component extends DCLogic {
   constructor(props) {
     super(props);
-    this.state = { group: 62, living: 70, kitchen: 55, muted: false };
+    // The hub has no group volume: the group pill shows the loudest member, and dragging it
+    // scales every member from the volumes they had when the drag started (spec FR-013a/b).
+    this.state = { living: 70, kitchen: 55, base: null, muted: false };
   }
   renderVals() {
     const s = this.state;
-    const vol = (k) => (e) => this.setState({ [k]: +e.target.value });
+    const clamp = (v) => Math.min(100, Math.max(0, v));
+    const group = Math.max(s.living, s.kitchen);
+    const setGroup = (e) => {
+      const v = +e.target.value;
+      const base = s.base || { living: s.living, kitchen: s.kitchen };
+      const top = Math.max(base.living, base.kitchen);
+      const scale = (x) => (top === 0 ? v : clamp(Math.floor(x * v / top + 0.5)));
+      this.setState({ base, living: scale(base.living), kitchen: scale(base.kitchen) });
+    };
+    const vol = (k) => (e) => this.setState({ [k]: +e.target.value, base: null });
     return {
-      group: s.group, groupV: s.group + '%', setGroup: vol('group'),
+      group, groupV: group + '%', setGroup,
+      endGroup: () => this.setState({ base: null }),
       living: s.living, livingV: s.living + '%', setLiving: vol('living'),
       kitchen: s.kitchen, kitchenV: s.kitchen + '%', setKitchen: vol('kitchen'),
       muted: s.muted,

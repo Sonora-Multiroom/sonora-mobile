@@ -1,0 +1,86 @@
+name: Android APK
+
+on:
+  push:
+    branches: [main]
+  # Feature-branch and Dependabot PRs; the Appetize upload stays manual-only.
+  pull_request:
+  workflow_dispatch:
+    inputs:
+      upload_to_appetize:
+        description: Upload the APK to Appetize.io
+        type: boolean
+        default: false
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  assemble-debug:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: 21
+
+      - uses: gradle/actions/setup-gradle@v6
+
+      - name: Run unit tests
+        run: ./gradlew :composeApp:testAndroidHostTest
+
+      - uses: actions/upload-artifact@v7
+        if: failure()
+        with:
+          name: test-reports
+          path: composeApp/build/reports/tests/
+          retention-days: 14
+
+      - name: Build debug APK
+        run: ./gradlew :androidApp:assembleDebug
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: sonora-debug-apk
+          path: androidApp/build/outputs/apk/debug/*.apk
+          if-no-files-found: error
+          retention-days: 14
+
+  # A separate job so a failed upload can be re-run without rebuilding.
+  # Needs the APPETIZE_API_TOKEN secret. Set the APPETIZE_PUBLIC_KEY variable (the id in
+  # https://appetize.io/app/<publicKey>) to update one app in place; without it every
+  # upload creates a new app.
+  deploy-appetize:
+    needs: assemble-debug
+    if: inputs.upload_to_appetize
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/download-artifact@v8
+        with:
+          name: sonora-debug-apk
+          path: apk
+
+      - name: Upload to Appetize.io
+        id: appetize
+        uses: appetizeio/github-action-appetize@v1.1.0
+        with:
+          apiToken: ${{ secrets.APPETIZE_API_TOKEN }}
+          publicKey: ${{ vars.APPETIZE_PUBLIC_KEY }}
+          appFile: apk/androidApp-debug.apk
+          platform: android
+          note: ${{ github.sha }} (${{ github.ref_name }})
+
+      - name: Report Appetize link
+        env:
+          PUBLIC_KEY: ${{ steps.appetize.outputs.publicKey }}
+          CONFIGURED_KEY: ${{ vars.APPETIZE_PUBLIC_KEY }}
+        run: |
+          echo "Appetize app: https://appetize.io/app/$PUBLIC_KEY" >> "$GITHUB_STEP_SUMMARY"
+          if [ -z "$CONFIGURED_KEY" ]; then
+            echo "New app created. Set the APPETIZE_PUBLIC_KEY variable to $PUBLIC_KEY to update it next time." >> "$GITHUB_STEP_SUMMARY"
+          fi

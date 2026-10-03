@@ -1,0 +1,28 @@
+version: 2
+updates:
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    groups:
+      actions:
+        patterns: ["*"]
+
+  # Reads gradle/libs.versions.toml (and the Gradle wrapper).
+  - package-ecosystem: gradle
+    directory: /
+    schedule:
+      interval: monthly
+    ignore:
+      # Pinned on purpose: composeApp/build.gradle.kts relies on 7.14.0's FILTER normalizer
+      # behaviour. Bump by hand and re-check the generated client.
+      - dependency-name: "org.openapi.generator*"
+    groups:
+      # Kotlin, Compose Multiplatform and AGP must move together; a lone bump rarely builds.
+      toolchain:
+        patterns:
+          - "org.jetbrains.kotlin.*"
+          - "org.jetbrains.compose*"
+          - "com.android.*"
+      libraries:
+        patterns: ["*"]
