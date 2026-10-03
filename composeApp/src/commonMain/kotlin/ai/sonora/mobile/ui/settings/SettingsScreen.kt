@@ -1,5 +1,6 @@
 package ai.sonora.mobile.ui.settings
 
+import ai.sonora.mobile.domain.appVersionLabel
 import ai.sonora.mobile.ui.theme.SonoraTheme
 import ai.sonora.mobile.ui.theme.minTouchTarget
 import androidx.compose.foundation.background
@@ -7,6 +8,8 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -23,6 +26,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 
 @Composable
@@ -42,11 +46,12 @@ fun SettingsContent(
     onTextChange: (String) -> Unit,
     onSave: () -> Unit,
     modifier: Modifier = Modifier,
+    versionLabel: String = appVersionLabel(),
 ) {
     val colors = SonoraTheme.colors
     val type = SonoraTheme.type
     Column(
-        modifier = modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 28.dp),
+        modifier = modifier.fillMaxSize().padding(horizontal = 20.dp, vertical = 28.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp),
     ) {
         Text("Settings", style = type.screenTitle, color = colors.text)
@@ -103,5 +108,15 @@ fun SettingsContent(
         if (state.saved) {
             Text("Saved", style = type.body14, color = colors.textMuted, modifier = Modifier.height(minTouchTarget))
         }
+
+        // Version footer (FR-021a): tells testers which build they run, including the alpha stage.
+        Spacer(Modifier.weight(1f))
+        Text(
+            text = versionLabel,
+            style = type.label12,
+            color = colors.textMuted,
+            textAlign = TextAlign.Center,
+            modifier = Modifier.fillMaxWidth(),
+        )
     }
 }

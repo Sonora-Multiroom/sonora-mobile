@@ -10,6 +10,37 @@ plugins {
     alias(libs.plugins.openapiGenerator)
 }
 
+// The app version (gradle.properties `sonora.versionName`) as a common constant, so every
+// platform's Settings footer shows the same version as the Android APK (FR-021a).
+abstract class GenerateAppVersion : DefaultTask() {
+    @get:Input
+    abstract val versionName: Property<String>
+
+    @get:OutputDirectory
+    abstract val outputDir: DirectoryProperty
+
+    @TaskAction
+    fun generate() {
+        val file = outputDir.file("ai/sonora/mobile/domain/AppVersionName.kt").get().asFile
+        file.parentFile.mkdirs()
+        file.writeText(
+            """
+            |package ai.sonora.mobile.domain
+            |
+            |/** Generated from gradle.properties `sonora.versionName`; do not edit. */
+            |const val APP_VERSION_NAME: String = "${versionName.get()}"
+            |""".trimMargin(),
+        )
+    }
+}
+
+val appVersionOutput = layout.buildDirectory.dir("generated/appVersion/src/commonMain/kotlin")
+
+val generateAppVersion by tasks.registering(GenerateAppVersion::class) {
+    versionName.set(providers.gradleProperty("sonora.versionName"))
+    outputDir.set(appVersionOutput)
+}
+
 kotlin {
     android {
         namespace = "ai.sonora.mobile.shared"
@@ -30,6 +61,7 @@ kotlin {
         commonMain {
             // Generated hub client (never committed, never edited).
             kotlin.srcDir(layout.buildDirectory.dir("generated/openapi/src/commonMain/kotlin"))
+            kotlin.srcDir(appVersionOutput)
             dependencies {
                 implementation(libs.compose.runtime)
                 implementation(libs.compose.foundation)
@@ -96,11 +128,11 @@ openApiGenerate {
 }
 
 tasks.withType<KotlinCompilationTask<*>>().configureEach {
-    dependsOn(tasks.named("openApiGenerate"))
+    dependsOn(tasks.named("openApiGenerate"), generateAppVersion)
 }
 // Anything else that reads the commonMain sources (source jars, resource/metadata tasks).
 tasks.matching { it.name.endsWith("SourcesJar") || it.name.startsWith("generateResourceAccessorsFor") }
-    .configureEach { dependsOn(tasks.named("openApiGenerate")) }
+    .configureEach { dependsOn(tasks.named("openApiGenerate"), generateAppVersion) }
 
 // ui/ and domain/ must never see generated wire types (Constitution I).
 abstract class VerifyLayering : DefaultTask() {

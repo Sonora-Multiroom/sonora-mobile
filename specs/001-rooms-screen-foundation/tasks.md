@@ -274,6 +274,7 @@ FR-013d. Every test task comes before its implementation task and MUST be seen f
 - [X] T058 Confirm FR-012 / Constitution II by searching `composeApp/src/` for `LinearProgressIndicator`, `Slider` and `CircularProgressIndicator`; none may appear. Confirm the string `groups/` + `volume` appears only in the generated client and the T044 negative test.
 - [X] T059 Run the [quickstart.md](quickstart.md) §1 commands: `./gradlew :androidApp:assembleDebug`, `./gradlew :composeApp:testAndroidHostTest` (or the name confirmed in T009), `./gradlew :composeApp:allTests`, `./gradlew :composeApp:check`. All must be green, and `git status` must show no generated files. Record the final versions actually used in research.md R1 if any differ.
 - [X] T060 Update `CLAUDE.md` if anything implemented differs from what it states (commands, layout, versions), and mark the spec `**Status**: Implemented` in `specs/001-rooms-screen-foundation/spec.md`.
+- [X] T061 Version footer on Settings (FR-021a, added 2026-10-03): `sonora.versionName=0.1.0-alpha` in `gradle.properties` feeds `androidApp` `versionName` and a generated `APP_VERSION_NAME` constant in `composeApp`; `versionLabel()` in `composeApp/src/commonMain/kotlin/ai/sonora/mobile/domain/AppVersion.kt` (tests first in `composeApp/src/commonTest/kotlin/ai/sonora/mobile/domain/AppVersionTest.kt`); footer at the bottom of `SettingsContent`; footer added to `design/screens/Settings.dc.html`.
 
 ---
 

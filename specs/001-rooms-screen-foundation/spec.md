@@ -274,7 +274,12 @@ screen; each shows the correct destination or placeholder, and Back returns to R
 
 - **FR-020**: The app MUST provide bottom navigation with Rooms, Sources and Settings.
 - **FR-021**: Now Playing, Start Playback and Sources MUST exist as reachable placeholder screens.
-  Settings in this feature contains only the hub address.
+  Settings in this feature contains only the hub address and the version footer (FR-021a).
+- **FR-021a**: Settings MUST end with a centred version footer in 12 sp `textMuted`, e.g.
+  "Sonora 0.1.0 · Alpha". The version comes from the build (`sonora.versionName` in
+  `gradle.properties`); a pre-release suffix such as `-alpha` becomes the stage label, and a
+  release version (`1.0.0`) shows no label. Added 2026-10-03 so testers can see the app is an
+  alpha and quote the version in reports.
 
 **Look & accessibility**
 
