@@ -15,6 +15,10 @@
 ### Session 2026-10-03
 
 - Q: Should other groups also be offered as "Move to room…" destinations, given that the hub can move playback to a group but the design lists rooms only? → A: Yes. The sheet lists rooms and, in their own "Groups" section, groups; the design is updated first (FR-020, FR-020a, FR-026).
+- Q: When playback is moved onto a room that is already playing something else, what does the hub do with that room's current playback? → A: It stops it and the moved playback takes over; if that playback was on a group, the whole group's playback stops (FR-021, FR-020a, Assumptions).
+- Q: If a group has one room whose speaker isn't connected, should playback still be movable to that group? → A: Yes; the group stays selectable and its note adds which rooms are not connected (e.g. "· Patio not connected"); the hub plays on the connected rooms (FR-020a).
+- Q: While master mute is on, what happens if a single room or group is unmuted? → A: The room stays silent until master mute is turned off, so the mute button stays disabled with "All rooms are muted" (FR-018, Assumptions).
+- Q: If a paused playback is moved, what does the hub do? → A: Unknown; offer "Move to room…" only while the playback is Playing and hide it while Paused, until checked on the hub (FR-012, Assumptions).
 
 ## User Scenarios & Testing *(mandatory)*
 
@@ -99,21 +103,22 @@ to a group, then from the group to one of its members; compare the result with t
 
 **Acceptance Scenarios**:
 
-1. **Given** a route the hub marks transferable and that is Playing or Paused, **When** Now Playing
-   is shown, **Then** it offers "Move to room…"; otherwise the action is not shown.
+1. **Given** a route the hub marks transferable and that is Playing, **When** Now Playing is shown,
+   **Then** it offers "Move to room…"; otherwise (including while Paused) the action is not shown.
 2. **Given** the user taps "Move to room…", **When** the sheet opens, **Then** it is titled "Move
    playback" with the line "<source> · now on <target>", lists the destinations under "Move to",
    shows the note "Keeps playing while it moves, no restart", and offers a primary button and
    Cancel.
 3. **Given** the sheet, **When** it lists destinations, **Then** each room shows what moving there
    means: an idle room reads "Idle"; a room busy with another playback reads "<other source> will
-   stop" in the warning colour; for a group route, each member room appears as "<Room> only" with
+   stop" in the warning colour (or "<other source> will stop on <group>" when that playback is on a
+   group, which then stops as a whole); for a group route, each member room appears as "<Room> only" with
    "<other member rooms> stop"; a room that is turned off reads "Turned off" and one whose hardware
    is not connected reads "Not connected", and neither can be picked.
 4. **Given** the sheet, **When** it lists groups in its "Groups" section, **Then** each group shows
    its member rooms (e.g. "Living Room + Kitchen"), or "<other source> will stop" in the warning
-   colour when moving there would stop other playback; a turned-off group, or one with a member
-   room that is not connected, cannot be picked.
+   colour when moving there would stop other playback, followed by "· <Room> not connected" for
+   member rooms without hardware; only a turned-off group cannot be picked.
 5. **Given** the user picks a destination, **When** the primary button reads "Move to <name>" and
    is tapped, **Then** the hub moves the playback, the sheet closes, and Now Playing shows the same
    source playing on the new target.
@@ -149,7 +154,8 @@ to a group, then from the group to one of its members; compare the result with t
 - **Destination becomes busy, turned off or disconnected while the sheet is open**: the option's
   note and availability update with the next refresh; a selected option that becomes unavailable
   is deselected.
-- **Nothing to move to** (every other room is turned off or not connected): the sheet still opens,
+- **Nothing to move to** (every other room is turned off or not connected, and every other group
+  is turned off or there is none): the sheet still opens,
   lists them as unavailable, and the primary button stays disabled.
 - **Two moves at once** (another client moves the same playback first): the hub rejects the
   second; the app shows the plain message and follows the hub's state.
@@ -199,7 +205,8 @@ to a group, then from the group to one of its members; compare the result with t
 - **FR-011**: A live stream (not pauseable and an `http(s)` address, decided by the same function
   as Rooms) MUST show the line "Live streams can't be paused". Other sources MUST NOT show it.
 - **FR-012**: "Move to room…" MUST be offered only when the hub marks the route transferable and
-  the route is Playing or Paused.
+  the route is Playing. It MUST NOT be offered while Paused, because the hub's behaviour for moving
+  a paused playback is unconfirmed; an open sheet whose playback becomes paused closes.
 - **FR-013**: Every action MUST follow feature 001 FR-018 and FR-019: confirmed by the next refresh,
   a short plain-language message on failure, and no duplicate requests from repeated taps.
 
@@ -230,14 +237,18 @@ to a group, then from the group to one of its members; compare the result with t
 - **FR-020a**: Below the rooms, a "Groups" section MUST list every group the hub lists except the
   one currently playing this route. Each group's note is decided in the same place as the room
   notes: "<other source> will stop" (warning colour) when any member room is occupied by another
-  playback, naming every such source ("Jazz24 and Morning playlist will stop"); otherwise its
-  member room names joined with " + ". A disabled group reads "Turned off"; a group with any member
-  room not connected reads "Not connected"; neither can be selected, and turned off takes
-  precedence. Groups are ordered like rooms: selectable alphabetically, then unselectable
+  playback, naming every such source ("Jazz24 and Morning playlist will stop"); a source playing on
+  another group stops on that whole group, as for rooms (FR-021); otherwise its
+  member room names joined with " + ". Member rooms that are not connected are appended as
+  " · <rooms> not connected" (names joined with ", " and " and "), and the group stays selectable,
+  because the hub plays on the connected rooms. A disabled group reads "Turned off" and cannot be
+  selected. Groups are ordered like rooms: selectable alphabetically, then unselectable
   alphabetically. When the hub lists no other group, the section is not shown.
 - **FR-021**: Each room destination MUST show one note, decided in one place:
   "Idle" for an unoccupied, available, enabled room; "<other source> will stop" (warning colour)
-  for a room occupied by another playback; "<other member rooms> stop" for "<Room> only" options
+  for a room occupied by another single-room playback; "<other source> will stop on <group>"
+  (warning colour) for a room occupied by another group's playback, because the hub stops that
+  whole group's playback; "<other member rooms> stop" for "<Room> only" options
   (names joined with ", " and " and "); "Turned off" for a disabled room; "Not connected" for a
   room without hardware. Turned-off and not-connected rooms MUST NOT be selectable and are shown
   dimmed; turned off takes precedence when both apply.
@@ -251,10 +262,10 @@ to a group, then from the group to one of its members; compare the result with t
   sheet closes and Now Playing follows the moved playback (FR-002); on failure the sheet closes and
   FR-013's message is shown. While the request is in flight the button cannot be tapped again.
 - **FR-025**: The destination notes and the list MUST be covered by automated tests: idle, busy
-  with a single-room playback, busy with a group playback, member "only" options with one and
+  with a single-room playback, busy with a group playback (naming the group), member "only" options with one and
   several other members, turned off, not connected, and ordering; and for groups: free, busy with
   one and with several other playbacks, overlapping the current target without stopping anything
-  else, turned off, a member not connected, the current group excluded, and ordering.
+  else, turned off, one and several members not connected (still selectable), the current group excluded, and ordering.
 
 **Look & accessibility**
 
@@ -299,10 +310,9 @@ to a group, then from the group to one of its members; compare the result with t
 
 - Now Playing is reached only from a Rooms card in this feature; Start Playback, Sources and the
   full Settings tabs remain later features.
-- Moving playback onto a room that is already playing replaces that room's playback (the design's
-  "will stop" notes rely on this). The hub documentation does not state it; to be checked against
-  the real hub. If the hub rejects such a move instead, the app shows the plain failure message and
-  nothing changes.
+- Moving playback onto a room that is already playing stops that room's playback and the moved
+  playback takes over; when the stopped playback was on a group, it stops on the whole group
+  (confirmed by the user, 2026-10-03). The "will stop" notes rely on this.
 - Moving to a group that shares rooms with the current target keeps those rooms playing without a
   restart; rooms of the current target outside the new group stop, which is the move itself and
   needs no note.
@@ -310,9 +320,12 @@ to a group, then from the group to one of its members; compare the result with t
   one playing, which is what the "<Room> only" options announce.
 - The hub keeps each room's own volume and mute when playback moves (volume is not carried over);
   the destination plays at whatever volume that room already has.
+- Moving playback to a group with member rooms that are not connected plays on the connected
+  rooms (confirmed by the user, 2026-10-03).
 - The hub reports a group as muted only when all its member rooms are muted.
-- While master mute is on the hub reports every room as muted; whether a room can be unmuted
-  individually then is unknown, so room and group mute are disabled during master mute (FR-018).
+- While master mute is on the hub reports every room as muted, and unmuting a single room or group
+  does not make it audible until master mute is turned off (confirmed by the user, 2026-10-03);
+  hence room and group mute are disabled during master mute (FR-018).
 - Departure from the design (called out per the constitution): the design's sample state has
   Bedroom preselected; this spec preselects nothing (FR-023) so that a move always follows an
   explicit choice. The design's sheet otherwise applies as drawn.
@@ -320,5 +333,8 @@ to a group, then from the group to one of its members; compare the result with t
   has one.
 - The decorative panel follows the source kind's design colours; the design shows only the stream
   variant, so other kinds use their kind tile colours from the design tokens.
+- How the hub moves a paused playback (stays paused, resumes, or refuses) is not known; until it
+  is checked on the hub, "Move to room…" is hidden while Paused (FR-012). Allowing it later is a
+  small follow-up.
 - Following the project workflow, the first implementation commit sets the app version to
   `0.2.0-alpha` (version code 2).
