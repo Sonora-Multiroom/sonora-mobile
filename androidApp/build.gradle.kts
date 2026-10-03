@@ -12,7 +12,7 @@ android {
         applicationId = "ai.sonora.mobile"
         minSdk = 26
         targetSdk = 37
-        versionCode = 1
+        versionCode = providers.gradleProperty("sonora.versionCode").get().toInt()
         versionName = providers.gradleProperty("sonora.versionName").get()
     }
 

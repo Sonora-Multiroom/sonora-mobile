@@ -152,6 +152,12 @@ a feature branch `NNN-short-name` and pushed. **Cloud sessions implement**: chec
 run `/speckit-implement`, keep commits on the same branch. If a task turns out to need a decision
 the spec does not cover, stop and ask rather than inventing behaviour.
 
+**Bump the app version first.** The first commit when starting to implement feature `NNN` sets, in
+[gradle.properties](gradle.properties), `sonora.versionName=0.N.0-alpha` (N = the feature number
+without leading zeros, e.g. `002-…` → `0.2.0-alpha`) and `sonora.versionCode=N`, so each feature's
+APK installs over the previous one and the Settings footer shows which feature a tester is on. Keep
+the `-alpha` suffix until the user says otherwise.
+
 Spec Kit tooling (`.specify/` except `memory/`, and `.claude/skills/speckit-*`) is **not committed**
 and is generated per machine: PowerShell scripts locally, sh scripts in the cloud. In cloud sessions
 the SessionStart hook [scripts/cloud-speckit-init.sh](scripts/cloud-speckit-init.sh) runs
