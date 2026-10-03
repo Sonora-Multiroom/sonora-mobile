@@ -1,6 +1,9 @@
 package sonora.multiroom.mobile.data
 
 import sonora.multiroom.mobile.domain.HubAddress
+import sonora.multiroom.mobile.domain.Route
+import sonora.multiroom.mobile.domain.RouteStatus
+import sonora.multiroom.mobile.domain.Target
 import io.ktor.client.engine.mock.MockEngine
 import io.ktor.client.engine.mock.respond
 import io.ktor.client.engine.mock.toByteArray
@@ -12,6 +15,8 @@ import io.ktor.http.headersOf
 import kotlinx.coroutines.test.runTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
+import kotlin.test.assertTrue
 
 class KtorHubRepositoryActionsTest {
     private val json = headersOf(HttpHeaders.ContentType, "application/json")
@@ -101,5 +106,87 @@ class KtorHubRepositoryActionsTest {
     fun nonJsonErrorBodyIsRejectedWithoutType() = runTest {
         val (repo, _) = repository(status = HttpStatusCode.BadGateway, body = "<html>", headers = headersOf(HttpHeaders.ContentType, "text/html"))
         assertEquals(HubResult.Err(HubError.Rejected(502, null)), repo.stopRoute("r"))
+    }
+
+    // ---- Mute and transfer (002, contracts/hub-repository.md) -------------------------------
+
+    @Test
+    fun setRoomMutePutsTheMuteStateForTrueAndFalse() = runTest {
+        for (muted in listOf(true, false)) {
+            val (repo, log) = repository(body = """{"outputId":"bedroom","muted":$muted}""")
+            assertEquals(HubResult.Ok(Unit), repo.setRoomMute("bedroom", muted))
+            val r = log.single()
+            assertEquals(HttpMethod.Put, r.method)
+            assertEquals("/api/v2/outputs/bedroom/mute", r.path)
+            assertEquals("""{"muted":$muted}""", r.body)
+        }
+    }
+
+    @Test
+    fun setGroupMutePutsTheMuteStateForTrueAndFalse() = runTest {
+        for (muted in listOf(true, false)) {
+            val (repo, log) = repository(body = """{"groupId":"downstairs","muted":$muted}""")
+            assertEquals(HubResult.Ok(Unit), repo.setGroupMute("downstairs", muted))
+            val r = log.single()
+            assertEquals(HttpMethod.Put, r.method)
+            assertEquals("/api/v2/groups/downstairs/mute", r.path)
+            assertEquals("""{"muted":$muted}""", r.body)
+        }
+    }
+
+    private val movedRoute = """{"routeId":"r2","inputId":"radio","targetId":"kitchen","targetType":"SINGLE_OUTPUT",
+        "status":"ACTIVE","transferable":true,"pauseable":false,"paused":false}"""
+
+    @Test
+    fun transferToARoomSendsSingleOutputAndReturnsTheNewRoute() = runTest {
+        val (repo, log) = repository(body = movedRoute)
+        val result = repo.transferRoute("r1", Target.Room("kitchen"))
+        assertEquals(
+            HubResult.Ok(Route("r2", "radio", Target.Room("kitchen"), RouteStatus.Active, false, false, true)),
+            result,
+        )
+        val r = log.single()
+        assertEquals(HttpMethod.Post, r.method)
+        assertEquals("/api/v2/routes/r1/transfer", r.path)
+        assertEquals("""{"targetId":"kitchen","targetType":"SINGLE_OUTPUT"}""", r.body)
+    }
+
+    @Test
+    fun transferToAGroupSendsOutputGroup() = runTest {
+        val (repo, log) = repository(body = movedRoute.replace("kitchen", "downstairs").replace("SINGLE_OUTPUT", "OUTPUT_GROUP"))
+        val result = repo.transferRoute("r1", Target.Group("downstairs"))
+        assertEquals(Target.Group("downstairs"), (result as HubResult.Ok).value.target)
+        assertEquals("""{"targetId":"downstairs","targetType":"OUTPUT_GROUP"}""", log.single().body)
+    }
+
+    @Test
+    fun transferProblemDetailsBecomeRejected() = runTest {
+        for (status in listOf(HttpStatusCode.BadRequest, HttpStatusCode.NotFound, HttpStatusCode.UnprocessableEntity)) {
+            val (repo, _) = repository(status = status, body = Fixtures.PROBLEM_NOT_FOUND, headers = problem)
+            assertEquals(
+                HubResult.Err(HubError.Rejected(status.value, "urn:multiroom:error:not-found")),
+                repo.transferRoute("r1", Target.Room("kitchen")),
+            )
+        }
+    }
+
+    @Test
+    fun transferWithAnIoFailureIsUnreachable() = runTest {
+        val engine = MockEngine { throw kotlinx.io.IOException("down") }
+        val repo = KtorHubRepository(HubAddress("http://hub:8080"), createHubHttpClient(engine))
+        assertEquals(HubResult.Err(HubError.Unreachable), repo.transferRoute("r1", Target.Room("kitchen")))
+    }
+
+    @Test
+    fun transferWithAGarbageBodyIsUnexpected() = runTest {
+        val (repo, _) = repository(body = "not json at all")
+        assertEquals(HubResult.Err(HubError.Unexpected), repo.transferRoute("r1", Target.Room("kitchen")))
+    }
+
+    @Test
+    fun transferToAnUnknownTargetThrowsAndSendsNothing() = runTest {
+        val (repo, log) = repository(body = movedRoute)
+        assertFailsWith<IllegalArgumentException> { repo.transferRoute("r1", Target.Unknown("x")) }
+        assertTrue(log.isEmpty())
     }
 }

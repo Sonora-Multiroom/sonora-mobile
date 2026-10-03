@@ -78,7 +78,7 @@ the new repository methods.
 
 ### Refactor: RoomsBuilder helpers (no behaviour change)
 
-- [ ] T003 In `main/domain/RoomsBuilder.kt`, extract the private `describe(...)`, `statusAndAction(...)` and
+- [X] T003 In `main/domain/RoomsBuilder.kt`, extract the private `describe(...)`, `statusAndAction(...)` and
   the live-route filter (`status != Stopped`) into `internal` top-level functions in a new
   `main/domain/PlaybackRules.kt`: `liveRoutes(snapshot)`, `describeTarget(target, rooms, groups, masterMuted)`
   (returns the existing `Described` shape, renamed `TargetDescription`, made `internal`), and
@@ -89,7 +89,7 @@ the new repository methods.
 
 ### Shared hub session (research R1, R4)
 
-- [ ] T004 Write `test/ui/session/HubSessionTest.kt`, failing first. **Move** every polling and
+- [X] T004 Write `test/ui/session/HubSessionTest.kt`, failing first. **Move** every polling and
   connection scenario out of `test/ui/rooms/RoomsViewModelPollingTest.kt` and the "no address → no
   requests" scenario out of `RoomsViewModelAddressTest.kt`, rewritten against `HubSession`:
   - a poll every 2.5 s with no overlap
@@ -112,7 +112,7 @@ the new repository methods.
     **not** pass `refreshSeq > c`; the next refresh's state does.
 
   Use `TestScope`/virtual time and the existing `FakeRepository`.
-- [ ] T005 Implement `main/ui/session/HubSession.kt`. It takes
+- [X] T005 Implement `main/ui/session/HubSession.kt`. It takes
   `(addressStore: HubAddressStore, repositoryFactory: HubRepositoryFactory, scope: CoroutineScope, now: () -> Long, pollIntervalMillis: Long = 2500)`
   and exposes:
   - `state: StateFlow<SessionState>`, where `SessionState` is `Initial | NoAddress |
@@ -125,11 +125,11 @@ the new repository methods.
   Move the loop, the conflated `refreshNow` channel and the `lastSuccessAt` bookkeeping verbatim
   from `RoomsViewModel`. Move `Connection` from `main/ui/rooms/RoomsUiState.kt` to
   `main/ui/session/Connection.kt`, updating imports. Make T004 pass.
-- [ ] T006 [P] Implement `main/ui/session/AppMessages.kt`: `class AppMessages { fun post(text: String); val messages: Flow<String> }`
+- [X] T006 [P] Implement `main/ui/session/AppMessages.kt`: `class AppMessages { fun post(text: String); val messages: Flow<String> }`
   backed by `Channel<String>(Channel.CONFLATED)` received as a flow (one consumer). Test it in
   `test/ui/session/AppMessagesTest.kt`: one post is delivered once, and the latest wins when
   several are posted before collection.
-- [ ] T007 Move Rooms onto the session:
+- [X] T007 Move Rooms onto the session:
   - `RoomsViewModel(session: HubSession, messages: AppMessages, now: () -> Long = …)` derives
     `RoomsUiState` from `session.state` with `RoomsBuilder.build`, and keeps `volumeOverrides`,
     `inFlight` and `message` as today.
@@ -147,7 +147,7 @@ the new repository methods.
 
 ### Shared volume controller (research R5)
 
-- [ ] T008 Write `test/ui/session/VolumeDragControllerTest.kt`, failing first. **Move** the volume
+- [X] T008 Write `test/ui/session/VolumeDragControllerTest.kt`, failing first. **Move** the volume
   scenarios from `RoomsViewModelControlsTest.kt` that test drag mechanics, rewritten against the
   controller:
   - ≤ 4 sends/s while dragging, plus a final send of the release value
@@ -169,7 +169,7 @@ the new repository methods.
     its base
 
   A `FakeRepository` handler fails the test on any `/groups/{id}/volume`.
-- [ ] T009 Implement `main/ui/session/VolumeDragController.kt`. It takes
+- [X] T009 Implement `main/ui/session/VolumeDragController.kt`. It takes
   `(scope: CoroutineScope, session: HubSession, onError: (targetName: String, HubError) -> Unit, throttleMillis: Long = 250)`.
   - `pending: StateFlow<Map<String, Int>>`, keyed by **room id**
   - `fun start(key: String, targetName: String, base: Map<String, Int>)`,
@@ -185,7 +185,7 @@ the new repository methods.
   Port `Drag`/`Settled`/`sendVolume` from `RoomsViewModel` and change them from per-card to
   per-room. Sending uses `GroupVolume.scale(base, value)` and `HubRepository.setRoomVolume` only.
   Make T008 pass.
-- [ ] T010 Move `RoomsViewModel` onto `VolumeDragController`:
+- [X] T010 Move `RoomsViewModel` onto `VolumeDragController`:
   - Replace `volumeOverrides` with the controller's `pending` and compute each card's shown value
     with `shown(...)` (group: member ids from `memberVolumes.keys`; single room: `roomId`).
   - Call `onRefresh` from the session's successful refreshes.
@@ -197,10 +197,10 @@ the new repository methods.
 
 ### Shared domain helpers
 
-- [ ] T011 [P] Write `test/domain/NamesTest.kt` (failing), then `main/domain/Names.kt` with
+- [X] T011 [P] Write `test/domain/NamesTest.kt` (failing), then `main/domain/Names.kt` with
   `fun joinNames(names: List<String>): String`: `[]` → `""`, `[A]` → `"A"`, `[A, B]` → `"A and B"`,
   `[A, B, C]` → `"A, B and C"`.
-- [ ] T012 [P] Write `test/domain/AddressDetailTest.kt` (failing), then add to
+- [X] T012 [P] Write `test/domain/AddressDetailTest.kt` (failing), then add to
   `main/domain/SourceKind.kt` (research R7, the only place this is derived):
   - `fun kindLabel(kind: SourceKind): String`: "Stream", "Line-in", "File", "Link".
   - `fun addressDetail(kind: SourceKind, uri: String?): String?`:
@@ -215,7 +215,7 @@ the new repository methods.
 
 ### Repository additions (contracts/hub-repository.md)
 
-- [ ] T013 Extend `test/data/KtorHubRepositoryActionsTest.kt` (and the payloads in `test/data/Fixtures.kt`)
+- [X] T013 Extend `test/data/KtorHubRepositoryActionsTest.kt` (and the payloads in `test/data/Fixtures.kt`)
   with contract tests 1–4 from contracts/hub-repository.md, failing first:
   - `setRoomMute("bedroom", true/false)` → `PUT /api/v2/outputs/bedroom/mute` `{"muted":…}`
   - `setGroupMute("downstairs", …)` → `PUT /api/v2/groups/downstairs/mute`
@@ -226,14 +226,14 @@ the new repository methods.
   - an IO failure → `Unreachable`
   - a 200 garbage body → `Unexpected`
   - `Target.Unknown` → throws `IllegalArgumentException` with no request recorded
-- [ ] T014 Add `setRoomMute`, `setGroupMute` and `transferRoute(routeId, target): HubResult<Route>` to
+- [X] T014 Add `setRoomMute`, `setGroupMute` and `transferRoute(routeId, target): HubResult<Route>` to
   `main/data/HubRepository.kt` (with KDoc per the contract) and implement them in
   `main/data/KtorHubRepository.kt` via the generated `OutputsApi.setOutputMute`,
   `GroupsApi.setGroupMute` and `RoutesApi.transferRoute`. Map the response with the existing
   `RouteResponse.toRoute()`, where `null` → `Unexpected`. Add the three methods to
   `FakeRepository` in `test/ui/rooms/FakeHub.kt` (recorded as `Call`s;
   `transferResult: () -> HubResult<Route>`, configurable). Make T013 pass.
-- [ ] T015 [P] Extend `test/ui/MessagesTest.kt` (failing), then `main/ui/Messages.kt`: add
+- [X] T015 [P] Extend `test/ui/MessagesTest.kt` (failing), then `main/ui/Messages.kt`: add
   `UserAction.Mute(on: Boolean)` and `UserAction.Move(destination: String)` with exactly the copy in
   contracts/hub-repository.md "User-facing messages":
   - Mute: "Couldn't mute X. Can't reach the hub." / "X is no longer on the hub." /
@@ -258,7 +258,7 @@ another client (quickstart §2 steps 2–5).
 
 ### Tests for User Story 1 ⚠️ write first, see them fail
 
-- [ ] T016 [P] [US1] Write `test/domain/NowPlayingBuilderTest.kt` (content part, `volume` ignored
+- [X] T016 [P] [US1] Write `test/domain/NowPlayingBuilderTest.kt` (content part, `volume` ignored
   here). Cover each rule from data-model.md "Validation / rules":
   - absent route → `Gone`; `STOPPED` → `Gone`
   - `FAILED` → status Failed, `moveVisible = false`, `pauseEnabled = false`
@@ -293,7 +293,7 @@ another client (quickstart §2 steps 2–5).
 
 ### Implementation for User Story 1
 
-- [ ] T018 [US1] Implement `main/domain/NowPlayingBuilder.kt` with the `NowPlayingContent`,
+- [X] T018 [US1] Implement `main/domain/NowPlayingBuilder.kt` with the `NowPlayingContent`,
   `TargetLine`, `VolumeSection`, `PillModel` and `MuteModel` types exactly as in data-model.md.
   `build(snapshot, routeId)` uses the T003 helpers (`liveRoutes`, `describeTarget`, `cardStatus`)
   and maps `CardStatus.LiveStream` → `Playing` + `live = true`. Leave `volume = null` for now
@@ -365,7 +365,7 @@ then each room pill, then mute and unmute the group, comparing each value with t
 
 ### Tests for User Story 2 ⚠️ write first, see them fail
 
-- [ ] T023 [P] [US2] Extend `test/domain/NowPlayingBuilderTest.kt` with the volume rules from
+- [X] T023 [P] [US2] Extend `test/domain/NowPlayingBuilderTest.kt` with the volume rules from
   data-model.md:
   - single room → `main` pill (`key = "main"`, label = room name, `roomVolumes = {id: v}`),
     `members = []`, `MuteModel(Target.Room, name, muted, enabled)`
@@ -378,7 +378,7 @@ then each room pill, then mute and unmute the group, comparing each value with t
     `muted = masterMuted || target.muted`"
   - the group `muted` comes only from the hub's `GroupResponse.muted` (one muted member out of two
     → group not muted, that member pill muted)
-- [ ] T024 [US2] Fill `volume: VolumeSection?` in `main/domain/NowPlayingBuilder.kt` per T023.
+- [X] T024 [US2] Fill `volume: VolumeSection?` in `main/domain/NowPlayingBuilder.kt` per T023.
   Make T023 pass.
 - [ ] T025 [P] [US2] Extend `test/ui/nowplaying/NowPlayingViewModelTest.kt` (US2 part):
   - main-pill drag on a group → only `setRoomVolume` per member, scaled (70/35 → 35 gives 35/18)
