@@ -16,6 +16,17 @@ android {
         versionName = providers.gradleProperty("sonora.versionName").get()
     }
 
+    // One committed debug key for every machine, so debug APKs update each other instead of failing
+    // with INSTALL_FAILED_UPDATE_INCOMPATIBLE (see keystore/README.md).
+    signingConfigs {
+        getByName("debug") {
+            storeFile = file("keystore/debug.keystore")
+            storePassword = "android"
+            keyAlias = "androiddebugkey"
+            keyPassword = "android"
+        }
+    }
+
     buildTypes {
         release {
             isMinifyEnabled = false
