@@ -273,7 +273,7 @@ another client (quickstart §2 steps 2–5).
   - target line: room → name; group → name + `memberNames` "in `outputIds` order, skipping unknown
     ids"; a missing room/group → the id; `Target.Unknown` → the id
   - `notConnected` when the room or any listed member has `available = false`
-- [ ] T017 [P] [US1] Write `test/ui/nowplaying/NowPlayingViewModelTest.kt` (US1 part) with
+- [X] T017 [P] [US1] Write `test/ui/nowplaying/NowPlayingViewModelTest.kt` (US1 part) with
   `HubSession` + `FakeRepository` on virtual time:
   - opening shows the session's existing snapshot before any new request
   - `onVisible()` acquires polling
@@ -298,7 +298,7 @@ another client (quickstart §2 steps 2–5).
   `build(snapshot, routeId)` uses the T003 helpers (`liveRoutes`, `describeTarget`, `cardStatus`)
   and maps `CardStatus.LiveStream` → `Playing` + `live = true`. Leave `volume = null` for now
   (T024 fills it). Make T016 pass.
-- [ ] T019 [US1] Implement `main/ui/nowplaying/NowPlayingUiState.kt` and
+- [X] T019 [US1] Implement `main/ui/nowplaying/NowPlayingUiState.kt` and
   `main/ui/nowplaying/NowPlayingViewModel.kt`. The view model takes
   `(routeId: String, savedState: SavedStateHandle, session: HubSession, messages: AppMessages)`:
   - It holds `followedRouteId` in `savedState["followedRouteId"]` (initialised to `routeId` when
@@ -380,7 +380,7 @@ then each room pill, then mute and unmute the group, comparing each value with t
     → group not muted, that member pill muted)
 - [X] T024 [US2] Fill `volume: VolumeSection?` in `main/domain/NowPlayingBuilder.kt` per T023.
   Make T023 pass.
-- [ ] T025 [P] [US2] Extend `test/ui/nowplaying/NowPlayingViewModelTest.kt` (US2 part):
+- [X] T025 [P] [US2] Extend `test/ui/nowplaying/NowPlayingViewModelTest.kt` (US2 part):
   - main-pill drag on a group → only `setRoomVolume` per member, scaled (70/35 → 35 gives 35/18)
     and throttled; the member pills' shown values follow
   - member drag → only that room changes and the shown group value is the new max
@@ -391,7 +391,7 @@ then each room pill, then mute and unmute the group, comparing each value with t
   - a failed mute → "Couldn't mute <name>. Can't reach the hub."
   - stale → drags and mute are ignored
   - no `/groups/{id}/volume` is ever requested
-- [ ] T026 [US2] In `main/ui/nowplaying/NowPlayingViewModel.kt`:
+- [X] T026 [US2] In `main/ui/nowplaying/NowPlayingViewModel.kt`:
   - Own a `VolumeDragController`, exposing its `pending` in `NowPlayingUiState.pending`.
   - Add `onVolumeDragStart(pillKey)`, `onVolumeDrag(pillKey, v)` and `onVolumeDragEnd(pillKey, v)`.
     The base is the pill's `roomVolumes` overlaid with `pending`, and the target name is the
@@ -427,7 +427,7 @@ member via "<Room> only" (quickstart §2 steps 7–10).
 
 ### Tests for User Story 3 ⚠️ write first, see them fail
 
-- [ ] T028 [P] [US3] Write `test/domain/MoveDestinationsTest.kt` covering **all 23 cases** of the
+- [X] T028 [P] [US3] Write `test/domain/MoveDestinationsTest.kt` covering **all 23 cases** of the
   data-model.md "FR-025 test matrix" one-to-one, using research R8 rules:
   - room precedence `TurnedOff` > `NotConnected` > occupied (`WillStop` for a single-room route,
     `WillStopOnGroup` for a group route) > `Idle`
@@ -447,7 +447,7 @@ member via "<Room> only" (quickstart §2 steps 7–10).
   - `ctaName` = the room name for "X only"
   - `null` for a gone route; empty lists for a `Target.Unknown` route (case 23)
   - `sourceName`/`currentTargetName`
-- [ ] T029 [P] [US3] Write `test/ui/nowplaying/DestinationTextTest.kt` for every row of the research
+- [X] T029 [P] [US3] Write `test/ui/nowplaying/DestinationTextTest.kt` for every row of the research
   R8 copy table:
   - "Idle"
   - "Jazz24 will stop"
@@ -463,7 +463,7 @@ member via "<Room> only" (quickstart §2 steps 7–10).
   - "Living Room + Kitchen · Patio turned off · Garden not connected"
   - "Turned off", "Not connected", "No rooms"
   - the warning flag only for `WillStop` and `WillStopOnGroup`
-- [ ] T030 [P] [US3] Extend `test/ui/nowplaying/NowPlayingViewModelTest.kt` (US3 part):
+- [X] T030 [P] [US3] Extend `test/ui/nowplaying/NowPlayingViewModelTest.kt` (US3 part):
   - `onOpenMove()` opens the sheet only when Live and `moveVisible`, with `selected = null`
   - `onSelect(target)` ignores unselectable targets
   - the CTA is disabled with nothing selected
@@ -490,15 +490,15 @@ member via "<Room> only" (quickstart §2 steps 7–10).
 
 ### Implementation for User Story 3
 
-- [ ] T031 [US3] Implement `main/domain/MoveDestinations.kt`: `MoveSheetContent`, `MoveDestination`,
+- [X] T031 [US3] Implement `main/domain/MoveDestinations.kt`: `MoveSheetContent`, `MoveDestination`,
   `MoveDestinationKind { Room, MemberOnly, Group }`, `MoveDestinationNote` (with `val warning`) exactly as
   in data-model.md, and `object MoveDestinations { fun build(snapshot, routeId): MoveSheetContent? }`
   using `occupancy()` from T003 with the current route excluded. Make T028 pass.
-- [ ] T032 [US3] Implement `main/ui/nowplaying/DestinationText.kt`: `fun destinationNoteText(note: MoveDestinationNote): String`
+- [X] T032 [US3] Implement `main/ui/nowplaying/DestinationText.kt`: `fun destinationNoteText(note: MoveDestinationNote): String`
   using `joinNames`. Group `Members` are joined with " + ", then a non-empty `turnedOff` is
   appended as `" · ${joinNames(it)} turned off"` and a non-empty `notConnected` as
   `" · ${joinNames(it)} not connected"`. Make T029 pass.
-- [ ] T033 [US3] Add the sheet to `main/ui/nowplaying/NowPlayingViewModel.kt`:
+- [X] T033 [US3] Add the sheet to `main/ui/nowplaying/NowPlayingViewModel.kt`:
   - `MoveSheetState(content, selected)` rebuilt from each snapshot with `MoveDestinations.build`
   - `onOpenMove()`, `onSelect(target)`, `onDismissMove()` and `onConfirmMove()`
   - after `Ok(route)`: set `savedState["followedRouteId"] = route.id` and
