@@ -23,6 +23,45 @@ fun inferSourceKind(origin: SourceOrigin, uri: String?): SourceKind {
 fun isLiveStream(pauseable: Boolean, uri: String?): Boolean =
     !pauseable && uri?.trim().orEmpty().isHttp()
 
+fun kindLabel(kind: SourceKind): String = when (kind) {
+    SourceKind.Stream -> "Stream"
+    SourceKind.LineIn -> "Line-in"
+    SourceKind.File -> "File"
+    SourceKind.Link -> "Link"
+}
+
+/**
+ * The second half of Now Playing's subtitle ("Stream · stream.radioparadise.com"), derived here
+ * and only here (research R7). Stream/Link with an http(s) address: the host only. File: the last
+ * path segment (no percent-decoding). Line-in and blank: null. Anything else, or an address that
+ * cannot be parsed: the address as typed.
+ */
+fun addressDetail(kind: SourceKind, uri: String?): String? {
+    val address = uri?.trim().orEmpty()
+    if (address.isEmpty() || kind == SourceKind.LineIn) return null
+    return when (kind) {
+        SourceKind.File -> lastSegment(address) ?: address
+        else -> if (address.isHttp()) hostOf(address) ?: address else address
+    }
+}
+
+private fun hostOf(address: String): String? {
+    val afterScheme = address.substringAfter("://")
+    val authority = afterScheme.takeWhile { it != '/' && it != '?' && it != '#' }
+    val hostPort = authority.substringAfterLast('@')
+    val host = if (hostPort.startsWith("[")) {
+        hostPort.removePrefix("[").substringBefore(']')
+    } else {
+        hostPort.substringBefore(':')
+    }
+    return host.takeIf { it.isNotEmpty() }
+}
+
+private fun lastSegment(address: String): String? {
+    val path = if (address.startsWith("file:", ignoreCase = true)) address.substring(5) else address
+    return path.substringAfterLast('/').substringAfterLast('\\').takeIf { it.isNotEmpty() }
+}
+
 private fun String.isHttp(): Boolean =
     startsWith("http://", ignoreCase = true) || startsWith("https://", ignoreCase = true)
 

@@ -7,6 +7,8 @@ import sonora.multiroom.mobile.data.HubResult
 import sonora.multiroom.mobile.domain.HubAddress
 import sonora.multiroom.mobile.domain.HubSnapshot
 import sonora.multiroom.mobile.domain.Room
+import sonora.multiroom.mobile.domain.Route
+import sonora.multiroom.mobile.domain.Target
 import kotlinx.coroutines.delay
 
 /** A snapshot with a single room, enough to produce `RoomsContent.Rooms`. */
@@ -57,6 +59,18 @@ class FakeRepository(private val time: () -> Long) : HubRepository {
     override suspend fun stopRoute(routeId: String) = action("stopRoute", routeId)
     override suspend fun setRoutePaused(routeId: String, paused: Boolean) = action("setRoutePaused", routeId, paused)
     override suspend fun setMasterMute(muted: Boolean) = action("setMasterMute", muted)
+    override suspend fun setRoomMute(roomId: String, muted: Boolean) = action("setRoomMute", roomId, muted)
+    override suspend fun setGroupMute(groupId: String, muted: Boolean) = action("setGroupMute", groupId, muted)
+
+    /** What a transfer answers; the default hands back a route "moved". */
+    var transferResult: () -> HubResult<Route> =
+        { HubResult.Ok(Route("moved", "input", Target.Room("a"), sonora.multiroom.mobile.domain.RouteStatus.Active, false, false, true)) }
+
+    override suspend fun transferRoute(routeId: String, target: Target): HubResult<Route> {
+        calls += Call("transferRoute", listOf(routeId, target), time())
+        if (actionDelayMs > 0) delay(actionDelayMs)
+        return transferResult()
+    }
 }
 
 /** Hands out one [FakeRepository] per address, remembering them. */

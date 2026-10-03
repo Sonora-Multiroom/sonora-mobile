@@ -2,6 +2,8 @@ package sonora.multiroom.mobile.data
 
 import sonora.multiroom.mobile.domain.HubAddress
 import sonora.multiroom.mobile.domain.HubSnapshot
+import sonora.multiroom.mobile.domain.Route
+import sonora.multiroom.mobile.domain.Target
 import sonora.multiroom.mobile.hub.generated.apis.GroupsApi
 import sonora.multiroom.mobile.hub.generated.apis.InputsApi
 import sonora.multiroom.mobile.hub.generated.apis.MasterMuteApi
@@ -9,6 +11,7 @@ import sonora.multiroom.mobile.hub.generated.apis.OutputsApi
 import sonora.multiroom.mobile.hub.generated.apis.RoutesApi
 import sonora.multiroom.mobile.hub.generated.models.MuteRequest
 import sonora.multiroom.mobile.hub.generated.models.PauseRequest
+import sonora.multiroom.mobile.hub.generated.models.TransferRequest
 import sonora.multiroom.mobile.hub.generated.models.VolumeRequest
 import io.ktor.client.HttpClient
 import kotlinx.coroutines.async
@@ -61,6 +64,25 @@ class KtorHubRepository(address: HubAddress, client: HttpClient) : HubRepository
 
     override suspend fun setMasterMute(muted: Boolean): HubResult<Unit> =
         hubCallUnit { masterMute.setMasterMute(MuteRequest(muted)) }
+
+    override suspend fun setRoomMute(roomId: String, muted: Boolean): HubResult<Unit> =
+        hubCallUnit { outputs.setOutputMute(roomId, MuteRequest(muted)) }
+
+    override suspend fun setGroupMute(groupId: String, muted: Boolean): HubResult<Unit> =
+        hubCallUnit { groups.setGroupMute(groupId, MuteRequest(muted)) }
+
+    override suspend fun transferRoute(routeId: String, target: Target): HubResult<Route> {
+        val request = when (target) {
+            is Target.Room -> TransferRequest(target.id, TransferRequest.TargetType.SINGLE_OUTPUT)
+            is Target.Group -> TransferRequest(target.id, TransferRequest.TargetType.OUTPUT_GROUP)
+            is Target.Unknown -> throw IllegalArgumentException("Cannot move a playback to an unknown target type")
+        }
+        return when (val result = hubCall { routes.transferRoute(routeId, request) }) {
+            is HubResult.Err -> result
+            // The hub answers with the NEW route; one the app cannot read is unexpected.
+            is HubResult.Ok -> result.value.toRoute()?.let { HubResult.Ok(it) } ?: HubResult.Err(HubError.Unexpected)
+        }
+    }
 }
 
 class KtorHubRepositoryFactory(private val client: HttpClient) : HubRepositoryFactory {

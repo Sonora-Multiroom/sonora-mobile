@@ -3,6 +3,7 @@ package sonora.multiroom.mobile.ui.nav
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
+import kotlin.test.assertSame
 import kotlin.test.assertTrue
 
 class AppBackStackTest {
@@ -108,5 +109,20 @@ class AppBackStackTest {
     fun anEmptyOrGarbledRestoreFallsBackToRooms() {
         assertEquals(listOf<Destination>(Destination.Rooms), AppBackStack(emptyList()).contents())
         assertEquals(null, decodeDestination("nonsense"))
+    }
+
+    @Test
+    fun theRoomsRootIsTheSameInstanceAfterATabRoundTrip() {
+        val s = AppBackStack()
+        val root = s.stack[0]
+        s.selectTab(Destination.Settings)
+        s.selectTab(Destination.Rooms)
+        assertSame(root, s.stack[0])
+
+        s.push(Destination.NowPlaying("r1"))
+        s.selectTab(Destination.Settings)
+        s.selectTab(Destination.Rooms)
+        assertSame(root, s.stack[0])
+        assertEquals(listOf<Destination>(Destination.Rooms), s.contents())
     }
 }

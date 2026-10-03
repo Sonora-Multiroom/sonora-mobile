@@ -28,13 +28,14 @@ input[type=radio]:focus-visible{outline:2px solid #F2A541;outline-offset:2px}
 </div>
 <div style="position: absolute; inset: 0; background: rgba(5, 6, 8, 0.72)"></div>
 
-<section role="dialog" aria-labelledby="move-title" style="position: absolute; left: 0; right: 0; bottom: 0; height: 600px; box-sizing: border-box; background: #17191E; border-radius: 28px 28px 0 0; padding: 10px 20px 28px; display: flex; flex-direction: column; gap: 14px">
+<section role="dialog" aria-labelledby="move-title" style="position: absolute; left: 0; right: 0; bottom: 0; height: 768px; box-sizing: border-box; background: #17191E; border-radius: 28px 28px 0 0; padding: 10px 20px 28px; display: flex; flex-direction: column; gap: 14px">
 <div style="align-self: center; width: 36px; height: 4px; border-radius: 2px; background: #3A3E46"></div>
 <div style="display: flex; flex-direction: column; gap: 4px">
 <h2 id="move-title" style="margin: 0; font-family: Sora, sans-serif; font-size: 22px; font-weight: 600">Move playback</h2>
 <p style="margin: 0; font-size: 14px; color: #9A9DA6">Radio Paradise · now on Downstairs</p>
 </div>
 
+<div style="flex-grow: 1; min-height: 0; overflow-y: auto; display: flex; flex-direction: column; gap: 14px">
 <fieldset style="margin: 0; padding: 0; border: 0; display: flex; flex-direction: column; gap: 4px">
 <legend style="padding: 0; margin-bottom: 6px; font-size: 12px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: #9A9DA6">Move to</legend>
 <sc-for list="{{options}}" as="o" hint-placeholder-count="5">
@@ -50,6 +51,23 @@ input[type=radio]:focus-visible{outline:2px solid #F2A541;outline-offset:2px}
 </label>
 </sc-for>
 </fieldset>
+
+<fieldset style="margin: 0; padding: 0; border: 0; display: flex; flex-direction: column; gap: 4px">
+<legend style="padding: 0; margin-bottom: 6px; font-size: 12px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: #9A9DA6">Groups</legend>
+<sc-for list="{{groups}}" as="o" hint-placeholder-count="2">
+<label style="min-height: 58px; padding: 0 12px; border-radius: 14px; display: flex; align-items: center; gap: 12px; cursor: {{o.cursor}}; opacity: {{o.opacity}}; background: {{o.rowBg}}; box-shadow: inset 0 0 0 1px {{o.ring}}">
+<div style="width: 38px; height: 38px; border-radius: 10px; background: #22252B; color: #C9CBD1; display: flex; align-items: center; justify-content: center">
+<svg class="i" viewBox="0 0 24 24" aria-hidden="true"><rect x="2.5" y="5" width="8" height="14" rx="1.5"></rect><circle cx="6.5" cy="13.5" r="2"></circle><rect x="13.5" y="5" width="8" height="14" rx="1.5"></rect><circle cx="17.5" cy="13.5" r="2"></circle></svg>
+</div>
+<div style="flex-grow: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px">
+<span style="font-size: 15px; font-weight: 600">{{o.name}}</span>
+<span style="font-size: 12px; color: {{o.subColor}}">{{o.sub}}</span>
+</div>
+<input type="radio" name="dest" checked="{{o.checked}}" disabled="{{o.disabled}}" onChange="{{o.pick}}" style="width: 20px; height: 20px; margin: 0; accent-color: #F2A541">
+</label>
+</sc-for>
+</fieldset>
+</div>
 
 <p style="margin: auto 0 0; font-size: 13px; color: #9A9DA6; display: flex; align-items: center; gap: 8px">
 <svg class="i" style="width: 16px; height: 16px; color: #5FD3C4" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12l5 5 9-10"></path></svg>
@@ -80,7 +98,11 @@ class Component extends DCLogic {
       { id: 'kitchen', name: 'Kitchen only', sub: 'Living Room stops' },
       { id: 'patio', name: 'Patio', sub: 'Turned off', disabled: true }
     ];
-    const options = opts.map((x) => {
+    const groupOpts = [
+      { id: 'upstairs', name: 'Upstairs', sub: 'Morning playlist will stop', warn: true },
+      { id: 'outdoor', name: 'Outdoor', sub: 'Turned off', disabled: true }
+    ];
+    const toRow = (x) => {
       const on = x.id === s.dest;
       return {
         name: x.name, sub: x.sub, checked: on, disabled: !!x.disabled,
@@ -89,9 +111,11 @@ class Component extends DCLogic {
         rowBg: on ? '#1F1A12' : 'transparent', ring: on ? '#6B4C1F' : 'transparent',
         pick: () => this.setState({ dest: x.id })
       };
-    });
-    const dest = opts.find((x) => x.id === s.dest);
-    return { options, cta: 'Move to ' + dest.name.replace(' only', '') };
+    };
+    const options = opts.map(toRow);
+    const groups = groupOpts.map(toRow);
+    const dest = opts.concat(groupOpts).find((x) => x.id === s.dest);
+    return { options, groups, cta: 'Move to ' + dest.name.replace(' only', '') };
   }
 }
 </script>

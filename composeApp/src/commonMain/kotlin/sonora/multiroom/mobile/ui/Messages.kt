@@ -11,6 +11,12 @@ sealed interface UserAction {
 
     /** [on] is the state being asked for: true = mute everything. */
     data class MasterMute(val on: Boolean) : UserAction
+
+    /** Mute or unmute one room or group; [on] is the state being asked for. */
+    data class Mute(val on: Boolean) : UserAction
+
+    /** Move a playback; the target name passed to [actionErrorMessage] is the source's name. */
+    data class Move(val destination: String) : UserAction
 }
 
 /**
@@ -36,6 +42,20 @@ fun actionErrorMessage(action: UserAction, targetName: String, error: HubError):
             val verb = if (action.on) "mute" else "unmute"
             if (unreachable) "Couldn't $verb all rooms.$reason" else "Couldn't $verb all rooms."
         }
+
+        is UserAction.Mute -> {
+            val verb = if (action.on) "mute" else "unmute"
+            when {
+                unreachable -> "Couldn't $verb $targetName.$reason"
+                gone -> "$targetName is no longer on the hub."
+                else -> "Couldn't $verb $targetName."
+            }
+        }
+
+        // A 404 cannot tell a vanished playback from a vanished destination: general text.
+        is UserAction.Move ->
+            if (unreachable) "Couldn't move $targetName to ${action.destination}.$reason"
+            else "Couldn't move $targetName to ${action.destination}."
     }
 }
 

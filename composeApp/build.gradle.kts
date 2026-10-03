@@ -11,10 +11,17 @@ plugins {
 }
 
 // The app version (gradle.properties `sonora.versionName`) as a common constant, so every
-// platform's Settings footer shows the same version as the Android APK (FR-021a).
+// platform's Settings footer shows the same version as the Android APK (FR-021a), plus the CI build
+// number and commit (environment SONORA_BUILD_NUMBER / SONORA_COMMIT, empty for local builds).
 abstract class GenerateAppVersion : DefaultTask() {
     @get:Input
     abstract val versionName: Property<String>
+
+    @get:Input
+    abstract val buildNumber: Property<String>
+
+    @get:Input
+    abstract val commit: Property<String>
 
     @get:OutputDirectory
     abstract val outputDir: DirectoryProperty
@@ -29,6 +36,12 @@ abstract class GenerateAppVersion : DefaultTask() {
             |
             |/** Generated from gradle.properties `sonora.versionName`; do not edit. */
             |const val APP_VERSION_NAME: String = "${versionName.get()}"
+            |
+            |/** CI run number (SONORA_BUILD_NUMBER); empty for a local build. */
+            |const val APP_BUILD_NUMBER: String = "${buildNumber.get()}"
+            |
+            |/** Commit the build was made from (SONORA_COMMIT); empty for a local build. */
+            |const val APP_COMMIT: String = "${commit.get()}"
             |""".trimMargin(),
         )
     }
@@ -38,6 +51,8 @@ val appVersionOutput = layout.buildDirectory.dir("generated/appVersion/src/commo
 
 val generateAppVersion by tasks.registering(GenerateAppVersion::class) {
     versionName.set(providers.gradleProperty("sonora.versionName"))
+    buildNumber.set(providers.environmentVariable("SONORA_BUILD_NUMBER").map { it.trim() }.orElse(""))
+    commit.set(providers.environmentVariable("SONORA_COMMIT").map { it.trim().take(7) }.orElse(""))
     outputDir.set(appVersionOutput)
 }
 
@@ -70,6 +85,8 @@ kotlin {
                 implementation(libs.compose.components.resources)
                 implementation(libs.lifecycle.viewmodel.compose)
                 implementation(libs.lifecycle.runtime.compose)
+                implementation(libs.lifecycle.viewmodel.navigation3)
+                implementation(libs.lifecycle.viewmodel.savedstate)
                 implementation(libs.navigation3.ui)
                 implementation(libs.ktor.client.core)
                 implementation(libs.ktor.client.content.negotiation)

@@ -54,14 +54,13 @@ object RoomsBuilder {
         val sources = snapshot.sources.associateBy { it.id }
         val master = snapshot.masterMuted
 
-        // STOPPED routes are history; FAILED and Unknown ones still occupy their rooms.
-        val live = snapshot.routes.filter { it.status != RouteStatus.Stopped }
+        val live = liveRoutes(snapshot)
 
         val occupied = mutableSetOf<String>()
         val cards = live.map { route ->
             val source = sources[route.inputId]
             val (status, action, actionEnabled) = statusAndAction(route, source?.uri)
-            val target = describe(route.target, rooms, groups, master)
+            val target = describeTarget(route.target, rooms, groups, master)
             occupied += target.occupies
             NowPlayingCard(
                 key = route.id,
@@ -103,83 +102,8 @@ object RoomsBuilder {
         )
     }
 
-    private data class Described(
-        val title: String,
-        val isGroup: Boolean,
-        val memberNames: List<String>,
-        val volume: Int?,
-        val adjustable: Boolean,
-        val memberVolumes: Map<String, Int>,
-        val muted: Boolean,
-        val notConnected: Boolean,
-        val occupies: Set<String>,
-        val roomId: String? = null,
-    )
-
-    private fun describe(
-        target: Target,
-        rooms: Map<String, Room>,
-        groups: Map<String, Group>,
-        masterMuted: Boolean,
-    ): Described = when (target) {
-        is Target.Room -> {
-            val room = rooms[target.id]
-            Described(
-                title = room?.name ?: target.id,
-                isGroup = false,
-                memberNames = emptyList(),
-                volume = room?.volume ?: 0,
-                adjustable = room != null,
-                memberVolumes = emptyMap(),
-                muted = masterMuted || room?.muted == true,
-                notConnected = room?.available == false,
-                occupies = if (room != null) setOf(room.id) else emptySet(),
-                roomId = room?.id,
-            )
-        }
-
-        is Target.Group -> {
-            val group = groups[target.id]
-            val members = group?.memberIds.orEmpty().mapNotNull { rooms[it] }
-            Described(
-                title = group?.name ?: target.id,
-                isGroup = true,
-                memberNames = members.map { it.name },
-                volume = members.maxOfOrNull { it.volume } ?: 0,
-                adjustable = members.isNotEmpty(),
-                memberVolumes = members.associate { it.id to it.volume },
-                muted = masterMuted || group?.muted == true,
-                notConnected = members.any { !it.available },
-                occupies = members.map { it.id }.toSet(),
-            )
-        }
-
-        // The app cannot tell which rooms this covers, so it occupies none and has no volume.
-        is Target.Unknown -> Described(
-            title = target.id,
-            isGroup = false,
-            memberNames = emptyList(),
-            volume = null,
-            adjustable = false,
-            memberVolumes = emptyMap(),
-            muted = masterMuted,
-            notConnected = false,
-            occupies = emptySet(),
-        )
-    }
-
     private fun statusAndAction(route: Route, uri: String?): Triple<CardStatus, CardAction, Boolean> {
-        val status = when (route.status) {
-            RouteStatus.Starting -> CardStatus.Starting
-            RouteStatus.Stopping -> CardStatus.Stopping
-            RouteStatus.Failed -> CardStatus.Failed
-            RouteStatus.Active -> when {
-                route.pauseable && route.paused -> CardStatus.Paused
-                isLiveStream(route.pauseable, uri) -> CardStatus.LiveStream
-                else -> CardStatus.Playing
-            }
-            RouteStatus.Unknown, RouteStatus.Stopped -> CardStatus.Unknown
-        }
+        val status = cardStatus(route, uri)
         return when {
             status == CardStatus.Failed || !route.pauseable -> Triple(status, CardAction.Stop, true)
             status == CardStatus.Paused -> Triple(status, CardAction.Resume, true)
