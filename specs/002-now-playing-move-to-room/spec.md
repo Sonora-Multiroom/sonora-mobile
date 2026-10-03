@@ -19,6 +19,8 @@
 - Q: If a group has one room whose speaker isn't connected, should playback still be movable to that group? → A: Yes; the group stays selectable and its note adds which rooms are not connected (e.g. "· Patio not connected"); the hub plays on the connected rooms (FR-020a).
 - Q: While master mute is on, what happens if a single room or group is unmuted? → A: The room stays silent until master mute is turned off, so the mute button stays disabled with "All rooms are muted" (FR-018, Assumptions).
 - Q: If a paused playback is moved, what does the hub do? → A: Unknown; offer "Move to room…" only while the playback is Playing and hide it while Paused, until checked on the hub (FR-012, Assumptions).
+- Q: For a group route, how does a "<Room> only" option appear when that member room is turned off or not connected? → A: It keeps its "<Room> only" label, reads "Turned off" or "Not connected" instead of "… stop", and cannot be picked, like any other turned-off or disconnected room (FR-021, FR-022).
+- Q: How does a group appear when the hub knows none of its member rooms? → A: It is listed with the note "No rooms" and cannot be picked (FR-020a).
 
 ## User Scenarios & Testing *(mandatory)*
 
@@ -138,6 +140,8 @@ to a group, then from the group to one of its members; compare the result with t
 - **Route state Starting…, Stopping… or Unknown**: Pause/Resume is shown disabled (pauseable routes)
   and "Move to room…" is hidden; Stop stays available.
 - **Route failed ("Couldn't play")**: the screen shows the status and Stop only.
+- **Stop finds the playback already gone** (the hub answers "not found"): it ended elsewhere, so
+  the app returns to Rooms with the "Playback on <target> ended" message (FR-002), not an error.
 - **Route replaced by a move made elsewhere**: the original playback no longer exists, so Now
   Playing returns to Rooms with the "ended" message (scenario US1-6); the moved playback appears
   on Rooms as usual.
@@ -242,6 +246,7 @@ to a group, then from the group to one of its members; compare the result with t
   member room names joined with " + ". Member rooms that are not connected are appended as
   " · <rooms> not connected" (names joined with ", " and " and "), and the group stays selectable,
   because the hub plays on the connected rooms. A disabled group reads "Turned off" and cannot be
+  selected. A group none of whose member rooms the hub lists reads "No rooms" and cannot be
   selected. Groups are ordered like rooms: selectable alphabetically, then unselectable
   alphabetically. When the hub lists no other group, the section is not shown.
 - **FR-021**: Each room destination MUST show one note, decided in one place:
@@ -251,10 +256,12 @@ to a group, then from the group to one of its members; compare the result with t
   whole group's playback; "<other member rooms> stop" for "<Room> only" options
   (names joined with ", " and " and "); "Turned off" for a disabled room; "Not connected" for a
   room without hardware. Turned-off and not-connected rooms MUST NOT be selectable and are shown
-  dimmed; turned off takes precedence when both apply.
+  dimmed; turned off takes precedence when both apply. This also applies to "<Room> only"
+  options: a turned-off or not-connected member keeps its "<Room> only" label but reads "Turned
+  off" or "Not connected" instead of "… stop" and cannot be selected.
 - **FR-022**: Room destinations MUST be ordered: selectable rooms outside the current target
-  (alphabetically, case-insensitive), then "<Room> only" options (alphabetically), then
-  unselectable rooms (alphabetically).
+  (alphabetically, case-insensitive), then selectable "<Room> only" options (alphabetically), then
+  unselectable rooms and "<Room> only" options (alphabetically).
 - **FR-023**: No destination is preselected; rooms and groups form one single-choice list. The
   primary button MUST read "Move to <name>" for the selected room or group ("Move to Kitchen" for
   "Kitchen only") and be disabled until one is selected.
@@ -263,9 +270,10 @@ to a group, then from the group to one of its members; compare the result with t
   FR-013's message is shown. While the request is in flight the button cannot be tapped again.
 - **FR-025**: The destination notes and the list MUST be covered by automated tests: idle, busy
   with a single-room playback, busy with a group playback (naming the group), member "only" options with one and
-  several other members, turned off, not connected, and ordering; and for groups: free, busy with
-  one and with several other playbacks, overlapping the current target without stopping anything
-  else, turned off, one and several members not connected (still selectable), the current group excluded, and ordering.
+  several other members, a turned-off or not-connected "only" member, turned off, not connected,
+  and ordering; and for groups: free, busy with one and with several other playbacks, overlapping
+  the current target without stopping anything else, turned off, no known member rooms, one and
+  several members not connected (still selectable), the current group excluded, and ordering.
 
 **Look & accessibility**
 
@@ -328,7 +336,16 @@ to a group, then from the group to one of its members; compare the result with t
   hence room and group mute are disabled during master mute (FR-018).
 - Departure from the design (called out per the constitution): the design's sample state has
   Bedroom preselected; this spec preselects nothing (FR-023) so that a move always follows an
-  explicit choice. The design's sheet otherwise applies as drawn.
+  explicit choice. With nothing selected the primary button reads "Move" and is disabled.
+  The design's sheet otherwise applies as drawn.
+- States the design does not draw (called out per the constitution) reuse existing styles rather
+  than adding new emphasis:
+  - The Pause/Resume button uses the round `surface` style of "Move to room…", placed between Stop
+    and "Move to room…"; Stop keeps the accent fill as drawn.
+  - Status chips other than Playing use the Rooms status colours from feature 001.
+  - "All rooms are muted" is a muted-text line under the pills.
+  - Loading, "Can't reach the hub" and the stale banner reuse the Rooms copy and styles
+    (feature 001).
 - Per-member mute buttons are not offered, matching the design; only the room or group being played
   has one.
 - The decorative panel follows the source kind's design colours; the design shows only the stream
