@@ -21,7 +21,7 @@ Suites that must exist and pass, in addition to every 001 suite (which stay gree
 | `AddressDetailTest` | host for stream/link, file name for `file:` and paths, null for line-in, unparseable shown as typed (FR-005) |
 | `NamesTest` | `joinNames`: 1, 2, 3+ names |
 | `NowPlayingBuilderTest` | [data-model](data-model.md) "Validation / rules": gone, failed, live vs line-in, pause/move visibility per status, group members order, missing target, mute and master mute |
-| `MoveDestinationsTest` + `DestinationTextTest` | the FR-025 matrix (data-model, 19 cases) and the copy table (research R8) |
+| `MoveDestinationsTest` + `DestinationTextTest` | the FR-025 matrix (data-model, 23 cases) and the copy table (research R8) |
 | `HubSessionTest` | the 001 polling scenarios moved here: 2.5 s, no overlap, 3 s timeout → Unreachable, stale keeps the snapshot, `startedSeq`/`refreshSeq` fence (an in-flight refresh never passes), holder count 0 → no requests, acquire from 0 refreshes at once, address change resets |
 | `AppMessagesTest` | a posted message is delivered once; the latest wins before collection |
 | `VolumeDragControllerTest` | throttle ≤ 4 sends/s + final send; pending beats refresh until a later refresh; member drag changes one room and the group max; group drag moves member values; no `/groups/{id}/volume` |

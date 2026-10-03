@@ -72,8 +72,8 @@ Nothing else is drawn: no progress bar, position, metadata or artwork (FR-008).
 ## Move playback sheet
 
 Opened by "Move to room…" when Live and `moveVisible`. Closes on Cancel, swipe down, scrim tap and
-Back without any request (US3-7). It also closes when a refresh makes the playback not Playing
-(FR-012), and after a confirm returns.
+Back without any request (US3-7). It also closes when a refresh makes "Move to room…" unavailable
+(not Playing or not transferable, FR-012), and after a confirm returns.
 
 - Container `surface`, top radius 28, padding 10/20/28, handle 36×4 `#3A3E46`, scrim
   `rgba(5,6,8,0.72)`, gap 14.
@@ -112,6 +112,7 @@ Back without any request (US3-7). It also closes when a refresh makes the playba
 | Member pill | "<room> volume" |
 | Sheet rows | "<label>, <note>" as radio buttons in one group |
 
-All touch targets are ≥ 44 dp, and all text meets 4.5:1 on its background. `ContrastTest` gains
+All touch targets are ≥ 44 dp, and all text meets 4.5:1 on its background, except dimmed text of
+disabled controls and unselectable rows (Constitution VI 1.2.1, FR-027). `ContrastTest` gains
 `#C9CBD1`, `#E4E3DF` and `#F2D3A4` on `surface` / `background`, and the kind icon colours used as
 text-free decorations are exempt.

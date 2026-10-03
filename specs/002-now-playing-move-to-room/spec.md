@@ -21,6 +21,8 @@
 - Q: If a paused playback is moved, what does the hub do? → A: Unknown; offer "Move to room…" only while the playback is Playing and hide it while Paused, until checked on the hub (FR-012, Assumptions).
 - Q: For a group route, how does a "<Room> only" option appear when that member room is turned off or not connected? → A: It keeps its "<Room> only" label, reads "Turned off" or "Not connected" instead of "… stop", and cannot be picked, like any other turned-off or disconnected room (FR-021, FR-022).
 - Q: How does a group appear when the hub knows none of its member rooms? → A: It is listed with the note "No rooms" and cannot be picked (FR-020a).
+- Q: How does an enabled group read when one of its member rooms is turned off? → A: Like a not-connected member: it stays selectable and its note adds "· <Room> turned off"; the hub plays on the remaining rooms (FR-020a).
+- Q: Is a group selectable when none of its known member rooms is connected? → A: No. When no known member can play (each is turned off or not connected), the group reads "Not connected" ("Turned off" when every member is turned off) and cannot be picked (FR-020a).
 
 ## User Scenarios & Testing *(mandatory)*
 
@@ -119,8 +121,9 @@ to a group, then from the group to one of its members; compare the result with t
    is not connected reads "Not connected", and neither can be picked.
 4. **Given** the sheet, **When** it lists groups in its "Groups" section, **Then** each group shows
    its member rooms (e.g. "Living Room + Kitchen"), or "<other source> will stop" in the warning
-   colour when moving there would stop other playback, followed by "· <Room> not connected" for
-   member rooms without hardware; only a turned-off group cannot be picked.
+   colour when moving there would stop other playback, followed by "· <Room> turned off" and
+   "· <Room> not connected" for member rooms that are turned off or without hardware; a turned-off
+   group, one with no known rooms, and one none of whose rooms can play cannot be picked.
 5. **Given** the user picks a destination, **When** the primary button reads "Move to <name>" and
    is tapped, **Then** the hub moves the playback, the sheet closes, and Now Playing shows the same
    source playing on the new target.
@@ -163,7 +166,11 @@ to a group, then from the group to one of its members; compare the result with t
   lists them as unavailable, and the primary button stays disabled.
 - **Two moves at once** (another client moves the same playback first): the hub rejects the
   second; the app shows the plain message and follows the hub's state.
-- **Newer hub with unknown values**: shown as "Unknown", never breaking the screen.
+- **Playback disappears from a refresh while this screen's Stop or move is still waiting for the
+  hub**: it is not treated as "ended elsewhere"; the app waits for the answer (Stop succeeded →
+  back to Rooms without a message; move succeeded → follow the moved playback).
+- **Newer hub with unknown values**: shown as "Unknown", never breaking the screen. A playback
+  whose target type is unknown offers no "Move to room…".
 
 ## Requirements *(mandatory)*
 
@@ -210,7 +217,8 @@ to a group, then from the group to one of its members; compare the result with t
   as Rooms) MUST show the line "Live streams can't be paused". Other sources MUST NOT show it.
 - **FR-012**: "Move to room…" MUST be offered only when the hub marks the route transferable and
   the route is Playing. It MUST NOT be offered while Paused, because the hub's behaviour for moving
-  a paused playback is unconfirmed; an open sheet whose playback becomes paused closes.
+  a paused playback is unconfirmed. An open sheet closes as soon as the action would no longer be
+  offered (the playback becomes paused or not Playing, or no longer transferable).
 - **FR-013**: Every action MUST follow feature 001 FR-018 and FR-019: confirmed by the next refresh,
   a short plain-language message on failure, and no duplicate requests from repeated taps.
 
@@ -241,13 +249,18 @@ to a group, then from the group to one of its members; compare the result with t
 - **FR-020a**: Below the rooms, a "Groups" section MUST list every group the hub lists except the
   one currently playing this route. Each group's note is decided in the same place as the room
   notes: "<other source> will stop" (warning colour) when any member room is occupied by another
-  playback, naming every such source ("Jazz24 and Morning playlist will stop"); a source playing on
-  another group stops on that whole group, as for rooms (FR-021); otherwise its
-  member room names joined with " + ". Member rooms that are not connected are appended as
-  " · <rooms> not connected" (names joined with ", " and " and "), and the group stays selectable,
-  because the hub plays on the connected rooms. A disabled group reads "Turned off" and cannot be
+  playback, naming every such source ("Jazz24 and Morning playlist will stop"). The group note
+  names only the sources, not the group they play on, even though a source playing on another
+  group stops on that whole group (as for rooms, FR-021); otherwise the note is its
+  member room names joined with " + ". Member rooms that are turned off are appended as
+  " · <rooms> turned off", then member rooms that are not connected as " · <rooms> not connected"
+  (names joined with ", " and " and "), and the group stays selectable, because the hub plays on
+  the remaining rooms. When no known member room can play (each is turned off or not connected),
+  the group reads "Turned off" if every known member is turned off, otherwise "Not connected", and
+  cannot be selected. A disabled group reads "Turned off" and cannot be
   selected. A group none of whose member rooms the hub lists reads "No rooms" and cannot be
-  selected. Groups are ordered like rooms: selectable alphabetically, then unselectable
+  selected. Precedence: disabled group, then no known members, then no playable member. Groups
+  are ordered like rooms: selectable alphabetically, then unselectable
   alphabetically. When the hub lists no other group, the section is not shown.
 - **FR-021**: Each room destination MUST show one note, decided in one place:
   "Idle" for an unoccupied, available, enabled room; "<other source> will stop" (warning colour)
@@ -273,7 +286,8 @@ to a group, then from the group to one of its members; compare the result with t
   several other members, a turned-off or not-connected "only" member, turned off, not connected,
   and ordering; and for groups: free, busy with one and with several other playbacks, overlapping
   the current target without stopping anything else, turned off, no known member rooms, one and
-  several members not connected (still selectable), the current group excluded, and ordering.
+  several members not connected (still selectable), a member turned off (still selectable), no
+  playable member (unselectable), the current group excluded, and ordering.
 
 **Look & accessibility**
 
@@ -281,10 +295,12 @@ to a group, then from the group to one of its members; compare the result with t
   (`design/screens/NowPlaying.dc.html`, `design/screens/Transfer.dc.html`). The Move sheet's
   "Groups" section is not in the design yet: the canvas and `Transfer.dc.html` MUST be updated
   with it before the sheet is implemented, reusing the room rows' style with a group icon.
-- **FR-027**: Every touch target MUST be at least 44 dp, text MUST meet 4.5:1 contrast, every
-  icon-only control MUST have a spoken label naming its target ("Stop", "Pause Downstairs",
-  "Mute Downstairs", "Downstairs volume", "Living Room volume"), and the sheet's destinations MUST
-  be announced as a single-choice list.
+- **FR-027**: Every touch target MUST be at least 44 dp, and text MUST meet 4.5:1 contrast; text
+  of disabled controls and unselectable rows, dimmed as in the design, is exempt (Constitution VI).
+  Every icon control MUST have a spoken label; labels name the room or group where the control
+  acts on one ("Pause Downstairs", "Mute Downstairs", "Downstairs volume", "Living Room volume"),
+  while Stop reads "Stop", as its visible caption. The sheet's destinations MUST be announced as a
+  single-choice list.
 
 ### Key Entities
 
@@ -329,7 +345,9 @@ to a group, then from the group to one of its members; compare the result with t
 - The hub keeps each room's own volume and mute when playback moves (volume is not carried over);
   the destination plays at whatever volume that room already has.
 - Moving playback to a group with member rooms that are not connected plays on the connected
-  rooms (confirmed by the user, 2026-10-03).
+  rooms (confirmed by the user, 2026-10-03). A member room that is turned off is treated the same
+  way: the hub plays on the remaining rooms (decided by the user, 2026-10-03; to be checked on the
+  hub, like the paused-move behaviour).
 - The hub reports a group as muted only when all its member rooms are muted.
 - While master mute is on the hub reports every room as muted, and unmuting a single room or group
   does not make it audible until master mute is turned off (confirmed by the user, 2026-10-03);

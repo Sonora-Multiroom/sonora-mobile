@@ -43,7 +43,7 @@ FR-025. Every test task comes before its implementation task and MUST be seen fa
 
 ## Phase 1: Setup
 
-**Purpose**: version bump and the one new dependency.
+**Purpose**: version bump and the two new dependencies.
 
 - [ ] T001 Bump the app version as the **first commit** of this feature (AGENTS.md "Workflow"): in
   `gradle.properties` set `sonora.versionName=0.2.0-alpha` and `sonora.versionCode=2`. Run
@@ -267,6 +267,7 @@ another client (quickstart §2 steps 2–5).
   - pauseable Active paused → status Paused, `paused = true`, `pauseEnabled = true`,
     `moveVisible = false`
   - pauseable Active → Playing, `pauseEnabled = true`, `moveVisible = transferable`
+  - a transferable Playing route with `Target.Unknown` → `moveVisible = false`
   - Starting / Stopping / Unknown → `pauseEnabled = false`, `moveVisible = false`
   - `kindLabel` and `addressDetail` filled from the source; a missing source → `sourceName = inputId`
   - target line: room → name; group → name + `memberNames` "in `outputIds` order, skipping unknown
@@ -279,6 +280,9 @@ another client (quickstart §2 steps 2–5).
   - Stop → `stopRoute(id)`; `Ok` → `exit = Stopped` with nothing posted to `AppMessages`
   - Stop → `Rejected(404)` → `exit = Ended(name)` and "Playback on <name> ended" posted
   - Stop → `Unreachable` → stays open, message "Couldn't stop <name>. Can't reach the hub."
+  - **Stop race**: Stop pending (delayed fake), a refresh without the route completes → no `exit`
+    and nothing posted; then `Ok` → `exit = Stopped`, still nothing posted (spec edge case,
+    research R4)
   - the route disappears from a refresh → `exit = Ended`, message posted
   - a route id absent from the first snapshot → `Ended`
   - Pause/Resume → `setRoutePaused(id, true/false)`
@@ -302,8 +306,9 @@ another client (quickstart §2 steps 2–5).
     `session.state` per data-model.md "View-model state". `sheet`, `pending` and the Mute/Move
     actions stay unused until US2/US3.
   - `exit` is decided per research R4, behind a fence `fenceSeq: Long?`: a missing route counts as
-    ended only when the state's `refreshSeq > fenceSeq`. The fence is null in US1 and is set by
-    T033 from `session.startedSeq`.
+    ended only when the state's `refreshSeq > fenceSeq` **and** neither `Stop` nor `Move` is in
+    `inFlight` (research R3/R4). The fence is null in US1 and is set by T033 from
+    `session.startedSeq`.
   - `lastKnownTargetName` is kept for the "ended" text.
   - `onVisible()`/`onHidden()` acquire and release the session.
   - Exposes `onStop()`, `onPauseResume()`, `consumeMessage()` and `consumeExit()`.
@@ -422,20 +427,25 @@ member via "<Room> only" (quickstart §2 steps 7–10).
 
 ### Tests for User Story 3 ⚠️ write first, see them fail
 
-- [ ] T028 [P] [US3] Write `test/domain/MoveDestinationsTest.kt` covering **all 19 cases** of the
+- [ ] T028 [P] [US3] Write `test/domain/MoveDestinationsTest.kt` covering **all 23 cases** of the
   data-model.md "FR-025 test matrix" one-to-one, using research R8 rules:
-  - precedence `TurnedOff` > `NotConnected` > `WillStop` > `WillStopOnGroup` > `Idle`
+  - room precedence `TurnedOff` > `NotConnected` > occupied (`WillStop` for a single-room route,
+    `WillStopOnGroup` for a group route) > `Idle`
+  - group precedence: disabled → `TurnedOff`; no known members → `NoRooms`; no playable member →
+    `TurnedOff` (all disabled) or `NotConnected`, unselectable (cases 21–22); otherwise
+    `WillStop`/`Members` with `turnedOff` and `notConnected` lists, selectable (case 20)
   - "<Room> only" members follow the same precedence: a turned-off or not-connected member reads
     `TurnedOff`/`NotConnected` (not `OthersStop`), is unselectable, sorts with the unselectable
     rooms and keeps its " only" label (case 19, spec FR-021/FR-022)
   - a group with no known members → `NoRooms`, unselectable (case 18, spec FR-020a)
   - group `WillStop` sources are distinct and in member order; members occupied by the current
     route never count as "will stop"
-  - `notConnected` = names of unavailable members, and such a group stays selectable
+  - `turnedOff` = names of disabled members, `notConnected` = names of unavailable enabled
+    members, and such a group stays selectable while at least one member can play
   - room ordering: selectable non-members, then "only", then unselectable, each case-insensitive
     with the id as tiebreaker; groups: selectable, then unselectable
   - `ctaName` = the room name for "X only"
-  - `null` for a gone route; an empty list for a `Target.Unknown` route
+  - `null` for a gone route; empty lists for a `Target.Unknown` route (case 23)
   - `sourceName`/`currentTargetName`
 - [ ] T029 [P] [US3] Write `test/ui/nowplaying/DestinationTextTest.kt` for every row of the research
   R8 copy table:
@@ -449,6 +459,8 @@ member via "<Room> only" (quickstart §2 steps 7–10).
   - "Living Room + Kitchen"
   - "Living Room + Kitchen · Patio not connected"
   - "Jazz24 will stop · Patio and Office not connected"
+  - "Living Room + Kitchen · Patio turned off"
+  - "Living Room + Kitchen · Patio turned off · Garden not connected"
   - "Turned off", "Not connected", "No rooms"
   - the warning flag only for `WillStop` and `WillStopOnGroup`
 - [ ] T030 [P] [US3] Extend `test/ui/nowplaying/NowPlayingViewModelTest.kt` (US3 part):
@@ -456,7 +468,10 @@ member via "<Room> only" (quickstart §2 steps 7–10).
   - `onSelect(target)` ignores unselectable targets
   - the CTA is disabled with nothing selected
   - a refresh making the selected destination unselectable or absent → `selected = null`
-  - a refresh making the route Paused (or not Playing) → `sheet = null`
+  - a refresh making the route Paused (or not Playing) → `sheet = null`; a refresh making it not
+    transferable → `sheet = null` (FR-012)
+  - every destination unselectable ("Nothing to move to") → the sheet opens, nothing can be
+    selected, the CTA stays disabled
   - `onDismissMove()` → `sheet = null` with no request
   - `onConfirmMove()` → `transferRoute(followedId, selected)`; a repeated confirm while in flight
     sends nothing
@@ -465,6 +480,8 @@ member via "<Room> only" (quickstart §2 steps 7–10).
     switch that contains r2 shows r2's target; a later refresh without r2 → `Ended`
   - **in-flight fence**: a refresh that was already running when `Ok(r2)` returned completes
     without r2 → still no `exit` (`fenceSeq` was captured from `session.startedSeq`)
+  - **move race**: transfer pending (delayed fake), a refresh lacking r1 completes **before** the
+    answer → no `exit`, nothing posted; then `Ok(r2)` → follows r2 (research R3)
   - `followedRouteId` is written to `SavedStateHandle`. A new view model built with that handle
     (process-death restore) follows r2, shows r2's target and does not post "ended"
   - `Err` → `sheet = null` and message "Couldn't move <source> to <ctaName>." (or the "Can't reach
@@ -478,7 +495,8 @@ member via "<Room> only" (quickstart §2 steps 7–10).
   in data-model.md, and `object MoveDestinations { fun build(snapshot, routeId): MoveSheetContent? }`
   using `occupancy()` from T003 with the current route excluded. Make T028 pass.
 - [ ] T032 [US3] Implement `main/ui/nowplaying/DestinationText.kt`: `fun destinationNoteText(note: MoveDestinationNote): String`
-  using `joinNames`. Group `Members` are joined with " + ", and `notConnected` is appended as
+  using `joinNames`. Group `Members` are joined with " + ", then a non-empty `turnedOff` is
+  appended as `" · ${joinNames(it)} turned off"` and a non-empty `notConnected` as
   `" · ${joinNames(it)} not connected"`. Make T029 pass.
 - [ ] T033 [US3] Add the sheet to `main/ui/nowplaying/NowPlayingViewModel.kt`:
   - `MoveSheetState(content, selected)` rebuilt from each snapshot with `MoveDestinations.build`
@@ -488,10 +506,12 @@ member via "<Room> only" (quickstart §2 steps 7–10).
     sheet and request a refresh
   - after `Err`: close the sheet and set the message via `UserAction.Move(ctaName)` with the
     source name as X
-  - close the sheet automatically per FR-012
+  - close the sheet automatically when `moveVisible` becomes false (FR-012)
+  - while `Move` is in flight, never set `exit` for a missing route (research R3)
 
   Make T030 pass.
-- [ ] T034 [US3] **Design gate (FR-026, research R12)**. Confirm the canvas
+- [ ] T034 [US3] **Design gate (FR-026, research R12)**, met on 2026-10-03 (canvas version 13 and
+  the offline copy draw the Groups section); just confirm it. Confirm the canvas
   https://claude.ai/artifact/R7e4yABDYUuytc64XxNNKK (`project/Transfer.dc.html`) and
   `design/screens/Transfer.dc.html` contain a "Groups" section: a legend in the "Move to" style,
   room-row style with a group icon, and notes as in research R8.
@@ -535,7 +555,8 @@ member via "<Room> only" (quickstart §2 steps 7–10).
   Extend `test/ui/theme/ContrastTest.kt` with every new text pair: `#C9CBD1`, `#E4E3DF`,
   `#F2D3A4` and `textMuted` on `surface`/`background`, `#F2D3A4` on the badge background (black
   40 % over `#2A1F10`), accent on `#2A1F10` (chip), and `onAccent` on `accent`. Text ≥ 4.5:1,
-  icons ≥ 3:1.
+  icons ≥ 3:1. Dimmed text of disabled controls and unselectable rows is exempt (Constitution VI
+  1.2.1, spec FR-027); do not add contrast cases for it.
 - [ ] T038 [P] Compare Now Playing and the sheet with `design/screens/NowPlaying.dc.html` and
   `Transfer.dc.html` (sizes, spacing, radii, fonts, colours) and fix drift. Add previews in
   `main/ui/nowplaying/NowPlayingPreviews.kt` with the design sample data: the stream on Downstairs
@@ -549,8 +570,8 @@ member via "<Room> only" (quickstart §2 steps 7–10).
   `:composeApp:testAndroidHostTest`, `:composeApp:allTests`, `:composeApp:check`. All must be
   green, every suite in the §1 table must exist, and `git status` must show no generated files.
 - [ ] T041 Update `AGENTS.md` where the implementation differs from what it states (e.g. the
-  "Project layout" mention of `ui/session/` if useful, and the new dependency if versions are
-  listed), and mark `specs/002-now-playing-move-to-room/spec.md` `**Status**: Implemented`.
+  "Project layout" mention of `ui/session/` if useful, and the new dependencies if versions
+  are listed), and mark `specs/002-now-playing-move-to-room/spec.md` `**Status**: Implemented`.
 
 ---
 
@@ -633,8 +654,11 @@ Task: "Implement destinationNoteText in composeApp/src/commonMain/kotlin/sonora/
 - Never commit `composeApp/build/` or hand-edit generated code (Constitution I).
 - "Move to room…" never shows while Paused (FR-012). Allowing it is a later follow-up, once the
   hub's behaviour is checked.
-- The two Move-sheet rules confirmed on 2026-10-03 (spec FR-020a, FR-021/FR-022: an unavailable
-  "<Room> only" member is unselectable; a group with no known members reads "No rooms") are covered
-  by cases 18–19 of the FR-025 matrix.
+- The Move-sheet rules confirmed on 2026-10-03 (spec FR-020a, FR-021/FR-022: an unavailable
+  "<Room> only" member is unselectable; a group with no known members reads "No rooms"; a
+  turned-off member is listed like a not-connected one; a group with no playable member is
+  unselectable) are covered by cases 18–22 of the FR-025 matrix.
+- While Stop or Move is in flight, a refresh that lacks the route never triggers "ended"
+  (research R3/R4); the request's answer decides.
 - Fences on the session always capture `session.startedSeq`, never the state's `refreshSeq`
   (research R1).

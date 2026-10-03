@@ -60,11 +60,11 @@ Refactor of the Rooms view model onto a shared session.
 | Principle | Status | How |
 |---|---|---|
 | I. API Contract Fidelity | ✅ | Only `/api/v2` calls: `PUT outputs/{id}/mute`, `PUT groups/{id}/mute`, `POST routes/{id}/transfer`, all in `openapi.json` 0.1.20, through `HubRepository` ([contract](contracts/hub-repository.md)). The new route id comes from the documented transfer response, not a guess. Group volume stays absent. No new hub gap. The unknown "move while paused" behaviour is handled by hiding the action (FR-012), not by invention |
-| II. Truthful UI | ✅ | No progress, position or metadata. The decorative panel depends on kind only. Pause only when `pauseable`, Move only when `transferable` (+ Playing). Live decided by the existing `isLiveStream`. Address detail derived in one function (`addressDetail`, R7). Destination notes decided in one builder + one formatter (R8). Mute shows the hub's state with no optimistic flip (R9). The local value wins while dragging via the shared controller (R5) |
-| III. Shared-First | ✅ | All new code in `commonMain`. The new dependency is the JetBrains multiplatform artifact. No platform source set changes |
+| II. Truthful UI | ✅ | No progress, position or metadata. The decorative panel depends on kind only. Pause only when `pauseable`, Move only when `transferable` (+ Playing). Live decided by the existing `isLiveStream`. Address detail derived in one function (`addressDetail`, R7). Destination notes decided in one builder + one formatter (R8, including the turned-off-member and no-playable-member group rules). Mute shows the hub's state with no optimistic flip (R9). The local value wins while dragging via the shared controller (R5) |
+| III. Shared-First | ✅ | All new code in `commonMain`. Both new dependencies are JetBrains multiplatform artifacts. No platform source set changes |
 | IV. Test-First | ✅ | Builders (`NowPlayingBuilder`, `MoveDestinations`, `addressDetail`, `joinNames`, note text), `HubSession`, `VolumeDragController`, view models and repository additions get their tests first ([quickstart](quickstart.md) §1). The 001 suites migrate without dropping scenarios |
 | V. Resilient LAN | ✅ | Same timeouts and loop, now in one place. Stale state disables every Now Playing control and the sheet's confirm. Transfer errors (400/404/422, IO) map to plain copy. Unknown enum values → Unknown (001 mapping reused) |
-| VI. Design Fidelity & A11y | ✅ (gate) | Layout per `NowPlaying.dc.html` / `Transfer.dc.html` ([UI contract](contracts/now-playing-ui.md)). Departures already called out in the spec (no preselection, non-stream panel colours). The **Groups section must be added to the canvas first** (FR-026, R12): a gate task before the sheet UI. Labels, ≥ 44 dp and a radio-group sheet per FR-027 |
+| VI. Design Fidelity & A11y | ✅ (gate) | Layout per `NowPlaying.dc.html` / `Transfer.dc.html` ([UI contract](contracts/now-playing-ui.md)). Departures already called out in the spec (no preselection, non-stream panel colours). The **Groups section must be added to the canvas first** (FR-026, R12): a gate task before the sheet UI. Labels, ≥ 44 dp and a radio-group sheet per FR-027. Dimmed disabled/unselectable text is exempt from 4.5:1 (constitution 1.2.1) |
 | VII. Minimal Dependencies | ✅ | Two new artifacts from the lifecycle family already in use (same version 2.11.0), justified in R2 (per-entry view-model scope; `SavedStateHandle` for R3), added to `libs.versions.toml`. `ModalBottomSheet` comes from the existing material3 |
 
 **Post-design re-check (after Phase 1)**: still passing.
@@ -169,10 +169,9 @@ shared across screens.
 
 ## Open points for the user (not blocking the plan)
 
-- R12: the canvas update is needed before the sheet UI. It is best done locally, since the canvas
-  is editable there.
+- None. R12 (Groups section on the canvas) was done on 2026-10-03.
 
 ## Complexity Tracking
 
-None. The new dependency is justified in research R2 (Constitution VII), and the shared-session
+None. The two new dependencies are justified in research R2 (Constitution VII), and the shared-session
 refactor is justified in R1.

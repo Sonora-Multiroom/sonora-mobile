@@ -95,7 +95,9 @@ route ("callers must update their references to the new routeId", `openapi.json`
 `followedRouteId` to the new id (FR-002).
 
 Fence:
-- While a move is in flight, a missing route is never treated as "ended".
+- While a move is in flight (`Move` ∈ `inFlight`), a missing route is never treated as "ended",
+  whatever the fence. A refresh that completes during the request and lacks the old id changes
+  nothing; the request's answer decides.
 - On success the view model captures `fenceSeq = session.startedSeq` (R1). Until a state arrives
   with `refreshSeq > fenceSeq`, a missing route is still not "ended".
 - So neither a refresh in flight during the move nor one completed before it can send the user
@@ -119,6 +121,11 @@ the same source plays twice, and the hub gives the id explicitly.
 - **Stop tapped here**: on `Ok` the app returns at once without a message (US1-4, FR-009). On
   `Rejected(404)` it returns with the "ended" message, because the playback already ended
   elsewhere. On any other failure it stays and shows the 001 Stop error.
+- **Stop in flight**: while `Stop` ∈ `inFlight`, a missing route is never treated as "ended".
+  The Stop answer decides, as above: `Ok` → `exit = Stopped` with no message, `Rejected(404)` →
+  `Ended` with the message, other failures → stay with the 001 Stop error, and the next refresh
+  decides again. This avoids a false "ended" when a poll lands between the hub stopping the route and
+  the response arriving (spec edge case).
 - A route id that is absent from the very first snapshot after opening counts as ended elsewhere.
 - Cross-screen one-shot messages go through a small `AppMessages` holder in `AppGraph`
   (`post(text)`, `messages: Flow<String>`). Rooms collects it into the snackbar it already has,
@@ -221,11 +228,20 @@ Room rows (FR-020–FR-022):
 
 Group rows (FR-020a):
 - Every group except the current target (for a single-room route, all groups).
-- Disabled → `TurnedOff`, unselectable. Otherwise selectable, with note
-  `WillStop(distinct other sources occupying any member, in member order)` when any member is
-  occupied by another route, else `Members(member names)`. In both cases
-  `notConnected = names of unavailable members` is appended as " · X not connected" /
-  " · X and Y not connected".
+- Precedence, first match wins:
+  1. Disabled group → `TurnedOff`, unselectable.
+  2. No listed member resolves → `NoRooms`, unselectable (below).
+  3. No known member can play (each is disabled or unavailable) → `TurnedOff` when every known
+     member is disabled, else `NotConnected`; unselectable (spec FR-020a, decided by the user
+     2026-10-03).
+  4. Otherwise selectable, with note `WillStop(distinct other sources occupying any member, in
+     member order)` when any member is occupied by another route, else `Members(member names)`.
+     The note names only the sources, never the other group they play on (spec FR-020a).
+- In case 4 the note carries `turnedOff = names of disabled members` and
+  `notConnected = names of unavailable, enabled members` (a member both disabled and unavailable
+  counts as turned off, as for rooms). They are appended in that order as " · X turned off" and
+  " · X and Y not connected". Such a group stays selectable: the hub plays on the remaining rooms
+  (spec Assumptions).
 - Members that the current route occupies do not count as "will stop" (spec Assumptions: overlap
   keeps playing).
 - A group whose listed members are all unknown to the hub (none resolve) reads "No rooms" and is
@@ -247,7 +263,7 @@ Copy (formatter):
 | `WillStopOnGroup(a, g)` | "a will stop on g" | warning |
 | `OthersStop([x, y])` | "x and y stop" (3+: "x, y and z stop") | textMuted |
 | `Members([x, y], notConnected=[])` | "x + y" | textMuted |
-| any group note + notConnected | "… · p not connected" | base colour of the note |
+| any group note + turnedOff / notConnected | "… · p turned off · q and r not connected" | base colour of the note |
 | `TurnedOff` / `NotConnected` / `NoRooms` | "Turned off" / "Not connected" / "No rooms" | textMuted, row dimmed |
 
 ## R9. Mute endpoints
@@ -287,8 +303,11 @@ adds no dependency savings.
 
 ## R12. Design prerequisite (FR-026)
 
-**Finding**: the canvas (`project/Transfer.dc.html`, checked 2026-10-03) and the offline copy have
-no "Groups" section yet. The NowPlaying design shows only the stream variant and has no Pause or
+**Finding**: the canvas (`project/Transfer.dc.html`, checked 2026-10-03) and the offline copy had
+no "Groups" section. **Resolved 2026-10-03**: the canvas (version 13) and
+`design/screens/Transfer.dc.html` now draw a "Groups" legend after the rooms, room-row style with a
+two-speaker group icon, sample rows "Upstairs" ("Morning playlist will stop", warning) and
+"Outdoor" ("Turned off", dimmed), inside one scrolling list; the sheet is 768 px tall. The NowPlaying design shows only the stream variant and has no Pause or
 "All rooms are muted" state, which the spec covers in its Assumptions.
 
 **Decision**: updating the canvas and `design/screens/Transfer.dc.html` with a "Groups" section

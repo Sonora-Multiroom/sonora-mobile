@@ -50,7 +50,7 @@ sealed interface NowPlayingContent {
         val pauseVisible: Boolean,                // route.pauseable
         val pauseEnabled: Boolean,                // status ∈ {Playing, Paused}
         val paused: Boolean,                      // status == Paused → button reads Resume
-        val moveVisible: Boolean,                 // transferable && status == Playing
+        val moveVisible: Boolean,                 // transferable && status == Playing && target !is Target.Unknown
         val volume: VolumeSection?,               // null for Target.Unknown / target missing
     ) : NowPlayingContent
 }
@@ -83,6 +83,7 @@ What a pill shows is derived in the view model, not stored: `max(roomVolumes[id]
 controller's pending[id])`, where pending values win (research R5).
 
 **Validation / rules** (each one is a test in `NowPlayingBuilderTest`):
+- `moveVisible = false` for a `Target.Unknown` route (no destinations can be computed).
 - A `STOPPED` or absent route → `Gone`. `FAILED` → `Playback` with status Failed, Stop only (pause
   hidden or disabled per `pauseable`, move hidden).
 - A live stream → `status = Playing`, `live = true`. Line-in or file (non-pauseable) →
@@ -114,10 +115,18 @@ data class MoveDestination(
 
 sealed interface MoveDestinationNote {
     data object Idle : MoveDestinationNote
-    data class WillStop(val sources: List<String>, val notConnected: List<String> = emptyList()) : MoveDestinationNote
+    data class WillStop(
+        val sources: List<String>,
+        val turnedOff: List<String> = emptyList(),    // group rows only
+        val notConnected: List<String> = emptyList(), // group rows only
+    ) : MoveDestinationNote
     data class WillStopOnGroup(val source: String, val group: String) : MoveDestinationNote
     data class OthersStop(val rooms: List<String>) : MoveDestinationNote
-    data class Members(val rooms: List<String>, val notConnected: List<String> = emptyList()) : MoveDestinationNote
+    data class Members(
+        val rooms: List<String>,
+        val turnedOff: List<String> = emptyList(),
+        val notConnected: List<String> = emptyList(),
+    ) : MoveDestinationNote
     data object TurnedOff : MoveDestinationNote
     data object NotConnected : MoveDestinationNote
     data object NoRooms : MoveDestinationNote
@@ -153,6 +162,10 @@ The copy comes from `destinationNoteText(note)` (`ui/nowplaying/DestinationText.
 | 17 | Current room excluded (single-room route) | |
 | 18 | Group with no known members | `NoRooms`, unselectable |
 | 19 | Group route, member turned off / not connected | "A only" → `TurnedOff` / `NotConnected` (not `OthersStop`), unselectable, sorted with the unselectable rooms, label keeps " only" |
+| 20 | Enabled group with 1 turned-off member (+ 1 not connected) | `Members(…, turnedOff=[P])` → "… · P turned off" (and "… · P turned off · Q not connected"), selectable; a member both disabled and unavailable counts as turned off |
+| 21 | Group whose known members are all unavailable, or a mix of disabled and unavailable | `NotConnected`, unselectable |
+| 22 | Group whose known members are all disabled | `TurnedOff`, unselectable; a disabled group stays `TurnedOff` and one with no known members stays `NoRooms` (precedence) |
+| 23 | Route with `Target.Unknown` | `build` returns content with no destinations; `NowPlayingBuilder` sets `moveVisible = false` |
 
 ## View-model state
 
@@ -175,12 +188,13 @@ data class MoveSheetState(val content: MoveSheetContent, val selected: Target?)
 State transitions:
 
 ```
-open ─▶ (first snapshot) ─▶ Playback ──Stop ok──────────▶ exit = Stopped
+open ─▶ (first snapshot) ─▶ Playback ──Stop ok──────────▶ exit = Stopped   (route gone while Stop in flight: wait, R4)
                               │  │  └─route gone (fenced)─▶ exit = Ended(name)  → AppMessages "Playback on <name> ended"
                               │  └─Move… (Live && moveVisible) ─▶ sheet(selected=null)
                               │        ├─ pick selectable ─▶ selected
                               │        ├─ refresh: selected unselectable/gone ─▶ selected=null
-                              │        ├─ refresh: status != Playing ─▶ sheet=null (FR-012)
+                              │        ├─ refresh: !moveVisible (not Playing / not transferable) ─▶ sheet=null (FR-012)
+                              │        ├─ refresh lacks route while Move in flight ─▶ no change (R3)
                               │        ├─ Cancel / swipe / Back ─▶ sheet=null
                               │        └─ Confirm (Live) ─▶ inFlight+Move
                               │              ├─ Ok(newRoute) ─▶ followedId = newRoute.id, fence seq, sheet=null
