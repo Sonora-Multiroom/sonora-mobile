@@ -15,15 +15,20 @@ sealed interface SessionState {
         val address: HubAddress,
         val connection: Connection,               // Loading | Live | Unreachable(lastSuccessAt), from 001
         val snapshot: HubSnapshot?,               // last successful refresh
-        val refreshSeq: Long,                     // seq of the refresh that produced `connection`
+        val refreshSeq: Long,                     // startedSeq of the refresh whose result this is (0 before any)
     ) : SessionState
 }
 ```
 
 - `HubSession.acquire()` / `release()` maintain a holder count. The loop runs while the count is
   above 0 and an address exists. The address changing restarts the loop and clears `snapshot`.
-- `refreshSeq` increments when a refresh **starts**. A consumer fences on it: "a refresh that
-  started after X" means `seq > seqAtX` (research R3, R5).
+- `HubSession.startedSeq: Long` (a property, not in the state) is incremented just before each
+  refresh request starts. `Connected.refreshSeq` is the `startedSeq` of the refresh whose result
+  the state carries.
+- Fence rule (research R1): to wait for "a refresh that started after X", capture
+  `captured = session.startedSeq` at X, then accept the first state with
+  `refreshSeq > captured`. Never capture `state.refreshSeq`, because a refresh already in flight
+  at X would pass.
 
 `AppMessages`: `post(text: String)` plus a `messages` flow that is collected once (conflated buffer,
 latest wins).
@@ -94,30 +99,30 @@ controller's pending[id])`, where pending values win (research R5).
 data class MoveSheetContent(
     val sourceName: String,
     val currentTargetName: String,                // "<source> · now on <target>"
-    val rooms: List<Destination>,
-    val groups: List<Destination>,                // empty → section hidden
+    val rooms: List<MoveDestination>,
+    val groups: List<MoveDestination>,                // empty → section hidden
 )
 
-data class Destination(
+data class MoveDestination(
     val target: Target,                           // Target.Room or Target.Group only
     val label: String,                            // "Kitchen", "Kitchen only", "Downstairs"
     val ctaName: String,                          // "Kitchen" (also for "Kitchen only"), group name
-    val kind: DestinationKind,                    // Room | MemberOnly | Group
-    val note: DestinationNote,
+    val kind: MoveDestinationKind,                    // Room | MemberOnly | Group
+    val note: MoveDestinationNote,
     val selectable: Boolean,
 )
 
-sealed interface DestinationNote {
-    data object Idle : DestinationNote
-    data class WillStop(val sources: List<String>, val notConnected: List<String> = emptyList()) : DestinationNote
-    data class WillStopOnGroup(val source: String, val group: String) : DestinationNote
-    data class OthersStop(val rooms: List<String>) : DestinationNote
-    data class Members(val rooms: List<String>, val notConnected: List<String> = emptyList()) : DestinationNote
-    data object TurnedOff : DestinationNote
-    data object NotConnected : DestinationNote
-    data object NoRooms : DestinationNote
+sealed interface MoveDestinationNote {
+    data object Idle : MoveDestinationNote
+    data class WillStop(val sources: List<String>, val notConnected: List<String> = emptyList()) : MoveDestinationNote
+    data class WillStopOnGroup(val source: String, val group: String) : MoveDestinationNote
+    data class OthersStop(val rooms: List<String>) : MoveDestinationNote
+    data class Members(val rooms: List<String>, val notConnected: List<String> = emptyList()) : MoveDestinationNote
+    data object TurnedOff : MoveDestinationNote
+    data object NotConnected : MoveDestinationNote
+    data object NoRooms : MoveDestinationNote
 }
-val DestinationNote.warning: Boolean get() = this is WillStop || this is WillStopOnGroup
+val MoveDestinationNote.warning: Boolean get() = this is WillStop || this is WillStopOnGroup
 ```
 
 `MoveDestinations.build(snapshot, routeId)` returns `null` when the route is gone, and an `Unknown`
@@ -147,6 +152,7 @@ The copy comes from `destinationNoteText(note)` (`ui/nowplaying/DestinationText.
 | 16 | Group ordering | selectable alphabetical → unselectable alphabetical |
 | 17 | Current room excluded (single-room route) | |
 | 18 | Group with no known members | `NoRooms`, unselectable |
+| 19 | Group route, member turned off / not connected | "A only" → `TurnedOff` / `NotConnected` (not `OthersStop`), unselectable, sorted with the unselectable rooms, label keeps " only" |
 
 ## View-model state
 
@@ -182,4 +188,6 @@ open ─▶ (first snapshot) ─▶ Playback ──Stop ok───────�
                               └─ Unreachable ─▶ stale content, all controls disabled, confirm disabled
 ```
 
-The `followedRouteId` is kept in the view model (research R3).
+`followedRouteId` is stored in the view model's `SavedStateHandle` under `"followedRouteId"`,
+initialised from the destination's `routeId`, so it survives rotation and process death. `fenceSeq`
+is in-memory only, because after a restore a fresh snapshot decides (research R3).

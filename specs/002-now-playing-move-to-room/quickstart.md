@@ -21,14 +21,15 @@ Suites that must exist and pass, in addition to every 001 suite (which stay gree
 | `AddressDetailTest` | host for stream/link, file name for `file:` and paths, null for line-in, unparseable shown as typed (FR-005) |
 | `NamesTest` | `joinNames`: 1, 2, 3+ names |
 | `NowPlayingBuilderTest` | [data-model](data-model.md) "Validation / rules": gone, failed, live vs line-in, pause/move visibility per status, group members order, missing target, mute and master mute |
-| `MoveDestinationsTest` + `DestinationTextTest` | the FR-025 matrix (data-model, 18 cases) and the copy table (research R8) |
-| `HubSessionTest` | the 001 polling scenarios moved here: 2.5 s, no overlap, 3 s timeout → Unreachable, stale keeps the snapshot, holder count 0 → no requests, acquire from 0 refreshes at once, address change resets |
+| `MoveDestinationsTest` + `DestinationTextTest` | the FR-025 matrix (data-model, 19 cases) and the copy table (research R8) |
+| `HubSessionTest` | the 001 polling scenarios moved here: 2.5 s, no overlap, 3 s timeout → Unreachable, stale keeps the snapshot, `startedSeq`/`refreshSeq` fence (an in-flight refresh never passes), holder count 0 → no requests, acquire from 0 refreshes at once, address change resets |
+| `AppMessagesTest` | a posted message is delivered once; the latest wins before collection |
 | `VolumeDragControllerTest` | throttle ≤ 4 sends/s + final send; pending beats refresh until a later refresh; member drag changes one room and the group max; group drag moves member values; no `/groups/{id}/volume` |
 | `KtorHubRepositoryActionsTest` | [contract tests](contracts/hub-repository.md) 1–4 |
-| `NowPlayingViewModelTest` | opens from the session snapshot; Stop ok → `exit=Stopped`; Stop 404 → `Ended`; route gone elsewhere → `Ended` + "Playback on X ended" posted; pause/resume/mute requests and in-flight blocking; stale disables everything; sheet opens only when Live and moveVisible; selection cleared when it becomes unselectable; sheet closes when paused; confirm → `transferRoute` → follows the new id without a false "ended" (refresh fence); move failure closes the sheet with the message |
+| `NowPlayingViewModelTest` | opens from the session snapshot; Stop ok → `exit=Stopped`; Stop 404 → `Ended`; route gone elsewhere → `Ended` + "Playback on X ended" posted; pause/resume/mute requests and in-flight blocking; stale disables everything; sheet opens only when Live and moveVisible; selection cleared when it becomes unselectable; sheet closes when paused; confirm → `transferRoute` → follows the new id without a false "ended", even with a refresh in flight during the move (`startedSeq` fence); the followed id restored from `SavedStateHandle`; move failure closes the sheet with the message |
 | `RoomsViewModel*Test` | the 001 scenarios against the shared session; `AppMessages` text appears as the Rooms message |
 | `MessagesTest` | mute and move rows of the message table |
-| `AppBackStackTest` | Now Playing push/pop, saver round-trip unchanged |
+| `AppBackStackTest` | Now Playing push/pop, saver round-trip unchanged, the Rooms root survives tab switches (same instance) |
 | `ContrastTest` | new text colours (contracts/now-playing-ui.md) |
 
 ## 2. On a device against the real hub (user, locally)
@@ -63,3 +64,9 @@ http://multiroom.lan:8080/api/v2/routes` or another client to compare.
 10. **Failures (US3-6, edge cases)**: stop the hub with the sheet open. The button is disabled and
     the stale banner shows. Restart it. Cancel, swipe down and Back each close the sheet with no
     change.
+11. **Tab round trip (research R2)**: on Rooms, drag a pill and release, then within a second tap
+    Settings and back to Rooms. The pill does not jump back to the old value before the hub
+    confirms.
+12. **Restore after a move (research R3)**: move a playback, then press Home and run
+    `adb shell am kill sonora.multiroom.mobile`. Reopen the app: it shows Now Playing for the moved
+    playback on its new target, with no "ended" message.

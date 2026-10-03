@@ -50,12 +50,21 @@ FR-025. Every test task comes before its implementation task and MUST be seen fa
   `./gradlew :androidApp:assembleDebug` and check that `AppVersionTest` still passes (it must not
   hard-code 0.1.0).
 - [ ] T002 Add `lifecycle-viewmodel-navigation3 = { module = "org.jetbrains.androidx.lifecycle:lifecycle-viewmodel-navigation3", version.ref = "lifecycle" }`
+  and `lifecycle-viewmodel-savedstate = { module = "org.jetbrains.androidx.lifecycle:lifecycle-viewmodel-savedstate", version.ref = "lifecycle" }`
   to `gradle/libs.versions.toml` (2.11.0, research R2; re-check Maven Central for a newer **stable**
-  2.11.x patch and record any change in research.md R2). Add it to `commonMain` dependencies in
-  `composeApp/build.gradle.kts`. Install the decorator in `main/ui/nav/AppNavigation.kt`:
-  `entryDecorators = listOf(rememberSaveableStateHolderNavEntryDecorator(), rememberViewModelStoreNavEntryDecorator())`
-  (use the exact factory names the 2.11.0 artifact exposes). The Rooms and Settings view models
-  keep working, and `./gradlew :androidApp:assembleDebug` is green.
+  2.11.x patch and record any change in research.md R2). Add both to `commonMain` dependencies in
+  `composeApp/build.gradle.kts`.
+  - Install the decorators in `main/ui/nav/AppNavigation.kt`:
+    `entryDecorators = listOf(rememberSaveableStateHolderNavEntryDecorator(), rememberViewModelStoreNavEntryDecorator())`
+    (use the exact factory names the 2.11.0 artifact exposes).
+  - Entry scoping moves the Rooms and Settings view models into their entries' stores (research
+    R2). Change `AppBackStack.selectTab()` in `main/ui/nav/Destinations.kt` so it never removes
+    the Rooms root: it removes only the entries above it, then adds the tab unless the tab is Rooms.
+  - Extend `test/ui/nav/AppBackStackTest.kt` (failing first): after Rooms → Settings → Rooms, and
+    after Rooms → NowPlaying → Settings → Rooms, `stack[0]` is the **same instance** as before
+    (`assertSame`), and the existing tab tests still pass.
+
+  `./gradlew :androidApp:assembleDebug` is green.
 
 ---
 
@@ -95,8 +104,12 @@ the new repository methods.
   - two `acquire()` and one `release()` → still polling
   - release to 0 cancels an in-flight refresh
   - an address change clears `snapshot` and restarts
-  - `refreshSeq` increments when a refresh **starts**, and the state reports the seq of the refresh
-    that produced it
+  - sequence numbers (research R1): `session.startedSeq` increments just before each refresh
+    request starts. `Connected.refreshSeq` equals the `startedSeq` of the refresh whose result the
+    state carries.
+  - **fence case**: with a refresh in flight (`snapshotDelayMs`), capture
+    `c = session.startedSeq`. That in-flight refresh's state has `refreshSeq == c`, which does
+    **not** pass `refreshSeq > c`; the next refresh's state does.
 
   Use `TestScope`/virtual time and the existing `FakeRepository`.
 - [ ] T005 Implement `main/ui/session/HubSession.kt`. It takes
@@ -105,6 +118,7 @@ the new repository methods.
   - `state: StateFlow<SessionState>`, where `SessionState` is `Initial | NoAddress |
     Connected(address, connection, snapshot: HubSnapshot?, refreshSeq: Long)` per data-model.md
     "Session"
+  - `val startedSeq: Long` (the latest refresh started, not part of the state)
   - `val repository: HubRepository?`
   - `fun requestRefresh()`, `fun acquire()`, `fun release()`
 
@@ -160,7 +174,10 @@ the new repository methods.
   - `pending: StateFlow<Map<String, Int>>`, keyed by **room id**
   - `fun start(key: String, targetName: String, base: Map<String, Int>)`,
     `fun drag(key: String, value: Int)`, `fun end(key: String, value: Int)`
-  - `fun onRefresh(seq: Long, knownRoomIds: Set<String>)` drops confirmed or vanished rooms
+  - at each final send, capture `session.startedSeq` per room
+  - `fun onRefresh(refreshSeq: Long, knownRoomIds: Set<String>)` drops rooms whose captured value
+    is `< refreshSeq` (confirmed) or that are not in `knownRoomIds` (vanished). Never capture
+    `state.refreshSeq` (research R1 fence rule).
   - `fun clear()` for an address change
   - `fun shown(roomIds: Collection<String>, hub: Map<String, Int>): Int` returns the max over the
     rooms of pending-else-hub
@@ -279,12 +296,14 @@ another client (quickstart §2 steps 2–5).
   (T024 fills it). Make T016 pass.
 - [ ] T019 [US1] Implement `main/ui/nowplaying/NowPlayingUiState.kt` and
   `main/ui/nowplaying/NowPlayingViewModel.kt`. The view model takes
-  `(routeId: String, session: HubSession, messages: AppMessages)`:
-  - It holds `followedRouteId` (starts as `routeId`) and derives `NowPlayingUiState` from
+  `(routeId: String, savedState: SavedStateHandle, session: HubSession, messages: AppMessages)`:
+  - It holds `followedRouteId` in `savedState["followedRouteId"]` (initialised to `routeId` when
+    absent, research R3) and derives `NowPlayingUiState` from
     `session.state` per data-model.md "View-model state". `sheet`, `pending` and the Mute/Move
     actions stay unused until US2/US3.
   - `exit` is decided per research R4, behind a fence `fenceSeq: Long?`: a missing route counts as
-    ended only when `state.refreshSeq > fenceSeq`. The fence is null in US1 and is set by T033.
+    ended only when the state's `refreshSeq > fenceSeq`. The fence is null in US1 and is set by
+    T033 from `session.startedSeq`.
   - `lastKnownTargetName` is kept for the "ended" text.
   - `onVisible()`/`onHidden()` acquire and release the session.
   - Exposes `onStop()`, `onPauseResume()`, `consumeMessage()` and `consumeExit()`.
@@ -318,8 +337,8 @@ another client (quickstart §2 steps 2–5).
   When `exit` is non-null, call `onExit()` then `consumeExit()`. No progress bar, position or
   artwork (FR-008).
 - [ ] T022 [US1] Wire navigation in `main/ui/nav/AppNavigation.kt` and `main/AppGraph.kt`:
-  - `AppGraph.nowPlayingViewModel(routeId)`.
-  - The `entry<Destination.NowPlaying>` renders `NowPlayingScreen(viewModel { graph.nowPlayingViewModel(key.routeId) }, onBack = { backStack.pop() }, onExit = { backStack.pop() })`,
+  - `AppGraph.nowPlayingViewModel(routeId, savedState: SavedStateHandle)`.
+  - The `entry<Destination.NowPlaying>` renders `NowPlayingScreen(viewModel { graph.nowPlayingViewModel(key.routeId, createSavedStateHandle()) }, onBack = { backStack.pop() }, onExit = { backStack.pop() })`,
     replacing the placeholder (FR-001). The view model is per entry via T002's decorator.
   - Update the `PlaceholderScreen` description text only where it mentions Now Playing.
 
@@ -403,10 +422,13 @@ member via "<Room> only" (quickstart §2 steps 7–10).
 
 ### Tests for User Story 3 ⚠️ write first, see them fail
 
-- [ ] T028 [P] [US3] Write `test/domain/MoveDestinationsTest.kt` covering **all 18 cases** of the
+- [ ] T028 [P] [US3] Write `test/domain/MoveDestinationsTest.kt` covering **all 19 cases** of the
   data-model.md "FR-025 test matrix" one-to-one, using research R8 rules:
   - precedence `TurnedOff` > `NotConnected` > `WillStop` > `WillStopOnGroup` > `Idle`
-  - "<Room> only" members follow the same precedence
+  - "<Room> only" members follow the same precedence: a turned-off or not-connected member reads
+    `TurnedOff`/`NotConnected` (not `OthersStop`), is unselectable, sorts with the unselectable
+    rooms and keeps its " only" label (case 19, spec FR-021/FR-022)
+  - a group with no known members → `NoRooms`, unselectable (case 18, spec FR-020a)
   - group `WillStop` sources are distinct and in member order; members occupied by the current
     route never count as "will stop"
   - `notConnected` = names of unavailable members, and such a group stays selectable
@@ -441,24 +463,29 @@ member via "<Room> only" (quickstart §2 steps 7–10).
   - `Ok(Route("r2"))` → `followedRouteId = "r2"`, `sheet = null`, and **no** `exit` even when the
     next refresh (started before the switch) lacks both r1 and r2; a refresh started after the
     switch that contains r2 shows r2's target; a later refresh without r2 → `Ended`
+  - **in-flight fence**: a refresh that was already running when `Ok(r2)` returned completes
+    without r2 → still no `exit` (`fenceSeq` was captured from `session.startedSeq`)
+  - `followedRouteId` is written to `SavedStateHandle`. A new view model built with that handle
+    (process-death restore) follows r2, shows r2's target and does not post "ended"
   - `Err` → `sheet = null` and message "Couldn't move <source> to <ctaName>." (or the "Can't reach
     the hub." variant)
   - stale → confirm is ignored
 
 ### Implementation for User Story 3
 
-- [ ] T031 [US3] Implement `main/domain/MoveDestinations.kt`: `MoveSheetContent`, `Destination`,
-  `DestinationKind { Room, MemberOnly, Group }`, `DestinationNote` (with `val warning`) exactly as
+- [ ] T031 [US3] Implement `main/domain/MoveDestinations.kt`: `MoveSheetContent`, `MoveDestination`,
+  `MoveDestinationKind { Room, MemberOnly, Group }`, `MoveDestinationNote` (with `val warning`) exactly as
   in data-model.md, and `object MoveDestinations { fun build(snapshot, routeId): MoveSheetContent? }`
   using `occupancy()` from T003 with the current route excluded. Make T028 pass.
-- [ ] T032 [US3] Implement `main/ui/nowplaying/DestinationText.kt`: `fun destinationNoteText(note: DestinationNote): String`
+- [ ] T032 [US3] Implement `main/ui/nowplaying/DestinationText.kt`: `fun destinationNoteText(note: MoveDestinationNote): String`
   using `joinNames`. Group `Members` are joined with " + ", and `notConnected` is appended as
   `" · ${joinNames(it)} not connected"`. Make T029 pass.
 - [ ] T033 [US3] Add the sheet to `main/ui/nowplaying/NowPlayingViewModel.kt`:
   - `MoveSheetState(content, selected)` rebuilt from each snapshot with `MoveDestinations.build`
   - `onOpenMove()`, `onSelect(target)`, `onDismissMove()` and `onConfirmMove()`
-  - after `Ok(route)`: set `followedRouteId = route.id` and `fenceSeq = current session refreshSeq`
-    (research R3), close the sheet and request a refresh
+  - after `Ok(route)`: set `savedState["followedRouteId"] = route.id` and
+    `fenceSeq = session.startedSeq` (research R1/R3; **not** the state's `refreshSeq`), close the
+    sheet and request a refresh
   - after `Err`: close the sheet and set the message via `UserAction.Move(ctaName)` with the
     source name as X
   - close the sheet automatically per FR-012
@@ -606,6 +633,8 @@ Task: "Implement destinationNoteText in composeApp/src/commonMain/kotlin/sonora/
 - Never commit `composeApp/build/` or hand-edit generated code (Constitution I).
 - "Move to room…" never shows while Paused (FR-012). Allowing it is a later follow-up, once the
   hub's behaviour is checked.
-- Two plan-level readings (research R8: an unavailable "<Room> only" member is unselectable, and a
-  group with no known members reads "No rooms") are implemented as written. If the user overrules
-  them, only `MoveDestinations` and its tests change.
+- The two Move-sheet rules confirmed on 2026-10-03 (spec FR-020a, FR-021/FR-022: an unavailable
+  "<Room> only" member is unselectable; a group with no known members reads "No rooms") are covered
+  by cases 18–19 of the FR-025 matrix.
+- Fences on the session always capture `session.startedSeq`, never the state's `refreshSeq`
+  (research R1).

@@ -20,15 +20,17 @@ Technically:
 - The volume drag/throttle logic is extracted into a reusable controller keyed by room.
 - Now Playing content and move destinations are pure, test-first functions.
 - Three repository methods are added (room mute, group mute, transfer).
-- One dependency is added: the JetBrains Nav3 view-model decorator, so each Now Playing entry
-  gets its own view model.
+- Two libraries from the existing JetBrains lifecycle family are added: the Nav3 view-model
+  decorator, so each Now Playing entry gets its own view model, and `lifecycle-viewmodel-savedstate`,
+  so the followed route id survives process death.
 
 ## Technical Context
 
 **Language/Version**: Kotlin 2.4.20 (KMP), JDK 17+, Gradle 9.8.0 (unchanged from 001)
 
 **Primary Dependencies**: as 001 ([research R1](../001-rooms-screen-foundation/research.md)). New:
-`org.jetbrains.androidx.lifecycle:lifecycle-viewmodel-navigation3` 2.11.0 ([research R2](research.md#r2-a-view-model-per-now-playing-entry)).
+`org.jetbrains.androidx.lifecycle:lifecycle-viewmodel-navigation3` and `lifecycle-viewmodel-savedstate`,
+both 2.11.0 ([research R2](research.md#r2-a-view-model-per-now-playing-entry)).
 Uses the existing `compose-material3` 1.9.0 for `ModalBottomSheet` ([R11](research.md#r11-bottom-sheet)).
 
 **Storage**: none new (hub address only, from 001).
@@ -63,15 +65,20 @@ Refactor of the Rooms view model onto a shared session.
 | IV. Test-First | ✅ | Builders (`NowPlayingBuilder`, `MoveDestinations`, `addressDetail`, `joinNames`, note text), `HubSession`, `VolumeDragController`, view models and repository additions get their tests first ([quickstart](quickstart.md) §1). The 001 suites migrate without dropping scenarios |
 | V. Resilient LAN | ✅ | Same timeouts and loop, now in one place. Stale state disables every Now Playing control and the sheet's confirm. Transfer errors (400/404/422, IO) map to plain copy. Unknown enum values → Unknown (001 mapping reused) |
 | VI. Design Fidelity & A11y | ✅ (gate) | Layout per `NowPlaying.dc.html` / `Transfer.dc.html` ([UI contract](contracts/now-playing-ui.md)). Departures already called out in the spec (no preselection, non-stream panel colours). The **Groups section must be added to the canvas first** (FR-026, R12): a gate task before the sheet UI. Labels, ≥ 44 dp and a radio-group sheet per FR-027 |
-| VII. Minimal Dependencies | ✅ | One new library, justified in R2 (per-entry view-model scope, same family and version as lifecycle 2.11.0), added to `libs.versions.toml`. `ModalBottomSheet` comes from the existing material3 |
+| VII. Minimal Dependencies | ✅ | Two new artifacts from the lifecycle family already in use (same version 2.11.0), justified in R2 (per-entry view-model scope; `SavedStateHandle` for R3), added to `libs.versions.toml`. `ModalBottomSheet` comes from the existing material3 |
 
 **Post-design re-check (after Phase 1)**: still passing.
 - The data model keeps generated types in `data/`.
 - The repository contract adds only spec'd v2 calls and omits group volume.
 - The UI contract keeps the pill, the "Move to room…" label and "will stop" notes.
-- The two plan-level readings in R8 (an unavailable "<Room> only" member is unselectable, and a
-  group with no known members reads "No rooms") follow existing spec rules for disabled and
-  unavailable targets. They are flagged for the user rather than silently assumed.
+- The two Move-sheet rules in R8 (an unavailable "<Room> only" member is unselectable, and a group
+  with no known members reads "No rooms") were confirmed by the user on 2026-10-03 and are now in
+  spec FR-020a–FR-022.
+- The states the design does not draw (Pause/Resume button, non-Playing chips, "All rooms are
+  muted", loading and stale states, the "Move" label with nothing selected) are called out in the
+  spec Assumptions (Principle VI).
+- Every "refresh started after X" check captures `session.startedSeq`, never the state's
+  `refreshSeq` (R1), so a refresh in flight at X cannot confirm a move or a volume.
 
 ## Project Structure
 
@@ -94,8 +101,8 @@ specs/002-now-playing-move-to-room/
 
 ```text
 gradle.properties                          # versionName 0.2.0-alpha, versionCode 2 (first commit)
-gradle/libs.versions.toml                  # + lifecycle-viewmodel-navigation3 (version.ref lifecycle)
-composeApp/build.gradle.kts                # + that dependency in commonMain
+gradle/libs.versions.toml                  # + lifecycle-viewmodel-navigation3, lifecycle-viewmodel-savedstate (version.ref lifecycle)
+composeApp/build.gradle.kts                # + both in commonMain
 design/screens/Transfer.dc.html            # + Groups section (gate, synced from canvas, R12)
 
 composeApp/src/commonMain/kotlin/sonora/multiroom/mobile/
@@ -105,17 +112,19 @@ composeApp/src/commonMain/kotlin/sonora/multiroom/mobile/
 │   ├── Names.kt                           # joinNames
 │   ├── RoomsBuilder.kt                    # shared helpers extracted (status/target/occupancy), behaviour unchanged
 │   ├── NowPlayingBuilder.kt               # NowPlayingContent, TargetLine, VolumeSection, PillModel, MuteModel
-│   └── MoveDestinations.kt                # MoveSheetContent, Destination, DestinationNote
+│   └── MoveDestinations.kt                # MoveSheetContent, MoveDestination, MoveDestinationNote
 ├── data/
 │   ├── HubRepository.kt                   # + setRoomMute, setGroupMute, transferRoute
 │   └── KtorHubRepository.kt               # + the three calls (generated OutputsApi/GroupsApi/RoutesApi)
 └── ui/
     ├── Messages.kt                        # + UserAction.Mute, UserAction.Move
     ├── session/
-    │   ├── HubSession.kt                  # poll loop + connection + snapshot, acquire/release (R1)
+    │   ├── HubSession.kt                  # poll loop + connection + snapshot, startedSeq, acquire/release (R1)
+    │   ├── Connection.kt                  # moved from ui/rooms/RoomsUiState.kt
     │   ├── AppMessages.kt                 # cross-screen one-shot messages (R4)
     │   └── VolumeDragController.kt        # extracted from RoomsViewModel, per-room pending (R5)
     ├── nav/AppNavigation.kt               # view-model decorator, NowPlaying entry, exit handling
+    ├── nav/Destinations.kt                # selectTab() keeps the Rooms root (R2)
     ├── rooms/
     │   ├── RoomsViewModel.kt              # onto HubSession + VolumeDragController; collects AppMessages
     │   └── RoomsScreen.kt                 # acquire/release instead of start/stopPolling
@@ -160,10 +169,6 @@ shared across screens.
 
 ## Open points for the user (not blocking the plan)
 
-- R8 plan-level readings:
-  - A turned-off or not-connected member of the current group shows as "<Room> only · Turned
-    off/Not connected" and is unselectable.
-  - A group whose members the hub does not list reads "No rooms" and is unselectable.
 - R12: the canvas update is needed before the sheet UI. It is best done locally, since the canvas
   is editable there.
 

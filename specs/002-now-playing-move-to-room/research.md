@@ -8,12 +8,27 @@ unless stated here.
 
 **Decision**: Extract the address subscription, repository creation, poll loop and connection
 state from `RoomsViewModel` into an app-wide `HubSession` (created once in `AppGraph`, its own
-`CoroutineScope`). It exposes `state: StateFlow<SessionState>` (no address / connected with
-`Connection`, last good `HubSnapshot`, `refreshSeq` of the last completed refresh), `repository`,
-`requestRefresh()`, and reference-counted `acquire()/release()` polling: polling runs while at least
-one visible screen holds it, an `acquire()` from 0 refreshes immediately, the release to 0 cancels
-the loop and any refresh in flight. `RoomsViewModel` and `NowPlayingViewModel` both derive their
-content from the session's snapshot.
+`CoroutineScope`). It exposes:
+- `state: StateFlow<SessionState>`: no address, or connected with `Connection`, the last good
+  `HubSnapshot` and `refreshSeq`.
+- `startedSeq`, `repository` and `requestRefresh()`.
+- Reference-counted `acquire()/release()` polling. Polling runs while at least one visible screen
+  holds it. An `acquire()` from 0 refreshes immediately, and the release to 0 cancels the loop and
+  any refresh in flight.
+
+`RoomsViewModel` and `NowPlayingViewModel` both derive their content from the session's snapshot.
+
+**Refresh sequence numbers** (two values, never conflated):
+- `startedSeq` is the number of the most recent refresh **started**. It is incremented just
+  before each request and is readable at any time.
+- `SessionState.Connected.refreshSeq` is the `startedSeq` value of the refresh whose result the
+  state carries.
+
+A consumer that needs "a refresh that started after moment X" captures `startedSeq` at X and
+waits for a state with `refreshSeq > captured`. Capturing `refreshSeq` instead would be wrong: a
+refresh already in flight at X would then count, although it may predate X. This is the 001 rule
+(`finishedAtRefresh < seq`, where `refreshSeq` was the counter incremented at start), made
+explicit.
 
 **Rationale**:
 - Now Playing opens with the last known snapshot already on screen (no "loading" flash) and the
@@ -51,6 +66,23 @@ entries would share one instance, and none would ever be cleared. The decorator 
 multiplatform counterpart of the AndroidX artifact (commonMain-safe, Constitution III/VII). It
 comes from the same family and release train as `lifecycle-viewmodel-compose`.
 
+Also declare `org.jetbrains.androidx.lifecycle:lifecycle-viewmodel-savedstate` 2.11.0 (same
+family and version) for `SavedStateHandle` in common code (`createSavedStateHandle()` inside
+`viewModel { }`), which R3 needs.
+
+**Scope change for the other entries**: the decorator applies to every entry, so the Rooms and
+Settings view models move from the activity's store to their entries' stores.
+- Settings: popping the Settings entry now clears its view model. That is harmless, because its
+  state is the stored address.
+- Rooms: `AppBackStack.selectTab()` clears the stack and re-adds `Destination.Rooms`. If Nav3
+  treats that as a new entry, `RoomsViewModel` would be recreated on every tab switch, losing
+  unconfirmed volume values (the session snapshot survives, R1).
+
+**Decision**: make `selectTab()` keep the existing Rooms root (only remove entries above it), so
+the Rooms entry is never removed while the app runs. Add a test in `AppBackStackTest` that the
+Rooms element instance survives Rooms → Settings → Rooms. Then check on the device, as part of the
+quickstart, that a pending drag survives a tab round trip.
+
 **Alternatives considered**: `viewModel(key = routeId)` on the activity store leaks a view model
 per opened playback and never clears it. A plain `remember`ed state holder loses in-flight
 requests on rotation.
@@ -60,16 +92,20 @@ requests on rotation.
 **Decision**: `POST /api/v2/routes/{routeId}/transfer` returns `200 RouteResponse` for the **new**
 route ("callers must update their references to the new routeId", `openapi.json` 0.1.20).
 `HubRepository.transferRoute` returns the mapped `Route`, and `NowPlayingViewModel` switches its
-`followedRouteId` to the new id (FR-002). While a move is in flight, and until a refresh that
-**started after** the switch completes, a missing route is not treated as "ended". This is the
-same refresh-sequence fence 001 uses for settled volumes (`finishedAtRefresh < seq`), so a
-snapshot taken before the hub created the new route cannot send the user back to Rooms.
+`followedRouteId` to the new id (FR-002).
 
-The back-stack destination keeps the original id. The followed id lives in the view model, which
-survives rotation (R2). After process death the restored entry carries the old id, its first
-refresh does not find it, and the app returns to Rooms with the "ended" message. This is
-accepted: the result is truthful and nothing breaks. Replacing the destination would recreate the
-entry and its view model mid-flow.
+Fence:
+- While a move is in flight, a missing route is never treated as "ended".
+- On success the view model captures `fenceSeq = session.startedSeq` (R1). Until a state arrives
+  with `refreshSeq > fenceSeq`, a missing route is still not "ended".
+- So neither a refresh in flight during the move nor one completed before it can send the user
+  back to Rooms, and the first refresh started after the switch decides.
+
+The back-stack destination keeps the original id, because replacing it would recreate the entry
+and its view model mid-flow. The followed id is stored in the view model's `SavedStateHandle`
+(key `"followedRouteId"`, R2), so it survives rotation **and** process death. After a restore the
+screen follows the moved playback, and never claims a playback ended when it only moved
+(Constitution II).
 
 **Alternatives considered**: re-finding the playback by `inputId` after the move is ambiguous when
 the same source plays twice, and the hub gives the id explicitly.
@@ -108,8 +144,11 @@ own one, constructed with their `viewModelScope`, the session and an error callb
   shows the **max** over its members (`scale` maps the loudest member to exactly the dragged value,
   so Rooms cards look exactly as in 001). Member pills follow a group drag, and the group pill
   follows a member drag (US2-3, US2-4).
-- Pending values clear per room when a refresh that started after that room's final send succeeds,
-  or when the room disappears (same rule as 001, keyed by room instead of card).
+- Pending values clear per room once a refresh that started after that room's final send succeeds.
+  At the final send the controller captures `session.startedSeq` (R1), and the room clears when
+  `onRefresh(refreshSeq, …)` arrives with `refreshSeq` greater than the captured value. A pending
+  value also clears when its room disappears. This is the 001 rule, keyed by room instead of
+  card.
 - `PUT /api/v2/groups/{id}/volume` remains absent from the repository (FR-015, SC-005).
 
 **Rationale**: one implementation of the subtle throttle and reconcile rules (Constitution II "local
@@ -174,9 +213,9 @@ Room rows (FR-020–FR-022):
 - Notes in order of precedence: disabled → `TurnedOff`; unavailable → `NotConnected`; occupied by a
   single-room route → `WillStop([source])`; occupied by a group route →
   `WillStopOnGroup(source, group)`; else `Idle`.
-- **Plan-level reading** (not spelled out in the spec): a `"<Room> only"` member that is turned off
-  or not connected shows that note instead of "… stop" and is unselectable, by the same precedence.
-  It sorts with the unselectable rooms and keeps its "only" label.
+- A `"<Room> only"` member that is turned off or not connected shows that note instead of
+  "… stop" and is unselectable, by the same precedence. It sorts with the unselectable rooms and
+  keeps its "only" label (spec FR-021/FR-022, confirmed by the user 2026-10-03).
 - Ordering: selectable non-members, "only" options, unselectable. Each bucket is sorted by label,
   case-insensitively, with the id as tiebreaker.
 
@@ -189,8 +228,9 @@ Group rows (FR-020a):
   " · X and Y not connected".
 - Members that the current route occupies do not count as "will stop" (spec Assumptions: overlap
   keeps playing).
-- **Plan-level reading**: a group whose listed members are all unknown to the hub (none resolve)
-  reads "No rooms" and is unselectable, because the hub would have nothing to play on.
+- A group whose listed members are all unknown to the hub (none resolve) reads "No rooms" and is
+  unselectable, because the hub would have nothing to play on (spec FR-020a, confirmed by the user
+  2026-10-03).
 - Ordering: selectable alphabetical, then unselectable alphabetical. An empty list hides the
   section.
 
