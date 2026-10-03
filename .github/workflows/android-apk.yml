@@ -3,6 +3,8 @@ name: Android APK
 on:
   push:
     branches: [main]
+  # Feature-branch and Dependabot PRs; the Appetize upload stays manual-only.
+  pull_request:
   workflow_dispatch:
     inputs:
       upload_to_appetize:
