@@ -135,8 +135,14 @@ Rationale: each dependency is a multiplatform compatibility risk and a future iO
   invent behaviour.
 - Every plan MUST pass the Constitution Check against these principles; any deviation is recorded
   in the plan's complexity tracking with its justification.
-- There is no CI for Android. The merge gate is a local or cloud build plus all tests green. A
-  GitHub Actions macOS runner will exist only for iOS builds.
+- GitHub Actions CI (`.github/workflows/android-apk.yml`) builds the debug APK and runs the
+  Android host tests on every pull request and every push to `main`; uploading the APK to
+  Appetize.io is a manual option only. Dependabot proposes dependency updates as pull requests
+  that go through the same CI.
+- The merge gate is a green CI run on the pull request plus all the Principle IV checks green in
+  a local or cloud session (CI does not run `:composeApp:allTests` or `:composeApp:check`).
+  Changes reach `main` only through pull requests.
+- iOS builds will run on a separate GitHub Actions macOS runner once the iOS target is enabled.
 - Commits use Conventional Commit messages that explain why, not just what.
 
 ## Governance
@@ -150,4 +156,4 @@ Rationale: each dependency is a multiplatform compatibility risk and a future iO
 - Reviews of specs, plans and implementations MUST check compliance with every principle;
   unjustified complexity or deviation is a blocking finding.
 
-**Version**: 1.1.1 | **Ratified**: 2026-10-01 | **Last Amended**: 2026-10-02
+**Version**: 1.2.0 | **Ratified**: 2026-10-01 | **Last Amended**: 2026-10-03
