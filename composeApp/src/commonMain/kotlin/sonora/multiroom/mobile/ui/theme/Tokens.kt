@@ -41,4 +41,14 @@ data class SonoraColors(
     val scrim: Color = Color(0xB8050608),
     /** Black at 40 %: behind the "Live stream" badge. */
     val badgeScrim: Color = Color(0x66000000),
+    // Settings (design/screens/Settings.dc.html).
+    val danger: Color = Color(0xFFFF8A7A),
+    val dangerContainer: Color = Color(0xFF3A1A16),
+    val onDanger: Color = Color(0xFF2A0D08),
+    val positive: Color = Color(0xFF5FD3C4),
+    val positiveContainer: Color = Color(0xFF12302E),
+    val chevron: Color = Color(0xFF6E717A),
+    val rowDivider: Color = Color(0xFF22252B),
+    val switchTrackOff: Color = Color(0xFF2C3038),
+    val switchThumbOff: Color = Color(0xFF9A9DA6),
 )

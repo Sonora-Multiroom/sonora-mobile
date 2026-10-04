@@ -2,8 +2,8 @@ package sonora.multiroom.mobile.ui.nav
 
 import sonora.multiroom.mobile.AppGraph
 import sonora.multiroom.mobile.ui.nowplaying.NowPlayingScreen
-import sonora.multiroom.mobile.ui.placeholder.PlaceholderScreen
 import sonora.multiroom.mobile.ui.rooms.RoomsScreen
+import sonora.multiroom.mobile.ui.session.SettingsTab
 import sonora.multiroom.mobile.ui.settings.SettingsScreen
 import sonora.multiroom.mobile.ui.startplayback.StartPlaybackScreen
 import androidx.compose.foundation.layout.Column
@@ -49,12 +49,6 @@ fun AppNavigation(graph: AppGraph, backStack: AppBackStack, onExit: () -> Unit) 
                 entry<Destination.Settings> {
                     SettingsScreen(viewModel { graph.settingsViewModel() })
                 }
-                entry<Destination.Sources> {
-                    PlaceholderScreen(
-                        title = "Sources",
-                        description = "Your saved stations, line-ins and files will be listed here.",
-                    )
-                }
                 entry<Destination.NowPlaying> { key ->
                     NowPlayingScreen(
                         // One view model per entry (the decorators above), with its own saved state.
@@ -77,7 +71,15 @@ fun AppNavigation(graph: AppGraph, backStack: AppBackStack, onExit: () -> Unit) 
             },
         )
         if (backStack.showsBottomBar) {
-            BottomBar(selected = backStack.currentTab, onSelect = backStack::selectTab)
+            BottomBar(
+                selected = backStack.currentTab,
+                onSelectRooms = { backStack.selectTab(Destination.Rooms) },
+                onOpenSources = {
+                    graph.settingsNavigator.select(SettingsTab.Sources)
+                    backStack.selectTab(Destination.Settings)
+                },
+                onSelectSettings = { backStack.selectTab(Destination.Settings) },
+            )
         }
     }
 }

@@ -60,10 +60,10 @@ failing first.
 **Purpose**: the version bump, the one new dependency, and a check that the generated client has
 what the contract docs name.
 
-- [ ] T001 Bump the app version as the **first commit** of this feature (AGENTS.md "Workflow"): in
+- [X] T001 Bump the app version as the **first commit** of this feature (AGENTS.md "Workflow"): in
   `gradle.properties` set `sonora.versionName=0.4.0-alpha` and `sonora.versionCode=4`. Run
   `./gradlew :androidApp:assembleDebug`.
-- [ ] T002 Add kotlinx-datetime (research R10/R13):
+- [X] T002 Add kotlinx-datetime (research R10/R13):
   - `gradle/libs.versions.toml`: `kotlinxDatetime = "0.8.0"` under `[versions]`, and
     `kotlinx-datetime = { module = "org.jetbrains.kotlinx:kotlinx-datetime", version.ref = "kotlinxDatetime" }`
     under `[libraries]`.
@@ -72,7 +72,7 @@ what the contract docs name.
 
   Run `./gradlew :androidApp:assembleDebug :composeApp:testAndroidHostTest`: green, with no code
   change.
-- [ ] T003 Confirm the generated client (research R1). Run `./gradlew :composeApp:openApiGenerate`.
+- [X] T003 Confirm the generated client (research R1). Run `./gradlew :composeApp:openApiGenerate`.
   In `composeApp/build/generated/openapi/`, check these exist:
   - `OutputsApi.setOutputEnabled(outputId, EnabledRequest)`
   - `GroupsApi.setGroupEnabled(groupId, EnabledRequest)`
@@ -99,26 +99,26 @@ states.
 
 ### Tab memory and navigation (research R2)
 
-- [ ] T004 [P] Write `test/ui/session/SettingsNavigatorTest.kt`, failing first:
+- [X] T004 [P] Write `test/ui/session/SettingsNavigatorTest.kt`, failing first:
   - `tab` starts at `SettingsTab.Rooms`
   - `select(Groups)` → `Groups`
   - `openSheet()` sets `openSheetRequested` to true, and `consumeSheetRequest()` sets it back to false
-- [ ] T005 Create `main/ui/session/SettingsNavigator.kt` with `enum class SettingsTab { Rooms, Groups,
+- [X] T005 Create `main/ui/session/SettingsNavigator.kt` with `enum class SettingsTab { Rooms, Groups,
   Sources, Extensions }` and `class SettingsNavigator` (data-model.md "SettingsNavigator":
   `tab: StateFlow<SettingsTab>`, `openSheetRequested: StateFlow<Boolean>`, `select`, `openSheet`,
   `consumeSheetRequest`). In `main/AppGraph.kt` add `val settingsNavigator = SettingsNavigator()`.
   Make T004 pass.
-- [ ] T006 [P] Rewrite the `Destination.Sources` cases in `test/ui/nav/AppBackStackTest.kt`, failing
+- [X] T006 [P] Rewrite the `Destination.Sources` cases in `test/ui/nav/AppBackStackTest.kt`, failing
   first:
   - `selectTab` accepts only `Rooms` and `Settings`
   - `[Rooms, Settings]` has `currentTab == Settings` and shows the bottom bar
   - `decodeDestination("sources")` → `Destination.Settings` (an old saved stack restores to
     Settings)
   - round-trips for `rooms`, `settings`, `now:<id>`, `play`, `play:<id>` stay green
-- [ ] T007 In `main/ui/nav/Destinations.kt` remove `Destination.Sources` from the sealed interface,
+- [X] T007 In `main/ui/nav/Destinations.kt` remove `Destination.Sources` from the sealed interface,
   `currentTab`, `showsBottomBar`, `selectTab`'s `require` and `encodeDestination`. In
   `decodeDestination`, map `"sources"` to `Destination.Settings`. Make T006 pass.
-- [ ] T008 Wire the bottom bar (FR-003):
+- [X] T008 Wire the bottom bar (FR-003):
   - `main/ui/nav/BottomBar.kt`: replace `onSelect: (Destination) -> Unit` with a per-item action.
     Rooms → `selectTab(Rooms)`. Sources → `onOpenSources`. Settings → `selectTab(Settings)`.
     "Selected" is `currentTab == Destination.Settings` for the Settings item only; the Sources item
@@ -132,7 +132,7 @@ states.
 
 ### Theme (research R12)
 
-- [ ] T009 [P] Extend `test/ui/theme/ContrastTest.kt`, failing first (the tokens don't exist yet),
+- [X] T009 [P] Extend `test/ui/theme/ContrastTest.kt`, failing first (the tokens don't exist yet),
   with ≥ 4.5:1 for each of:
   - `danger #FF8A7A` on `dangerContainer #3A1A16`
   - `onDanger #2A0D08` on `danger`
@@ -142,7 +142,7 @@ states.
   - `textSoft` on `surfaceRaised`
   - `accent` on `surface` (the amber "Playing · …" line)
   - `text` on `outline` (the selected tab)
-- [ ] T010 In `main/ui/theme/Tokens.kt` add to `SonoraColors`, with a comment "Settings
+- [X] T010 In `main/ui/theme/Tokens.kt` add to `SonoraColors`, with a comment "Settings
   (design/screens/Settings.dc.html)":
   - `danger = Color(0xFFFF8A7A)`, `dangerContainer = Color(0xFF3A1A16)`, `onDanger = Color(0xFF2A0D08)`
   - `positive = Color(0xFF5FD3C4)`, `positiveContainer = Color(0xFF12302E)`
@@ -160,7 +160,7 @@ states.
 
 ### Hub row and address sheet with Save (research R9; US3 adds the test)
 
-- [ ] T011 [P] Write `test/ui/settings/SettingsTextTest.kt` (hub part), failing first. For
+- [X] T011 [P] Write `test/ui/settings/SettingsTextTest.kt` (hub part), failing first. For
   `hubRow(state: SessionState)`:
   - `Initial` → `HubStatus.Hidden`, no address
   - `NoAddress` → `NotSet` with address line "Set the hub address to start"
@@ -171,9 +171,9 @@ states.
   The address is `HubAddress.baseUrl`. The accessibility label is "Hub connection: <status>,
   <address>. Change address", or "Hub connection: Not set. Change address" without an address
   (FR-023).
-- [ ] T012 Create `main/ui/settings/SettingsText.kt` with `HubStatus`, `HubRow` (data-model.md
+- [X] T012 Create `main/ui/settings/SettingsText.kt` with `HubStatus`, `HubRow` (data-model.md
   `SettingsUiState.hub`), `hubRow(state)` and `hubRowLabel(row)`. Make T011 pass.
-- [ ] T013 Replace `test/ui/settings/SettingsViewModelTest.kt` (001) with the new view model's
+- [X] T013 Replace `test/ui/settings/SettingsViewModelTest.kt` (001) with the new view model's
   foundation, failing first. Use `runViewModelTest`, `HubSession` with `FakeFactory`, and
   `InMemoryHubAddressStore`:
   - **visibility**: `onVisible()` acquires the session (a snapshot is requested), and `onHidden()`
@@ -192,13 +192,13 @@ states.
     - `onSheetClosed()` discards the draft, and reopening shows the saved address
   - **sheet request**: when `openSheetRequested` is true at `onVisible()`, the sheet opens and the
     request is consumed
-- [ ] T014 Rewrite `main/ui/settings/SettingsViewModel.kt` and create
+- [X] T014 Rewrite `main/ui/settings/SettingsViewModel.kt` and create
   `main/ui/settings/SettingsUiState.kt` (data-model.md "SettingsUiState": `hub`, `tab`, `body`,
   `sheet`, `message`; `confirm` comes in US1). Constructor
   `(session: HubSession, store: HubAddressStore, navigator: SettingsNavigator)`. More parameters are
   added by later tasks. Build `Lists` from the session state without content for now.
   `controlsEnabled = connection == Live`. Update `AppGraph.settingsViewModel()`. Make T013 pass.
-- [ ] T015 Build the frame in `main/ui/settings/` per the [UI contract](contracts/settings-ui.md)
+- [X] T015 Build the frame in `main/ui/settings/` per the [UI contract](contracts/settings-ui.md)
   "Layout":
   - `SettingsScreen.kt`:
     - polls while visible: `repeatOnLifecycle(STARTED)` → `onVisible`/`onHidden`, as `RoomsScreen`

@@ -21,8 +21,6 @@ class AppBackStackTest {
         val s = AppBackStack()
         s.selectTab(Destination.Settings)
         assertEquals(listOf(Destination.Rooms, Destination.Settings), s.contents())
-        s.selectTab(Destination.Sources)
-        assertEquals(listOf(Destination.Rooms, Destination.Sources), s.contents())
         s.selectTab(Destination.Rooms)
         assertEquals(listOf<Destination>(Destination.Rooms), s.contents())
     }
@@ -65,10 +63,10 @@ class AppBackStackTest {
     @Test
     fun startPlaybackReturnsToThePreviousScreen() {
         val s = AppBackStack()
-        s.selectTab(Destination.Sources)
+        s.selectTab(Destination.Settings)
         s.push(Destination.StartPlayback(null))
         assertTrue(s.pop())
-        assertEquals(listOf(Destination.Rooms, Destination.Sources), s.contents())
+        assertEquals(listOf(Destination.Rooms, Destination.Settings), s.contents())
     }
 
     @Test
@@ -79,15 +77,29 @@ class AppBackStackTest {
         s.selectTab(Destination.Settings)
         s.push(Destination.StartPlayback(null))
         assertEquals(Destination.Settings, s.currentTab)
-        s.selectTab(Destination.Sources)
-        assertEquals(Destination.Sources, s.currentTab)
+        s.selectTab(Destination.Rooms)
+        assertEquals(Destination.Rooms, s.currentTab)
+    }
+
+    @Test
+    fun onlyRoomsAndSettingsAreTabs() {
+        // Sources is a tab of Settings now (004): the destination is gone.
+        val s = AppBackStack(listOf(Destination.Rooms, Destination.Settings))
+        assertEquals(Destination.Settings, s.currentTab)
+        assertTrue(s.showsBottomBar)
+    }
+
+    @Test
+    fun anOldSavedSourcesEntryRestoresToSettings() {
+        assertEquals(Destination.Settings, decodeDestination("sources"))
+        val restored = AppBackStack(listOf("rooms", "sources").mapNotNull(::decodeDestination))
+        assertEquals(listOf(Destination.Rooms, Destination.Settings), restored.contents())
     }
 
     @Test
     fun everyDestinationSurvivesSaveAndRestore() {
         val all = listOf(
             Destination.Rooms,
-            Destination.Sources,
             Destination.Settings,
             Destination.NowPlaying("route:with:colons"),
             Destination.StartPlayback(null),

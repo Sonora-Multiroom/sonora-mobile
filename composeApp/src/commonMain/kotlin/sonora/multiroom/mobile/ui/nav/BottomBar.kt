@@ -24,17 +24,25 @@ import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 
-private data class Tab(val destination: Destination, val label: String, val icon: ImageVector)
+private enum class Item(val label: String, val icon: ImageVector) {
+    Rooms("Rooms", SonoraIcons.Rooms),
+    Sources("Sources", SonoraIcons.Sources),
+    Settings("Settings", SonoraIcons.Settings),
+}
 
-private val tabs = listOf(
-    Tab(Destination.Rooms, "Rooms", SonoraIcons.Rooms),
-    Tab(Destination.Sources, "Sources", SonoraIcons.Sources),
-    Tab(Destination.Settings, "Settings", SonoraIcons.Settings),
-)
-
-/** Rooms / Sources / Settings, per design/screens/Main.dc.html. The selected tab is accent. */
+/**
+ * Rooms / Sources / Settings, per design/screens/Main.dc.html. The selected tab is accent. Sources
+ * is a tab of Settings now (FR-003): it opens Settings on that tab, and only Settings is ever
+ * shown as selected.
+ */
 @Composable
-fun BottomBar(selected: Destination, onSelect: (Destination) -> Unit, modifier: Modifier = Modifier) {
+fun BottomBar(
+    selected: Destination,
+    onSelectRooms: () -> Unit,
+    onOpenSources: () -> Unit,
+    onSelectSettings: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
     val colors = SonoraTheme.colors
     Column(modifier = modifier.fillMaxWidth().background(colors.background)) {
         Box(Modifier.fillMaxWidth().height(1.dp).background(colors.navDivider))
@@ -42,14 +50,24 @@ fun BottomBar(selected: Destination, onSelect: (Destination) -> Unit, modifier: 
             modifier = Modifier.fillMaxWidth().padding(top = 6.dp, bottom = 6.dp),
             horizontalArrangement = Arrangement.SpaceAround,
         ) {
-            for (tab in tabs) {
-                val isSelected = tab.destination == selected
+            for (tab in Item.entries) {
+                val isSelected = when (tab) {
+                    Item.Rooms -> selected == Destination.Rooms
+                    Item.Sources -> false
+                    Item.Settings -> selected == Destination.Settings
+                }
                 val tint = if (isSelected) colors.accent else colors.textMuted
                 Column(
                     modifier = Modifier
                         .widthIn(min = 72.dp)
                         .height(52.dp)
-                        .clickable(role = Role.Tab) { if (!isSelected) onSelect(tab.destination) }
+                        .clickable(role = Role.Tab) {
+                            when (tab) {
+                                Item.Rooms -> onSelectRooms()
+                                Item.Sources -> onOpenSources()
+                                Item.Settings -> onSelectSettings()
+                            }
+                        }
                         .semantics { this.selected = isSelected },
                     horizontalAlignment = Alignment.CenterHorizontally,
                     verticalArrangement = Arrangement.spacedBy(4.dp, Alignment.CenterVertically),

@@ -7,7 +7,6 @@ import androidx.compose.runtime.snapshots.SnapshotStateList
 
 sealed interface Destination {
     data object Rooms : Destination
-    data object Sources : Destination
     data object Settings : Destination
 
     /**
@@ -37,11 +36,11 @@ class AppBackStack(initial: List<Destination> = listOf(Destination.Rooms)) {
 
     /** The top-level tab the user is in: the last tab destination on the stack. */
     val currentTab: Destination
-        get() = stack.last { it == Destination.Rooms || it == Destination.Sources || it == Destination.Settings }
+        get() = stack.last { it == Destination.Rooms || it == Destination.Settings }
 
-    /** Only the three tabs show the bottom bar; detail destinations cover it. */
+    /** Only the two tab roots show the bottom bar (Sources is a tab of Settings); detail destinations cover it. */
     val showsBottomBar: Boolean
-        get() = top == Destination.Rooms || top == Destination.Sources || top == Destination.Settings
+        get() = top == Destination.Rooms || top == Destination.Settings
 
     fun push(destination: Destination) {
         stack.add(destination)
@@ -61,7 +60,7 @@ class AppBackStack(initial: List<Destination> = listOf(Destination.Rooms)) {
 
     /** Switches to a top-level tab: Rooms is the root, the other tabs sit directly on it. */
     fun selectTab(tab: Destination) {
-        require(tab == Destination.Rooms || tab == Destination.Sources || tab == Destination.Settings)
+        require(tab == Destination.Rooms || tab == Destination.Settings)
         if (stack.size == 1 && stack.single() == tab) return
         if (stack.size == 2 && stack.last() == tab && tab != Destination.Rooms) return
         // The Rooms root is never removed, so its entry (and view model) survives tab switches.
@@ -80,7 +79,6 @@ class AppBackStack(initial: List<Destination> = listOf(Destination.Rooms)) {
 
 internal fun encodeDestination(d: Destination): String = when (d) {
     Destination.Rooms -> "rooms"
-    Destination.Sources -> "sources"
     Destination.Settings -> "settings"
     is Destination.NowPlaying -> "now:${d.routeId}"
     is Destination.StartPlayback -> if (d.targetId == null) "play" else "play:${d.targetId}"
@@ -88,8 +86,8 @@ internal fun encodeDestination(d: Destination): String = when (d) {
 
 internal fun decodeDestination(s: String): Destination? = when {
     s == "rooms" -> Destination.Rooms
-    s == "sources" -> Destination.Sources
-    s == "settings" -> Destination.Settings
+    // "sources" was a destination before 004: an old saved stack restores to Settings.
+    s == "settings" || s == "sources" -> Destination.Settings
     s.startsWith("now:") -> Destination.NowPlaying(s.removePrefix("now:"))
     s == "play" -> Destination.StartPlayback(null)
     s.startsWith("play:") -> Destination.StartPlayback(s.removePrefix("play:"))

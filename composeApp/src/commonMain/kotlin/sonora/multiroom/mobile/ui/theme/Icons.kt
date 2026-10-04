@@ -107,4 +107,15 @@ object SonoraIcons {
         ),
     )
     val Info = icon("info", paths = arrayOf(circle(12f, 12f, 9f), "M12 8v5M12 16h.01"))
+
+    // Settings (design/screens/Settings.dc.html).
+    val Server = icon("server", paths = arrayOf(rect(3f, 4f, 18f, 7f, 2f), rect(3f, 13f, 18f, 7f, 2f), "M7 7.5h.01M7 16.5h.01"))
+    val Chevron = icon("chevron", paths = arrayOf("M9 6l6 6-6 6"))
+    val Trash = icon("trash", paths = arrayOf("M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3"))
+
+    /** A group of rooms as the Settings tile draws it (Rooms' [Group] is two cabinets). */
+    val GroupStack = icon("groupStack", paths = arrayOf(rect(3f, 7f, 10f, 14f, 2f), "M8 3h11a2 2 0 0 1 2 2v12"))
+
+    /** The turn-off dialog's tile: an outlined stop square. */
+    val StopOutline = icon("stopOutline", paths = arrayOf(rect(6f, 6f, 12f, 12f, 2f)))
 }

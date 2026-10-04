@@ -11,6 +11,7 @@ import sonora.multiroom.mobile.ui.rooms.RoomsViewModel
 import sonora.multiroom.mobile.ui.session.AppMessages
 import sonora.multiroom.mobile.ui.session.HubSession
 import sonora.multiroom.mobile.ui.session.PlaybackStarter
+import sonora.multiroom.mobile.ui.session.SettingsNavigator
 import sonora.multiroom.mobile.ui.startplayback.StartPlaybackViewModel
 import sonora.multiroom.mobile.ui.settings.SettingsViewModel
 import androidx.lifecycle.SavedStateHandle
@@ -37,7 +38,10 @@ class AppGraph(
     /** Runs starts so they outlive their screen (research R9). */
     val starter = PlaybackStarter(appScope, session, messages)
 
-    fun settingsViewModel() = SettingsViewModel(addressStore)
+    /** The Settings tab and the sheet request, which outlive the Settings entry (research R2). */
+    val settingsNavigator = SettingsNavigator()
+
+    fun settingsViewModel() = SettingsViewModel(session, addressStore, settingsNavigator)
 
     fun nowPlayingViewModel(routeId: String, savedState: SavedStateHandle, startedAfterSeq: Long? = null, targetName: String? = null) =
         NowPlayingViewModel(routeId, savedState, session, messages, startedAfterSeq, targetName)
