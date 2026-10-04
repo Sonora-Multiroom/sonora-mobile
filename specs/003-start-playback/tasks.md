@@ -52,7 +52,7 @@ failing first.
 **Purpose**: version bump and the contract reconciliation that Constitution I requires before any
 call is touched.
 
-- [ ] T001 Bump the app version as the **first commit** of this feature (AGENTS.md "Workflow"): in
+- [X] T001 Bump the app version as the **first commit** of this feature (AGENTS.md "Workflow"): in
   `gradle.properties` set `sonora.versionName=0.3.0-alpha` and `sonora.versionCode=3`. Run
   `./gradlew :androidApp:assembleDebug`.
 - [X] T002 Reconcile the 0.1.21 contract (research R1). Run `./gradlew :composeApp:openApiGenerate`.
@@ -506,16 +506,16 @@ unreachable address and a malformed one (quickstart §2 rows 7–9, 12, 13).
 
 ## Phase 6: Polish & Cross-Cutting Concerns
 
-- [ ] T050 [P] Accessibility pass on `main/ui/startplayback/*` against FR-019: Close label, radio
+- [X] T050 [P] Accessibility pass on `main/ui/startplayback/*` against FR-019: Close label, radio
   groups, disabled semantics on unselectable tiles, every target ≥ 44 dp. If any new text/background
   pair is introduced, add it to `test/ui/theme/ContrastTest.kt`.
-- [ ] T051 [P] Design check against `design/screens/StartPlayback.dc.html` (sizes, radii, spacing,
+- [X] T051 [P] Design check against `design/screens/StartPlayback.dc.html` (sizes, radii, spacing,
   colours via tokens). Any departure not already in spec Assumptions or
   contracts/start-playback-ui.md is fixed or stopped on and asked about (Constitution VI).
-- [ ] T052 Run quickstart §1 in full: `./gradlew :androidApp:assembleDebug
+- [X] T052 Run quickstart §1 in full: `./gradlew :androidApp:assembleDebug
   :composeApp:testAndroidHostTest :composeApp:allTests :composeApp:check`. All green, with no
   generated files in `git status`.
-- [ ] T053 [P] Create `specs/003-start-playback/verification.md` with the quickstart §2 table (rows
+- [X] T053 [P] Create `specs/003-start-playback/verification.md` with the quickstart §2 table (rows
   1–13) and empty result columns for the on-device run, in the style of
   `specs/002-now-playing-move-to-room/verification.md`. Rows 5 and 13 are flagged as hub-assumption
   checks.
