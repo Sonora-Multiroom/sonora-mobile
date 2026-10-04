@@ -173,7 +173,7 @@ fun SettingsContentView(
                             if (body.lists.runtimeSources.isEmpty()) {
                                 Intro(RUNTIME_EMPTY)
                             } else {
-                                SettingsCard(body.lists.runtimeSources) { item ->
+                                SettingsCard(body.lists.runtimeSources, endPadding = 6.dp) { item ->
                                     RuntimeSourceSettingRow(item, body.controlsEnabled) { onRemove(item.row.id, item.row.name) }
                                 }
                             }

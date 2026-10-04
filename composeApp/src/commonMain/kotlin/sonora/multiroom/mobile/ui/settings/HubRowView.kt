@@ -53,9 +53,9 @@ fun HubRowView(row: HubRow, onClick: () -> Unit, modifier: Modifier = Modifier) 
             Modifier.size(40.dp).background(colors.surfaceRaised, SonoraTheme.shapes.smallTile),
             contentAlignment = Alignment.Center,
         ) {
-            Icon(SonoraIcons.Server, contentDescription = null, tint = colors.textSoft, modifier = Modifier.size(22.dp))
+            Icon(SonoraIcons.Server, contentDescription = null, tint = colors.textSoft, modifier = Modifier.size(20.dp))
         }
-        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
                 Text("Hub", style = type.body15.copy(fontWeight = FontWeight.SemiBold), color = colors.text)
                 val status = hubStatusText(row.status)

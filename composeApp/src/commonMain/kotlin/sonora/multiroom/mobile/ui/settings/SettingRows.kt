@@ -39,17 +39,24 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 
 /** The list card (UI contract "List card"): rows divided by a 1 dp line, none after the last. */
 @Composable
-fun <T> SettingsCard(items: List<T>, modifier: Modifier = Modifier, row: @Composable ColumnScope.(T) -> Unit) {
+fun <T> SettingsCard(
+    items: List<T>,
+    modifier: Modifier = Modifier,
+    /** The design gives the runtime rows 6 dp at the end, so the trash button sits close to the edge. */
+    endPadding: androidx.compose.ui.unit.Dp = 14.dp,
+    row: @Composable ColumnScope.(T) -> Unit,
+) {
     val colors = SonoraTheme.colors
     Column(
         modifier = modifier
             .padding(horizontal = 20.dp)
             .fillMaxWidth()
             .background(colors.surface, SonoraTheme.shapes.card)
-            .padding(horizontal = 14.dp, vertical = 4.dp),
+            .padding(start = 14.dp, end = endPadding, top = 4.dp, bottom = 4.dp),
     ) {
         items.forEachIndexed { i, item ->
             if (i > 0) Box(Modifier.fillMaxWidth().height(1.dp).background(colors.rowDivider))
@@ -79,8 +86,7 @@ private fun SwitchRow(
             .heightIn(min = minHeight)
             .alpha(if (enabled) 1f else 0.5f)
             .toggleable(value = item.shownEnabled, enabled = enabled, role = Role.Switch, onValueChange = onToggle)
-            .semantics(mergeDescendants = true) { contentDescription = name }
-            .padding(vertical = 8.dp),
+            .semantics(mergeDescendants = true) { contentDescription = name },
         horizontalArrangement = Arrangement.spacedBy(12.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
@@ -97,7 +103,7 @@ private fun IconTile(icon: ImageVector, size: androidx.compose.ui.unit.Dp = 40.d
         Modifier.size(size).background(colors.surfaceRaised, RoundedCornerShape(radius)),
         contentAlignment = Alignment.Center,
     ) {
-        Icon(icon, contentDescription = null, tint = colors.textSoft, modifier = Modifier.size(22.dp))
+        Icon(icon, contentDescription = null, tint = colors.textSoft, modifier = Modifier.size(20.dp))
     }
 }
 
@@ -137,7 +143,7 @@ fun GroupSettingRow(item: Item<GroupRow>, controlsEnabled: Boolean, onToggle: (B
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
         )
-        Text(groupMembersText(row.members), style = type.body13, color = colors.textMuted, maxLines = 1, overflow = TextOverflow.Ellipsis)
+        Text(groupMembersText(row.members), style = type.body13.copy(lineHeight = 17.55.sp), color = colors.textMuted, maxLines = 1, overflow = TextOverflow.Ellipsis)
         groupPlayingText(row.playing)?.let {
             Text(it, style = type.body13, color = colors.accent, maxLines = 1, overflow = TextOverflow.Ellipsis)
         }
@@ -187,8 +193,7 @@ fun RuntimeSourceSettingRow(item: Item<RuntimeSourceRow>, controlsEnabled: Boole
         modifier = Modifier
             .fillMaxWidth()
             .heightIn(min = 64.dp)
-            .alpha(if (item.removing) 0.5f else 1f)
-            .padding(start = 0.dp, end = 0.dp, top = 4.dp, bottom = 4.dp),
+            .alpha(if (item.removing) 0.5f else 1f),
         horizontalArrangement = Arrangement.spacedBy(12.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
@@ -217,7 +222,7 @@ fun RuntimeSourceSettingRow(item: Item<RuntimeSourceRow>, controlsEnabled: Boole
                 .semantics { contentDescription = removeLabel(row.name) },
             contentAlignment = Alignment.Center,
         ) {
-            Icon(SonoraIcons.Trash, contentDescription = null, tint = colors.textSoft, modifier = Modifier.size(22.dp))
+            Icon(SonoraIcons.Trash, contentDescription = null, tint = colors.textSoft, modifier = Modifier.size(20.dp))
         }
     }
 }
@@ -228,7 +233,7 @@ fun ExtensionSettingRow(row: ExtensionRow) {
     val colors = SonoraTheme.colors
     val type = SonoraTheme.type
     Row(
-        modifier = Modifier.fillMaxWidth().heightIn(min = 60.dp).padding(vertical = 8.dp),
+        modifier = Modifier.fillMaxWidth().heightIn(min = 60.dp),
         horizontalArrangement = Arrangement.spacedBy(12.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {

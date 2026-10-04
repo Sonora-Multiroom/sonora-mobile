@@ -29,7 +29,9 @@ composeApp/
   src/commonMain/kotlin/               # theme, API client wrapper, repository, screens
     .../ui/session/                    # state shared by screens: HubSession (the one poll loop,
                                        #   acquire/release per visible screen), VolumeDragController,
-                                       #   AppMessages. Screens never run their own loop.
+                                       #   AppMessages, SettingsActions (switch and removal requests
+                                       #   that outlive the screen), SettingsNavigator (selected
+                                       #   Settings tab). Screens never run their own loop.
   src/commonMain/composeResources/font # sora.ttf, dm_sans.ttf (already committed, variable fonts)
   src/commonTest/kotlin/
   src/androidMain/                     # platform drivers only (HTTP engine, storage path)
@@ -136,7 +138,7 @@ Record the build (CI build number and commit), the device and each row's evidenc
 | Start playback (link) | `POST /api/v2/play` `{uri, targetId, targetType, displayName?, volume?}` |
 | Start playback (configured source) | `POST /api/v2/routes` `{inputId, targetId, targetType}` |
 | Move to room | `POST /api/v2/routes/{routeId}/transfer` `{targetId, targetType}`, only when `transferable` and the route is Playing (never while Paused: the hub's behaviour is unchecked). The response is the NEW route; follow its id |
-| Settings | `PUT /api/v2/{outputs,groups,inputs}/{id}/enabled` `{enabled}`, `DELETE /api/v2/inputs/{id}`, `GET /api/v2/extensions` |
+| Settings | `PUT /api/v2/{outputs,groups,inputs}/{id}/enabled` `{enabled}`, `DELETE /api/v2/inputs/{id}`, `GET /api/v2/extensions` (only while the Extensions tab is open, on the session's refreshes), `GET /api/v2/outputs?includeDisabled=true` (the "Test connection" check of a drafted hub address) |
 
 `targetType` is `SINGLE_OUTPUT` or `OUTPUT_GROUP`.
 

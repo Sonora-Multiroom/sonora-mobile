@@ -678,13 +678,13 @@ while the tab is open.
 
 ## Phase 7: Polish & Cross-Cutting Concerns
 
-- [ ] T063 [P] Sync `AGENTS.md` (research R14):
+- [X] T063 [P] Sync `AGENTS.md` (research R14):
   - Endpoint table "Settings" row: add `GET /api/v2/outputs?includeDisabled=true` (connection
     test) and note that extensions are fetched only on the Extensions tab.
   - "Project layout": add `SettingsActions` and `SettingsNavigator` to the `ui/session/` comment.
   - "Scope of the first feature" item 4: leave it as history.
   - Check that no text still calls Sources a placeholder.
-- [ ] T064 [P] Accessibility pass against [UI contract "Accessibility"](contracts/settings-ui.md):
+- [X] T064 [P] Accessibility pass against [UI contract "Accessibility"](contracts/settings-ui.md):
   - rows are announced as switches with name and state, and as disabled when stale or in flight
   - tabs are `Role.Tab` + `selected`
   - the hub row label is right
@@ -695,14 +695,14 @@ while the tab is open.
   - every target is ≥ 44 dp
 
   Fix any gap in `main/ui/settings/`.
-- [ ] T065 [P] Design pass: compare each tab, the sheet and the dialog with
+- [X] T065 [P] Design pass: compare each tab, the sheet and the dialog with
   `design/screens/Settings.dc.html` (sizes, radii, gaps, tokens). Only the spec's listed departures
   are allowed: sorting, footer wording and position, undrawn states (including "Change address"
   when unreachable), extension wording, one card for runtime rows, and the platform dialog dim.
-- [ ] T066 Run [quickstart.md](quickstart.md) §1: `./gradlew :androidApp:assembleDebug
+- [X] T066 Run [quickstart.md](quickstart.md) §1: `./gradlew :androidApp:assembleDebug
   :composeApp:testAndroidHostTest :composeApp:allTests :composeApp:check`, reading Gradle's own
   exit code. Everything MUST be green, with no generated files in `git status`.
-- [ ] T067 Create `specs/004-settings-sources/verification.md` from 003's layout (build, device,
+- [X] T067 Create `specs/004-settings-sources/verification.md` from 003's layout (build, device,
   one row per quickstart §2 step, "Issues found"). Leave the results empty for the local session.
   Note at the top that §2 waits for the hub release and starts with `./gradlew refreshOpenApi`
   (plan "Open points").
