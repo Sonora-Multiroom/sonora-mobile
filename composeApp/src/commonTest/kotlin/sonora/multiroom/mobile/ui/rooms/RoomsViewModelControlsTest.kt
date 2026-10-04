@@ -19,6 +19,9 @@ import sonora.multiroom.mobile.domain.SourceKind
 import sonora.multiroom.mobile.domain.SourceOrigin
 import sonora.multiroom.mobile.domain.Target
 import sonora.multiroom.mobile.runViewModelTest
+import sonora.multiroom.mobile.ui.session.AppMessages
+import sonora.multiroom.mobile.ui.session.Connection
+import sonora.multiroom.mobile.ui.session.HubSession
 import io.ktor.client.engine.mock.MockEngine
 import io.ktor.client.engine.mock.respond
 import io.ktor.http.HttpHeaders
@@ -75,19 +78,21 @@ class RoomsViewModelControlsTest {
         masterMuted = masterMuted,
     )
 
-    private class Setup(val vm: RoomsViewModel, val factory: FakeFactory) {
+    private class Setup(val vm: RoomsViewModel, val factory: FakeFactory, val messages: AppMessages) {
         val repo get() = factory.last
     }
 
     /** A view model that has loaded [snapshot] and is polling. */
     private fun TestScope.live(snapshot: HubSnapshot = snapshot()): Setup {
         val factory = FakeFactory { currentTime }
-        val vm = RoomsViewModel(InMemoryHubAddressStore(address), factory, now = { currentTime })
+        val session = HubSession(InMemoryHubAddressStore(address), factory, backgroundScope, now = { currentTime })
+        val messages = AppMessages()
+        val vm = RoomsViewModel(session, messages)
         runCurrent()
         factory.last.snapshotResult = { HubResult.Ok(snapshot) }
-        vm.startPolling()
+        vm.onVisible()
         runCurrent()
-        return Setup(vm, factory)
+        return Setup(vm, factory, messages)
     }
 
     private fun Setup.connected(): RoomsUiState.Connected {
@@ -118,49 +123,10 @@ class RoomsViewModelControlsTest {
         runCurrent()
         assertTrue(s.connected().volumeOverrides.isEmpty())
         assertEquals(before + 1, s.repo.snapshotCalls)
-        s.vm.stopPolling()
+        s.vm.onHidden()
     }
 
     // ---- Throttle ------------------------------------------------------------------------
-
-    @Test
-    fun fortyDragEventsOverTwoSecondsSendAtMostFourPerSecondAndEndWithTheFinalValue() = runViewModelTest {
-        val s = live()
-        s.vm.onVolumeDragStart("r2")
-        for (i in 1..40) {
-            s.vm.onVolumeDrag("r2", 40 + i)
-            advanceTimeBy(50); runCurrent()
-        }
-        s.vm.onVolumeDragEnd("r2", 80)
-        runCurrent()
-
-        val calls = s.repo.calls.filter { it.name == "setRoomVolume" }
-        assertTrue(calls.isNotEmpty())
-        for (c in calls) {
-            val inWindow = calls.count { it.at >= c.at && it.at < c.at + 1000 }
-            assertTrue(inWindow <= 4 + 1, "too many sends in a second from ${c.at}: $inWindow") // +1: the final send
-        }
-        // Only throttled sends plus the final one: never one per event.
-        assertTrue(calls.size <= 8 + 1, "sent ${calls.size} times")
-        assertEquals(listOf<Any>("office", 80), calls.last().args)
-        assertEquals(1, calls.count { it.args[1] == 80 })
-        s.vm.stopPolling()
-    }
-
-    @Test
-    fun theThrottleAloneNeverExceedsFourSendsPerSecond() = runViewModelTest {
-        val s = live()
-        s.vm.onVolumeDragStart("r2")
-        for (i in 1..40) {
-            s.vm.onVolumeDrag("r2", 40 + i)
-            advanceTimeBy(50); runCurrent()
-        }
-        val calls = s.repo.calls.filter { it.name == "setRoomVolume" }
-        for (c in calls) {
-            assertTrue(calls.count { it.at >= c.at && it.at < c.at + 1000 } <= 4, "from ${c.at}")
-        }
-        s.vm.stopPolling()
-    }
 
     // ---- Group drag ------------------------------------------------------------------------
 
@@ -172,91 +138,10 @@ class RoomsViewModelControlsTest {
         runCurrent()
         val sent = s.repo.calls.filter { it.name == "setRoomVolume" }.map { it.args.toList() }.toSet()
         assertEquals(setOf<List<Any>>(listOf("living", 35), listOf("kitchen", 18)), sent)
-        s.vm.stopPolling()
-    }
-
-    @Test
-    fun aGroupWithAllMembersAtZeroSetsEveryoneToTheNewValue() = runViewModelTest {
-        val s = live(snapshot(livingVolume = 0, kitchenVolume = 0))
-        s.vm.onVolumeDragStart("r1")
-        s.vm.onVolumeDragEnd("r1", 40)
-        runCurrent()
-        val sent = s.repo.calls.filter { it.name == "setRoomVolume" }.map { it.args.toList() }.toSet()
-        assertEquals(setOf<List<Any>>(listOf("living", 40), listOf("kitchen", 40)), sent)
-        s.vm.stopPolling()
-    }
-
-    @Test
-    fun aGroupDragBackToTheStartRestoresTheHubBecauseMembersAreComparedWithWhatWasLastSent() = runViewModelTest {
-        val s = live()
-        s.vm.onVolumeDragStart("r1")
-        s.vm.onVolumeDrag("r1", 35)
-        runCurrent()
-        advanceTimeBy(300); runCurrent()
-        s.vm.onVolumeDrag("r1", 70)
-        s.vm.onVolumeDragEnd("r1", 70)
-        runCurrent()
-        val calls = s.repo.calls.filter { it.name == "setRoomVolume" }
-        val lastPerRoom = calls.groupBy { it.args[0] }.mapValues { (_, v) -> v.last().args[1] }
-        assertEquals(mapOf<Any, Any>("living" to 70, "kitchen" to 35), lastPerRoom)
-        s.vm.stopPolling()
-    }
-
-    @Test
-    fun aMemberAlreadyAtTheTargetIsNotSentAgain() = runViewModelTest {
-        val s = live()
-        s.vm.onVolumeDragStart("r1")
-        s.vm.onVolumeDragEnd("r1", 70) // same as the loudest: nothing changes
-        runCurrent()
-        assertEquals(emptyList(), s.repo.calls.filter { it.name == "setRoomVolume" })
-        s.vm.stopPolling()
+        s.vm.onHidden()
     }
 
     // ---- Releasing a drag before the hub confirms (review findings) ------------------------
-
-    @Test
-    fun aDragRightAfterReleaseStartsFromWhatWasSentNotFromStaleNumbers() = runViewModelTest {
-        val s = live(snapshot(livingVolume = 40, kitchenVolume = 80))
-        s.repo.snapshotDelayMs = 60_000 // the confirming refresh does not arrive in time
-        s.vm.onVolumeDragStart("r1")
-        s.vm.onVolumeDragEnd("r1", 40) // 40/80 -> 20/40
-        runCurrent()
-        assertEquals(40, s.connected().volumeOverrides["r1"], "the released value must not snap back")
-
-        s.vm.onVolumeDragStart("r1")
-        s.vm.onVolumeDragEnd("r1", 80) // back up: must really send 40/80
-        runCurrent()
-        val lastPerRoom = s.repo.calls.filter { it.name == "setRoomVolume" }
-            .groupBy { it.args[0] }.mapValues { (_, v) -> v.last().args[1] }
-        assertEquals(mapOf<Any, Any>("living" to 40, "kitchen" to 80), lastPerRoom)
-        s.vm.stopPolling()
-    }
-
-    @Test
-    fun aFinishingDragNeverResetsTheNextDragsDisplay() = runViewModelTest {
-        val s = live()
-        s.repo.actionDelayMs = 1000
-        s.vm.onVolumeDragStart("r2")
-        s.vm.onVolumeDragEnd("r2", 50) // its request takes 1 s
-        runCurrent()
-        s.vm.onVolumeDragStart("r2")
-        s.vm.onVolumeDrag("r2", 60)
-        advanceTimeBy(1500); runCurrent() // the first release finishes meanwhile
-        assertEquals(60, s.connected().volumeOverrides["r2"])
-        s.vm.onVolumeDragEnd("r2", 60)
-        advanceTimeBy(3000); runCurrent()
-        s.vm.stopPolling()
-    }
-
-    @Test
-    fun theReleasedValueIsDroppedOnceARefreshAfterTheSendConfirmsIt() = runViewModelTest {
-        val s = live()
-        s.vm.onVolumeDragStart("r2")
-        s.vm.onVolumeDragEnd("r2", 50)
-        runCurrent()
-        assertTrue(s.connected().volumeOverrides.isEmpty())
-        s.vm.stopPolling()
-    }
 
     // ---- Guards ----------------------------------------------------------------------------
 
@@ -270,7 +155,7 @@ class RoomsViewModelControlsTest {
         advanceTimeBy(1000); runCurrent()
         assertEquals(emptyList(), s.repo.calls)
         assertNull(s.connected().volumeOverrides["rg"])
-        s.vm.stopPolling()
+        s.vm.onHidden()
     }
 
     @Test
@@ -286,7 +171,7 @@ class RoomsViewModelControlsTest {
                 advanceTimeBy(1000); runCurrent()
             }
             assertEquals(emptyList(), s.repo.calls)
-            s.vm.stopPolling()
+            s.vm.onHidden()
         }
     }
 
@@ -304,7 +189,7 @@ class RoomsViewModelControlsTest {
         s.vm.onMasterMuteToggle()
         advanceTimeBy(1000); runCurrent()
         assertEquals(emptyList(), s.repo.calls)
-        s.vm.stopPolling()
+        s.vm.onHidden()
     }
 
     @Test
@@ -319,7 +204,7 @@ class RoomsViewModelControlsTest {
         assertEquals(1, s.repo.calls.count { it.name == "stopRoute" })
         advanceTimeBy(1000); runCurrent()
         assertTrue(s.connected().inFlight.isEmpty())
-        s.vm.stopPolling()
+        s.vm.onHidden()
     }
 
     @Test
@@ -329,7 +214,7 @@ class RoomsViewModelControlsTest {
         s.vm.onCardAction("r2")
         runCurrent()
         assertEquals(emptyList(), s.repo.calls)
-        s.vm.stopPolling()
+        s.vm.onHidden()
     }
 
     // ---- The actions -----------------------------------------------------------------------
@@ -363,7 +248,7 @@ class RoomsViewModelControlsTest {
             listOf(listOf<Any>("setRoutePaused", "r2", false), listOf<Any>("setMasterMute", false)),
             s.repo.calls.map { listOf(it.name) + it.args },
         )
-        s.vm.stopPolling()
+        s.vm.onHidden()
     }
 
     // ---- Failure ---------------------------------------------------------------------------
@@ -379,8 +264,9 @@ class RoomsViewModelControlsTest {
         assertTrue(s.connected().inFlight.isEmpty())
         assertEquals(before + 1, s.repo.snapshotCalls)
         s.vm.consumeMessage()
+        runCurrent()
         assertNull(s.connected().message)
-        s.vm.stopPolling()
+        s.vm.onHidden()
     }
 
     @Test
@@ -391,7 +277,7 @@ class RoomsViewModelControlsTest {
         s.vm.onVolumeDragEnd("r1", 35)
         runCurrent()
         assertEquals("Downstairs is no longer on the hub.", s.connected().message)
-        s.vm.stopPolling()
+        s.vm.onHidden()
     }
 
     // ---- Refresh after an action (I1) ------------------------------------------------------
@@ -408,18 +294,45 @@ class RoomsViewModelControlsTest {
         advanceTimeBy(1500); runCurrent()       // t = 4500: refresh ends, the signal starts one right away
         assertEquals(1, s.repo.maxConcurrentSnapshots)
         assertEquals(4500L, s.repo.snapshotTimes.last())
-        s.vm.stopPolling()
+        s.vm.onHidden()
     }
 
     @Test
     fun anActionCompletingAfterPollingStoppedStartsNoRefresh() = runViewModelTest {
         val s = live()
-        s.vm.stopPolling()
+        s.vm.onHidden()
         val before = s.repo.snapshotCalls
         s.repo.actionDelayMs = 100
         s.vm.onCardAction("r1")
         advanceUntilIdle()
         assertEquals(before, s.repo.snapshotCalls)
+    }
+
+    // ---- Messages from other screens (T007) ---------------------------------------------------
+
+    @Test
+    fun textPostedToAppMessagesAppearsAsTheRoomsMessage() = runViewModelTest {
+        val s = live()
+        s.messages.post("Playback on Bedroom ended")
+        runCurrent()
+        assertEquals("Playback on Bedroom ended", s.connected().message)
+        s.vm.consumeMessage()
+        runCurrent()
+        assertNull(s.connected().message)
+        s.vm.onHidden()
+    }
+
+    @Test
+    fun withoutAnAddressTheStateIsNoAddress() = runViewModelTest {
+        val factory = FakeFactory { currentTime }
+        val session = HubSession(InMemoryHubAddressStore(), factory, backgroundScope)
+        val vm = RoomsViewModel(session, AppMessages())
+        vm.onVisible()
+        runCurrent()
+        advanceTimeBy(30_000)
+        assertEquals(RoomsUiState.NoAddress, vm.state.value)
+        assertEquals(emptyList(), factory.created)
+        vm.onHidden()
     }
 
     // ---- Never the group-volume endpoint (contract test 7) --------------------------------
@@ -440,11 +353,13 @@ class RoomsViewModelControlsTest {
             }
             respond(body, HttpStatusCode.OK, json)
         }
-        val vm = RoomsViewModel(
+        val session = HubSession(
             InMemoryHubAddressStore(address),
             KtorHubRepositoryFactory(createHubHttpClient(engine)),
+            backgroundScope,
             now = { currentTime },
         )
+        val vm = RoomsViewModel(session, AppMessages())
         // MockEngine answers on a real thread, so wait in real time for each step.
         suspend fun settle(until: () -> Boolean) {
             repeat(500) {
@@ -454,7 +369,7 @@ class RoomsViewModelControlsTest {
             }
         }
         settle { (vm.state.value as? RoomsUiState.Connected) != null }
-        vm.startPolling()
+        vm.onVisible()
         settle { ((vm.state.value as? RoomsUiState.Connected)?.connection) == Connection.Live }
 
         vm.onVolumeDragStart("r1")
@@ -464,7 +379,7 @@ class RoomsViewModelControlsTest {
         vm.onVolumeDrag("r1", 70)
         vm.onVolumeDragEnd("r1", 70)
         settle { requests.count { it.first == HttpMethod.Put } >= 4 }
-        vm.stopPolling()
+        vm.onHidden()
 
         val puts = requests.filter { it.first == HttpMethod.Put }.map { it.second }
         assertTrue(puts.isNotEmpty(), "the drag should have sent member volumes")

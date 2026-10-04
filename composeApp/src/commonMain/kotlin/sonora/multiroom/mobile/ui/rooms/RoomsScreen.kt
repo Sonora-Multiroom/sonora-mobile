@@ -1,6 +1,7 @@
 package sonora.multiroom.mobile.ui.rooms
 
 import sonora.multiroom.mobile.domain.RoomsContent
+import sonora.multiroom.mobile.ui.session.Connection
 import sonora.multiroom.mobile.ui.theme.SonoraIcons
 import sonora.multiroom.mobile.ui.theme.SonoraTheme
 import androidx.compose.foundation.background
@@ -73,11 +74,11 @@ fun RoomsScreen(
     val lifecycleOwner = LocalLifecycleOwner.current
     LaunchedEffect(viewModel, lifecycleOwner) {
         lifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
-            viewModel.startPolling()
+            viewModel.onVisible()
             try {
                 awaitCancellation()
             } finally {
-                viewModel.stopPolling()
+                viewModel.onHidden()
             }
         }
     }
@@ -215,7 +216,7 @@ private fun Header(subtitle: String?, masterMuted: Boolean, muteEnabled: Boolean
 }
 
 @Composable
-private fun StaleBanner() {
+internal fun StaleBanner() {
     Text(
         "Can't reach the hub · showing last known state",
         style = SonoraTheme.type.body13Semi,

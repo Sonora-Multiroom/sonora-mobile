@@ -27,6 +27,9 @@ settings.gradle.kts, build.gradle.kts, gradle/libs.versions.toml, gradlew
 api/openapi.json                       # hub contract, input to code generation
 composeApp/
   src/commonMain/kotlin/               # theme, API client wrapper, repository, screens
+    .../ui/session/                    # state shared by screens: HubSession (the one poll loop,
+                                       #   acquire/release per visible screen), VolumeDragController,
+                                       #   AppMessages. Screens never run their own loop.
   src/commonMain/composeResources/font # sora.ttf, dm_sans.ttf (already committed, variable fonts)
   src/commonTest/kotlin/
   src/androidMain/                     # platform drivers only (HTTP engine, storage path)
@@ -72,7 +75,7 @@ pass. The user installs the APK and tries it against the real hub locally.
 | Pause / resume | `PUT /api/v2/routes/{routeId}/pause` `{paused}`, **only when `RouteResponse.pauseable`** |
 | Start playback (link) | `POST /api/v2/play` `{uri, targetId, targetType, displayName?, volume?}` |
 | Start playback (configured source) | `POST /api/v2/routes` `{inputId, targetId, targetType}` |
-| Move to room | `POST /api/v2/routes/{routeId}/transfer` `{targetId, targetType}`, only when `transferable` |
+| Move to room | `POST /api/v2/routes/{routeId}/transfer` `{targetId, targetType}`, only when `transferable` and the route is Playing (never while Paused: the hub's behaviour is unchecked). The response is the NEW route; follow its id |
 | Settings | `PUT /api/v2/{outputs,groups,inputs}/{id}/enabled` `{enabled}`, `DELETE /api/v2/inputs/{id}`, `GET /api/v2/extensions` |
 
 `targetType` is `SINGLE_OUTPUT` or `OUTPUT_GROUP`.

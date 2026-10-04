@@ -95,5 +95,16 @@ object SonoraIcons {
         "roomNotConnected",
         paths = arrayOf(rect(6f, 3f, 12f, 18f, 2f), circle(12f, 14f, 3f), "M3 3l18 18"),
     )
+    val Arrow = icon("arrow", paths = arrayOf("M4 12h14M13 6l6 6-6 6"))
+    val Check = icon("check", paths = arrayOf("M5 12l5 5 9-10"))
+
+    /** Two speaker cabinets: a group of rooms. */
+    val Group = icon(
+        "group",
+        paths = arrayOf(
+            rect(2.5f, 5f, 8f, 14f, 1.5f), circle(6.5f, 13.5f, 2f),
+            rect(13.5f, 5f, 8f, 14f, 1.5f), circle(17.5f, 13.5f, 2f),
+        ),
+    )
     val Info = icon("info", paths = arrayOf(circle(12f, 12f, 9f), "M12 8v5M12 16h.01"))
 }

@@ -20,6 +20,11 @@ jobs:
   assemble-debug:
     runs-on: ubuntu-latest
     timeout-minutes: 30
+    # Shown in the Settings footer and the APK's versionName. On a PR, github.sha is the merge
+    # commit, so use the branch head instead.
+    env:
+      SONORA_BUILD_NUMBER: ${{ github.run_number }}
+      SONORA_COMMIT: ${{ github.event.pull_request.head.sha || github.sha }}
     steps:
       - uses: actions/checkout@v7
 

@@ -2,16 +2,9 @@ package sonora.multiroom.mobile.ui.rooms
 
 import sonora.multiroom.mobile.domain.CardStatus
 import sonora.multiroom.mobile.domain.NowPlayingCard
-import sonora.multiroom.mobile.domain.SourceKind
+import sonora.multiroom.mobile.domain.kindLabel
 
-fun kindLabel(kind: SourceKind): String = when (kind) {
-    SourceKind.Stream -> "Stream"
-    SourceKind.LineIn -> "Line-in"
-    SourceKind.File -> "File"
-    SourceKind.Link -> "Link"
-}
-
-private fun statusWord(status: CardStatus): String = when (status) {
+internal fun statusWord(status: CardStatus): String = when (status) {
     CardStatus.Playing -> "Playing"
     CardStatus.Paused -> "Paused"
     CardStatus.LiveStream -> "Live stream"

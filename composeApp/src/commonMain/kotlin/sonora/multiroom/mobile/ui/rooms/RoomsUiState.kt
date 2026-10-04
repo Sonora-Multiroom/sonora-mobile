@@ -3,16 +3,7 @@ package sonora.multiroom.mobile.ui.rooms
 import sonora.multiroom.mobile.domain.CardAction
 import sonora.multiroom.mobile.domain.HubAddress
 import sonora.multiroom.mobile.domain.RoomsContent
-
-sealed interface Connection {
-    /** No answer yet. */
-    data object Loading : Connection
-
-    data object Live : Connection
-
-    /** The last refresh failed; [lastSuccessAt] is epoch millis of the last good one, if any. */
-    data class Unreachable(val lastSuccessAt: Long?) : Connection
-}
+import sonora.multiroom.mobile.ui.session.Connection
 
 /** A request the user started that is still running: its control stays disabled (FR-019). */
 sealed interface ActionKey {

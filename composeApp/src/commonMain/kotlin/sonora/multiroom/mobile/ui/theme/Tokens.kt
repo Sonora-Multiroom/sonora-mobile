@@ -30,4 +30,15 @@ data class SonoraColors(
     val offTile: Color = Color(0xFF1B1D22),
     val offTileIcon: Color = Color(0xFF6E727B),
     val navDivider: Color = Color(0xFF1F2228),
+    // Extras used by Now Playing and the Move sheet (design/screens/NowPlaying + Transfer).
+    /** Secondary controls and icons (back control, Cancel, tile icons). */
+    val textSoft: Color = Color(0xFFC9CBD1),
+    /** Member pill labels. */
+    val textBright: Color = Color(0xFFE4E3DF),
+    /** The Now Playing panel behind a stream, and the Playing chip. */
+    val streamPanel: Color = Color(0xFF2A1F10),
+    val sheetHandle: Color = Color(0xFF3A3E46),
+    val scrim: Color = Color(0xB8050608),
+    /** Black at 40 %: behind the "Live stream" badge. */
+    val badgeScrim: Color = Color(0x66000000),
 )

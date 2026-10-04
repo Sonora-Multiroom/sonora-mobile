@@ -2,6 +2,8 @@ package sonora.multiroom.mobile.data
 
 import sonora.multiroom.mobile.domain.HubAddress
 import sonora.multiroom.mobile.domain.HubSnapshot
+import sonora.multiroom.mobile.domain.Route
+import sonora.multiroom.mobile.domain.Target
 
 /**
  * The only boundary between the app and the hub (Constitution I). There is deliberately no group
@@ -19,6 +21,18 @@ interface HubRepository {
     suspend fun setRoutePaused(routeId: String, paused: Boolean): HubResult<Unit>
 
     suspend fun setMasterMute(muted: Boolean): HubResult<Unit>
+
+    suspend fun setRoomMute(roomId: String, muted: Boolean): HubResult<Unit>
+
+    /** Mutes or unmutes every member of the group (idempotent on the hub). */
+    suspend fun setGroupMute(groupId: String, muted: Boolean): HubResult<Unit>
+
+    /**
+     * Moves a playback. [target] is [Target.Room] or [Target.Group] (`Target.Unknown` throws
+     * [IllegalArgumentException] and is never sent). Returns the hub's NEW route: the old id is
+     * gone after success.
+     */
+    suspend fun transferRoute(routeId: String, target: Target): HubResult<Route>
 }
 
 sealed interface HubResult<out T> {
