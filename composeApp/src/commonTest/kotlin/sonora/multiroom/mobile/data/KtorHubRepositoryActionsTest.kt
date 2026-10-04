@@ -1,6 +1,7 @@
 package sonora.multiroom.mobile.data
 
 import sonora.multiroom.mobile.domain.HubAddress
+import sonora.multiroom.mobile.domain.JoinMode
 import sonora.multiroom.mobile.domain.Route
 import sonora.multiroom.mobile.domain.RouteStatus
 import sonora.multiroom.mobile.domain.Target
@@ -142,7 +143,7 @@ class KtorHubRepositoryActionsTest {
         val (repo, log) = repository(body = movedRoute)
         val result = repo.transferRoute("r1", Target.Room("kitchen"))
         assertEquals(
-            HubResult.Ok(Route("r2", "radio", Target.Room("kitchen"), RouteStatus.Active, false, false, true)),
+            HubResult.Ok(Route("r2", "radio", Target.Room("kitchen"), RouteStatus.Active, false, false, true, JoinMode.Unknown)),
             result,
         )
         val r = log.single()
@@ -188,5 +189,34 @@ class KtorHubRepositoryActionsTest {
         val (repo, log) = repository(body = movedRoute)
         assertFailsWith<IllegalArgumentException> { repo.transferRoute("r1", Target.Unknown("x")) }
         assertTrue(log.isEmpty())
+    }
+
+    // ---- Admission refusals (003, research R6) ----------------------------------------------
+
+    @Test
+    fun admissionRefusalsKeepReasonAndOutputIdOn409And422() = runTest {
+        val body = """{"type":"urn:multiroom:error:conflict","status":409,"reason":"ROUTE_LIMIT_REACHED","outputId":"kitchen"}"""
+        for (status in listOf(HttpStatusCode.Conflict, HttpStatusCode.UnprocessableEntity)) {
+            val (repo, _) = repository(status = status, body = body, headers = problem)
+            assertEquals(
+                HubResult.Err(HubError.Rejected(status.value, "urn:multiroom:error:conflict", "ROUTE_LIMIT_REACHED", "kitchen")),
+                repo.transferRoute("r1", Target.Room("kitchen")),
+            )
+        }
+    }
+
+    @Test
+    fun problemWithoutReasonHasNullReasonAndOutputId() = runTest {
+        val (repo, _) = repository(status = HttpStatusCode.NotFound, body = Fixtures.PROBLEM_NOT_FOUND, headers = problem)
+        assertEquals(
+            HubResult.Err(HubError.Rejected(404, "urn:multiroom:error:not-found", null, null)),
+            repo.transferRoute("r1", Target.Room("kitchen")),
+        )
+    }
+
+    @Test
+    fun nonJsonErrorBodyHasNoReasonEither() = runTest {
+        val (repo, _) = repository(status = HttpStatusCode.Conflict, body = "<html>", headers = headersOf(HttpHeaders.ContentType, "text/html"))
+        assertEquals(HubResult.Err(HubError.Rejected(409, null, null, null)), repo.transferRoute("r1", Target.Room("kitchen")))
     }
 }

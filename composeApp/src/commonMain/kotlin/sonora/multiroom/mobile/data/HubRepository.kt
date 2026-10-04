@@ -44,8 +44,17 @@ sealed interface HubError {
     /** Connect failure, timeout or other IO problem. */
     data object Unreachable : HubError
 
-    /** The hub answered with an error status; [problemType] is the RFC 7807 `type` if present. */
-    data class Rejected(val status: Int, val problemType: String?) : HubError
+    /**
+     * The hub answered with an error status; [problemType] is the RFC 7807 `type` if present.
+     * [reason] (e.g. `ROUTE_LIMIT_REACHED`) and [outputId] name an admission refusal (API 0.1.21).
+     * They are never shown as text.
+     */
+    data class Rejected(
+        val status: Int,
+        val problemType: String?,
+        val reason: String? = null,
+        val outputId: String? = null,
+    ) : HubError
 
     /** Undecodable body or anything else unexpected. */
     data object Unexpected : HubError

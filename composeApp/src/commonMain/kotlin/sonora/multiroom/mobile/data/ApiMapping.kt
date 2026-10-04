@@ -1,6 +1,7 @@
 package sonora.multiroom.mobile.data
 
 import sonora.multiroom.mobile.domain.Group
+import sonora.multiroom.mobile.domain.JoinMode
 import sonora.multiroom.mobile.domain.Room
 import sonora.multiroom.mobile.domain.Route
 import sonora.multiroom.mobile.domain.RouteStatus
@@ -56,6 +57,13 @@ internal fun InputResponse.toSource(): Source? {
         pauseable = pauseable ?: false,
         enabled = enabled ?: true,
         kind = inferSourceKind(origin, uri),
+        // HubJson coerces an unrecognised value to null, so "unknown" and "none" look the same here.
+        defaultJoinMode = when (defaultJoinMode) {
+            InputResponse.DefaultJoinMode.REPLACE -> JoinMode.Replace
+            InputResponse.DefaultJoinMode.MIX -> JoinMode.Mix
+            InputResponse.DefaultJoinMode.DUCK_OTHERS -> JoinMode.Announcement
+            null -> null
+        },
     )
 }
 
@@ -81,5 +89,11 @@ internal fun RouteResponse.toRoute(): Route? {
         paused = paused ?: false,
         pauseable = pauseable ?: false,
         transferable = transferable ?: false,
+        joinMode = when (joinMode) {
+            RouteResponse.JoinMode.REPLACE -> JoinMode.Replace
+            RouteResponse.JoinMode.MIX -> JoinMode.Mix
+            RouteResponse.JoinMode.DUCK_OTHERS -> JoinMode.Announcement
+            null -> JoinMode.Unknown
+        },
     )
 }

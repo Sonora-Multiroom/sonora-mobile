@@ -33,6 +33,8 @@ class NowPlayingViewModel(
     private val savedState: SavedStateHandle,
     private val session: HubSession,
     private val messages: AppMessages,
+    startedAfterSeq: Long? = null,
+    targetName: String? = null,
 ) : ViewModel() {
     private val _state = MutableStateFlow(NowPlayingUiState())
     val state: StateFlow<NowPlayingUiState> = _state.asStateFlow()
@@ -50,12 +52,12 @@ class NowPlayingViewModel(
     private val initialRouteId = routeId
 
     /**
-     * After a move: a missing route is not "ended" until a refresh that *started after* the move
+     * After a move, or when opened by Start Playback: a missing route is not "ended" until a refresh that *started after* the move
      * answered has arrived (research R1/R3). In memory only: after a restore a fresh snapshot decides.
      */
-    private var fenceSeq: Long? = null
+    private var fenceSeq: Long? = startedAfterSeq
 
-    private var lastTargetName: String? = null
+    private var lastTargetName: String? = targetName
 
     /**
      * Set once the screen is over (stopped here or ended elsewhere). Unlike [NowPlayingUiState.exit],

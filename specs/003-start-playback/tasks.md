@@ -55,7 +55,7 @@ call is touched.
 - [ ] T001 Bump the app version as the **first commit** of this feature (AGENTS.md "Workflow"): in
   `gradle.properties` set `sonora.versionName=0.3.0-alpha` and `sonora.versionCode=3`. Run
   `./gradlew :androidApp:assembleDebug`.
-- [ ] T002 Reconcile the 0.1.21 contract (research R1). Run `./gradlew :composeApp:openApiGenerate`.
+- [X] T002 Reconcile the 0.1.21 contract (research R1). Run `./gradlew :composeApp:openApiGenerate`.
   In `composeApp/build/generated/openapi/`, confirm these fields exist with these names and types:
   - `RouteResponse.joinMode`
   - `InputResponse.defaultJoinMode`
@@ -82,14 +82,14 @@ hand-off to Now Playing, which every story uses.
 
 ### Join modes (research R3)
 
-- [ ] T003 [P] Extend `test/data/KtorHubRepositorySnapshotTest.kt` (and payloads in
+- [X] T003 [P] Extend `test/data/KtorHubRepositorySnapshotTest.kt` (and payloads in
   `test/data/Fixtures.kt`), failing first, with contract test 7:
   - routes with `"joinMode"` `REPLACE`, `MIX`, `DUCK_OTHERS`, missing and `"SOMETHING_NEW"` map to
     `JoinMode.Replace`, `Mix`, `Announcement`, `Unknown` and `Unknown` (Constitution V)
   - inputs with `"defaultJoinMode"` the same values map to `Replace`, `Mix`, `Announcement`, `null`
     and `null` (unknown is coerced to `null`, the recorded deviation in plan Complexity Tracking)
   - the snapshot never fails because of the unknown value
-- [ ] T004 In `main/domain/Models.kt` add `enum class JoinMode { Replace, Mix, Announcement, Unknown }`,
+- [X] T004 In `main/domain/Models.kt` add `enum class JoinMode { Replace, Mix, Announcement, Unknown }`,
   `Route.joinMode: JoinMode = JoinMode.Replace` and `Source.defaultJoinMode: JoinMode? = null`.
   The defaults keep existing constructors compiling. Map both fields in `main/data/ApiMapping.kt`
   in the style of `RouteStatus` (`null -> Unknown`): "missing/unknown → `Unknown`" for routes and
@@ -97,33 +97,33 @@ hand-off to Now Playing, which every story uses.
 
 ### Admission refusals (research R6)
 
-- [ ] T005 [P] Extend `test/data/KtorHubRepositoryActionsTest.kt`, failing first:
+- [X] T005 [P] Extend `test/data/KtorHubRepositoryActionsTest.kt`, failing first:
   - an RFC 7807 body with `"reason":"ROUTE_LIMIT_REACHED","outputId":"kitchen"` on 409 and on 422
     (use `transferRoute`, an existing call) → `Rejected(status, type, "ROUTE_LIMIT_REACHED",
     "kitchen")`
   - a problem body without these fields → both `null`
   - a non-JSON error body → `Rejected(status, null, null, null)`
-- [ ] T006 In `main/data/HubRepository.kt` add `reason: String? = null` and `outputId: String? = null`
+- [X] T006 In `main/data/HubRepository.kt` add `reason: String? = null` and `outputId: String? = null`
   to `HubError.Rejected`. In `main/data/HttpClients.kt` make `rejection()` read both from
   `ErrorResponse`, never their text into UI. Make T005 pass; every existing `Rejected(…)` test stays
   green.
 
 ### Several routes per room (research R2)
 
-- [ ] T007 [P] Write `test/domain/RoutesByRoomTest.kt`, failing first:
+- [X] T007 [P] Write `test/domain/RoutesByRoomTest.kt`, failing first:
   - a room route is listed under its room
   - a group route is listed under every known member, and an unknown member id is skipped
   - two routes on one room are kept in hub order
   - a `Stopped` route is ignored, while `Failed`/`Unknown` are kept
   - a `Target.Unknown` route covers nothing
   - `Route.isAnnouncement` is true only for `JoinMode.Announcement` (false for `Unknown`)
-- [ ] T008 In `main/domain/PlaybackRules.kt` add `internal fun routesByRoom(snapshot: HubSnapshot):
+- [X] T008 In `main/domain/PlaybackRules.kt` add `internal fun routesByRoom(snapshot: HubSnapshot):
   Map<String, List<Route>>` (built on `liveRoutes` and `describeTarget(...).occupies`) and
   `internal val Route.isAnnouncement`. Leave `occupancy()` unchanged. Make T007 pass.
 
 ### Docs sync (Constitution I, research R1)
 
-- [ ] T009 [P] Update `AGENTS.md`:
+- [X] T009 [P] Update `AGENTS.md`:
   - "API": the contract was fetched at **0.1.21**; mention join modes (`joinMode`,
     `defaultJoinMode`) and admission refusals (`reason`, `outputId`).
   - "Domain rules": replace "An output plays **at most one route**" with: since 0.1.21 an output
@@ -133,17 +133,17 @@ hand-off to Now Playing, which every story uses.
 
 ### Hand-off to Now Playing (research R10)
 
-- [ ] T010 [P] Extend `test/ui/nav/AppBackStackTest.kt`, failing first:
+- [X] T010 [P] Extend `test/ui/nav/AppBackStackTest.kt`, failing first:
   - `replaceTop(NowPlaying("r1", 7, "Bedroom"))` on `[Rooms, StartPlayback(null)]` gives
     `[Rooms, NowPlaying("r1", 7, "Bedroom")]`, and `pop()` then shows Rooms
   - the saver writes `now:r1` for that entry and restores `NowPlaying("r1")` with `null` fence and
     name
   - the existing round-trips stay green
-- [ ] T011 In `main/ui/nav/Destinations.kt` change
+- [X] T011 In `main/ui/nav/Destinations.kt` change
   `NowPlaying(routeId: String, startedAfterSeq: Long? = null, targetName: String? = null)`, and add
   `fun replaceTop(destination: Destination)` to `AppBackStack`. `encodeDestination` keeps writing
   `now:<id>` (the fence is in memory only). Make T010 pass.
-- [ ] T012 Extend `test/ui/nowplaying/NowPlayingViewModelTest.kt`, failing first:
+- [X] T012 Extend `test/ui/nowplaying/NowPlayingViewModelTest.kt`, failing first:
   - created with `startedAfterSeq = session.startedSeq` (captured before a refresh whose snapshot
     lacks the route, with that refresh in flight) → no `exit` and nothing posted, even when that
     snapshot arrives
@@ -151,7 +151,7 @@ hand-off to Now Playing, which every story uses.
   - a refresh started after the fence that still lacks it → `Exit.Ended("Bedroom")` and
     "Playback on Bedroom ended" posted (name from `targetName` though never shown)
   - without a fence, behaviour is unchanged
-- [ ] T013 In `main/ui/nowplaying/NowPlayingViewModel.kt` accept `startedAfterSeq: Long?` and
+- [X] T013 In `main/ui/nowplaying/NowPlayingViewModel.kt` accept `startedAfterSeq: Long?` and
   `targetName: String?`. Initialise `fenceSeq = startedAfterSeq` and `lastTargetName = targetName`.
   In `main/AppGraph.kt` (`nowPlayingViewModel(...)`) and `main/ui/nav/AppNavigation.kt` (the
   `NowPlaying` entry) pass `key.startedAfterSeq` / `key.targetName`. Make T012 pass.

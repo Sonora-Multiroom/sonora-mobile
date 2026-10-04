@@ -3,6 +3,7 @@ package sonora.multiroom.mobile.data
 import sonora.multiroom.mobile.domain.Group
 import sonora.multiroom.mobile.domain.HubAddress
 import sonora.multiroom.mobile.domain.HubSnapshot
+import sonora.multiroom.mobile.domain.JoinMode
 import sonora.multiroom.mobile.domain.Room
 import sonora.multiroom.mobile.domain.Route
 import sonora.multiroom.mobile.domain.RouteStatus
@@ -84,8 +85,8 @@ class KtorHubRepositorySnapshotTest {
         assertEquals(listOf(Group("downstairs", "Downstairs", listOf("living", "kitchen"), muted = false, enabled = true)), s.groups)
         assertEquals(
             listOf(
-                Route("r1", "radio", Target.Group("downstairs"), RouteStatus.Active, paused = false, pauseable = false, transferable = true),
-                Route("r2", "playlist", Target.Room("patio"), RouteStatus.Starting, paused = true, pauseable = true, transferable = false),
+                Route("r1", "radio", Target.Group("downstairs"), RouteStatus.Active, paused = false, pauseable = false, transferable = true, joinMode = JoinMode.Unknown),
+                Route("r2", "playlist", Target.Room("patio"), RouteStatus.Starting, paused = true, pauseable = true, transferable = false, joinMode = JoinMode.Unknown),
             ),
             s.routes,
         )
@@ -169,7 +170,7 @@ class KtorHubRepositorySnapshotTest {
         assertEquals(100, s.rooms[1].volume)
         assertEquals(listOf("a", "b"), s.rooms.map { it.id })
         assertEquals(Group("g", "g", emptyList(), muted = false, enabled = true), s.groups.single())
-        assertEquals(Route("r", "", Target.Room("a"), RouteStatus.Unknown, paused = false, pauseable = false, transferable = false), s.routes.single())
+        assertEquals(Route("r", "", Target.Room("a"), RouteStatus.Unknown, paused = false, pauseable = false, transferable = false, joinMode = JoinMode.Unknown), s.routes.single())
         assertEquals(Source("i", "i", null, SourceOrigin.Unknown, false, true, SourceKind.LineIn), s.sources.single())
         assertEquals(false, s.masterMuted)
     }
@@ -182,5 +183,39 @@ class KtorHubRepositorySnapshotTest {
             val io = repository(Hub(failPath = path, failWith = { throw IOException("down") })).snapshot()
             assertEquals(HubResult.Err(HubError.Unreachable), io, path)
         }
+    }
+
+    @Test
+    fun routeJoinModesMapAndUnknownValuesNeverFailTheSnapshot() = runTest {
+        fun route(id: String, mode: String?) =
+            """{"routeId":"$id","inputId":"i","targetId":"a","targetType":"SINGLE_OUTPUT","status":"ACTIVE"${mode?.let { ""","joinMode":"$it"""" } ?: ""}}"""
+        val s = snapshotOf(
+            Hub(
+                routes = "[" + listOf(
+                    route("1", "REPLACE"), route("2", "MIX"), route("3", "DUCK_OTHERS"), route("4", null), route("5", "SOMETHING_NEW"),
+                ).joinToString(",") + "]",
+            ),
+        )
+        assertEquals(
+            listOf(JoinMode.Replace, JoinMode.Mix, JoinMode.Announcement, JoinMode.Unknown, JoinMode.Unknown),
+            s.routes.map { it.joinMode },
+        )
+    }
+
+    @Test
+    fun sourceDefaultJoinModesMapAndUnknownValuesBecomeNull() = runTest {
+        fun input(id: String, mode: String?) =
+            """{"inputId":"$id","displayName":"$id","uri":"http://x"${mode?.let { ""","defaultJoinMode":"$it"""" } ?: ""}}"""
+        val s = snapshotOf(
+            Hub(
+                inputs = "[" + listOf(
+                    input("1", "REPLACE"), input("2", "MIX"), input("3", "DUCK_OTHERS"), input("4", null), input("5", "SOMETHING_NEW"),
+                ).joinToString(",") + "]",
+            ),
+        )
+        assertEquals(
+            listOf(JoinMode.Replace, JoinMode.Mix, JoinMode.Announcement, null, null),
+            s.sources.map { it.defaultJoinMode },
+        )
     }
 }

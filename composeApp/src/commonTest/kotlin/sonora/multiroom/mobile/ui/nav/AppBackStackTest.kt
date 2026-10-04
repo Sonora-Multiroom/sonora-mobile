@@ -125,4 +125,21 @@ class AppBackStackTest {
         assertSame(root, s.stack[0])
         assertEquals(listOf<Destination>(Destination.Rooms), s.contents())
     }
+
+    @Test
+    fun replaceTopSwapsStartPlaybackForNowPlayingAndBackReturnsToRooms() {
+        val s = AppBackStack()
+        s.push(Destination.StartPlayback(null))
+        s.replaceTop(Destination.NowPlaying("r1", 7, "Bedroom"))
+        assertEquals(listOf(Destination.Rooms, Destination.NowPlaying("r1", 7, "Bedroom")), s.contents())
+        assertTrue(s.pop())
+        assertEquals(listOf<Destination>(Destination.Rooms), s.contents())
+    }
+
+    @Test
+    fun theFenceAndNameAreNotSavedForNowPlaying() {
+        val d = Destination.NowPlaying("r1", 7, "Bedroom")
+        assertEquals("now:r1", encodeDestination(d))
+        assertEquals(Destination.NowPlaying("r1", null, null), decodeDestination("now:r1"))
+    }
 }

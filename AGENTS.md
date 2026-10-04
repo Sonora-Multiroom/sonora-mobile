@@ -59,8 +59,10 @@ pass. The user installs the APK and tries it against the real hub locally; recor
 ## API
 
 - [api/openapi.json](api/openapi.json) was fetched from the production hub on 2026-10-01
-  (API version **0.1.20**). It also contains v1 paths (`/api/*` without `v2`) and TTS extension
+  (API version **0.1.21**). It also contains v1 paths (`/api/*` without `v2`) and TTS extension
   paths (`/api/tts/*`): **use only `/api/v2/**`**.
+- 0.1.21 added join modes (`RouteResponse.joinMode`, `InputResponse.defaultJoinMode`) and admission
+  refusals on errors (`ErrorResponse.reason`, `outputId`). The app never sends a `joinMode`.
 - Generate a Kotlin multiplatform client (Ktor + kotlinx.serialization) from it at build time,
   e.g. OpenAPI Generator `kotlin` with `library=multiplatform`. Do not commit generated code. Wrap
   it behind a small hand-written repository interface so screens never touch generated types.
@@ -84,7 +86,10 @@ pass. The user installs the APK and tries it against the real hub locally; recor
 
 ### Domain rules the UI depends on
 
-- An output plays **at most one route**. A group route occupies every member output. A route's
+- Since 0.1.21 an output may carry **several routes** (mixed sources, announcements). Rooms and Now
+  Playing still show one per room, see
+  [docs/backlog/rooms-with-several-playbacks.md](docs/backlog/rooms-with-several-playbacks.md); only
+  Start Playback reads them all. A group route occupies every member output. A route's
   `targetId` names only what was addressed, so to find "what plays on output X" check both
   single-output routes on X and group routes whose group contains X.
 - `enabled = false` on an output/group/input means "cannot start new playback"; show it as "Off".

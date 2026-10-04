@@ -32,8 +32,8 @@ class AppGraph(
 
     fun settingsViewModel() = SettingsViewModel(addressStore)
 
-    fun nowPlayingViewModel(routeId: String, savedState: SavedStateHandle) =
-        NowPlayingViewModel(routeId, savedState, session, messages)
+    fun nowPlayingViewModel(routeId: String, savedState: SavedStateHandle, startedAfterSeq: Long? = null, targetName: String? = null) =
+        NowPlayingViewModel(routeId, savedState, session, messages, startedAfterSeq, targetName)
 
     fun roomsViewModel() = RoomsViewModel(session, messages)
 }

@@ -52,7 +52,7 @@ fun AppNavigation(graph: AppGraph, backStack: AppBackStack, onExit: () -> Unit) 
                 entry<Destination.NowPlaying> { key ->
                     NowPlayingScreen(
                         // One view model per entry (the decorators above), with its own saved state.
-                        viewModel = viewModel { graph.nowPlayingViewModel(key.routeId, createSavedStateHandle()) },
+                        viewModel = viewModel { graph.nowPlayingViewModel(key.routeId, createSavedStateHandle(), key.startedAfterSeq, key.targetName) },
                         onBack = { backStack.pop() },
                         onExit = { backStack.pop() },
                     )
