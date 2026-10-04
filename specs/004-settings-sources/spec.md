@@ -20,6 +20,7 @@ sources, deleting runtime sources, and the Extensions list." — the full Settin
 - Q: When a room, group or source is turned off while it plays, what happens to the current playback? → A: The hub stops it for rooms and groups: a turned-off room's own playback stops and the room leaves any group playback (which plays on in its other rooms); a turned-off group's playback stops. A turned-off source keeps playing until stopped. The group part needs a hub change not yet made (FR-014, Assumptions).
 - Q: What does "Test connection" say when something answers at the address but it isn't the hub? → A: The same as no answer, "Can't reach the hub at this address"; only a reply that is the hub's room list counts as found (FR-007).
 - Q: Should turning off a playing room or group ask first, now that the hub stops its playback? → A: Yes, only while it plays: a centred dialog "Turn off <name>?" names what will stop, with "Keep playing" and "Turn off"; idle ones and turning on never ask. Playing rooms and groups show "Playing · <source>" in amber so the user sees which switches will ask, as in the updated design (FR-009, FR-010, FR-014).
+- Q: The hub's contract (re-fetched from `/api-docs` on 2026-10-04, still 0.1.21) says turning things off leaves existing playback running. How does the app handle a hub without the change? → A: It is written for the changed hub only: no version check and no fallback wording. The hub release is a precondition: `api/openapi.json` is refreshed from `/api-docs` once it ships, and before on-device verification (FR-014, Assumptions).
 
 ## User Scenarios & Testing *(mandatory)*
 
@@ -376,7 +377,11 @@ needed.
 - **Dependency (hub change)**: stopping a group's playback when the group is turned off is not yet
   in the hub (its branch keeps the old rule for groups) and is to be added there, together with the
   room change above, before this feature is verified on the device. The app does not depend on it
-  to build: it only reflects what the hub reports.
+  to build: it only reflects what the hub reports. The app targets the changed hub only: it does
+  not check the hub version and has no fallback wording for older hubs (the contract on 2026-10-04,
+  0.1.21, still says "Existing active routes are unaffected"). Once the hub change ships,
+  `api/openapi.json` MUST be refreshed from the hub's `/api-docs` and reconciled (Constitution I)
+  before on-device verification; against an older hub the turn-off dialog is knowingly inaccurate.
 - **Hub gap**: a playback reports the group it was addressed to, not the rooms it actually plays
   in, so after a room leaves a group playback the app still counts it as part of it (Edge Cases).
   Recorded in AGENTS.md "Hub gaps"; the fix (rooms in the playback's answer) belongs in the hub's
