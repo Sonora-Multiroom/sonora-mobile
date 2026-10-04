@@ -110,4 +110,13 @@ class SettingsTextTest {
         assertEquals("Removing…", REMOVING_LINE)
         assertEquals("Remove A link", removeLabel("A link"))
     }
+
+    @Test
+    fun connectionTestTexts() {
+        assertEquals(null, testText(TestState.Idle))
+        assertEquals("Checking…", testText(TestState.Checking))
+        assertEquals("Hub found · 1 room", testText(TestState.Found(1)))
+        assertEquals("Hub found · 5 rooms", testText(TestState.Found(5)))
+        assertEquals("Can't reach the hub at this address", testText(TestState.Failed))
+    }
 }

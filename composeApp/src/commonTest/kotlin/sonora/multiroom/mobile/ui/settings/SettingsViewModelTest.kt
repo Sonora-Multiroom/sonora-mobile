@@ -63,7 +63,7 @@ class SettingsViewModelTest {
         val session = HubSession(store, factory, backgroundScope, now = { currentTime })
         val actions = SettingsActions(backgroundScope, session, AppMessages())
         val vm = SettingsViewModel(
-            session, store, navigator, actions,
+            session, store, navigator, actions, factory,
             now = { Instant.parse("2026-10-04T12:00:00Z") },
             zone = { TimeZone.UTC },
         )
@@ -438,5 +438,93 @@ class SettingsViewModelTest {
         advanceTimeBy(2500); runCurrent()
         s.vm.onRemove("link", "A link"); runCurrent()
         assertTrue(s.repo.calls.none { it.name == "removeSource" })
+    }
+
+    // ---- Connection test (US3) ---------------------------------------------------------------
+
+    private val other = HubAddress("http://other.lan:8080")
+
+    private fun Setup.openSheet(draft: String) {
+        vm.onHubRowTapped()
+        vm.onDraftChange(draft)
+    }
+
+    @Test
+    fun aTestOfAnInvalidDraftShowsTheMessageAndCreatesNoRepository() = runViewModelTest {
+        val s = setup()
+        s.openSheet("a b")
+        val created = s.factory.created.size
+        s.vm.onTest(); runCurrent()
+        assertEquals("The address can't contain spaces", s.state.sheet?.error)
+        assertEquals(TestState.Idle, s.state.sheet?.test)
+        assertEquals(created, s.factory.created.size)
+    }
+
+    @Test
+    fun aTestAsksTheNormalisedDraftsHubNotTheSessions() = runViewModelTest {
+        val s = setup()
+        s.openSheet("other.lan")
+        s.repo.countDelayMs = 0
+        s.factory.onCreate = { it.countDelayMs = 1000 }
+        s.vm.onTest(); runCurrent()
+        assertEquals(TestState.Checking, s.state.sheet?.test)
+        assertEquals(other, s.factory.created.last())
+        advanceTimeBy(1001); runCurrent()
+        assertEquals(TestState.Found(5), s.state.sheet?.test)
+        assertEquals(1, s.factory.repositories.getValue(other).calls.count { it.name == "countRooms" })
+        assertEquals(0, s.factory.repositories.getValue(hub).calls.count { it.name == "countRooms" })
+        // Nothing is saved.
+        assertEquals(hub, s.store.address.first())
+    }
+
+    @Test
+    fun anyErrorIsFailed() = runViewModelTest {
+        for (result in listOf(
+            HubResult.Err(sonora.multiroom.mobile.data.HubError.Unreachable),
+            HubResult.Err(sonora.multiroom.mobile.data.HubError.Rejected(503, null)),
+            HubResult.Err(sonora.multiroom.mobile.data.HubError.Unexpected),
+        )) {
+            val s = setup()
+            s.factory.onCreate = { it.countRoomsResult = { result }; it.countDelayMs = 100 }
+            s.openSheet("other.lan")
+            s.vm.onTest(); advanceTimeBy(101); runCurrent()
+            assertEquals(TestState.Failed, s.state.sheet?.test)
+        }
+    }
+
+    @Test
+    fun editingSavingOrClosingCancelsTheTest() = runViewModelTest {
+        val s = setup()
+        s.factory.onCreate = { it.countDelayMs = 1000 }
+
+        s.openSheet("other.lan")
+        s.vm.onTest(); runCurrent()
+        s.vm.onDraftChange("other.lan2"); runCurrent()
+        assertEquals(TestState.Idle, s.state.sheet?.test)
+        advanceTimeBy(2000); runCurrent()
+        assertEquals(TestState.Idle, s.state.sheet?.test)
+
+        s.vm.onTest(); runCurrent()
+        s.vm.onSheetClosed(); runCurrent()
+        advanceTimeBy(2000); runCurrent()
+        s.vm.onHubRowTapped(); runCurrent()
+        assertEquals(TestState.Idle, s.state.sheet?.test)
+
+        s.vm.onDraftChange("other.lan"); s.vm.onTest(); runCurrent()
+        s.vm.onSave(); advanceTimeBy(2000); runCurrent()
+        assertNull(s.state.sheet)
+    }
+
+    @Test
+    fun aSecondTestReplacesTheFirst() = runViewModelTest {
+        val s = setup()
+        var n = 0
+        s.factory.onCreate = { repo -> val mine = ++n; repo.countDelayMs = if (mine == 1) 2000L else 100L; repo.countRoomsResult = { HubResult.Ok(mine) } }
+        s.openSheet("other.lan")
+        s.vm.onTest(); runCurrent()
+        s.vm.onTest(); advanceTimeBy(101); runCurrent()
+        assertEquals(TestState.Found(2), s.state.sheet?.test)
+        advanceTimeBy(3000); runCurrent()
+        assertEquals(TestState.Found(2), s.state.sheet?.test)
     }
 }

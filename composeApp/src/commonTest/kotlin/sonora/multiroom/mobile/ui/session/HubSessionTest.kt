@@ -49,6 +49,7 @@ private class CountingFactory : HubRepositoryFactory {
             override suspend fun setGroupEnabled(groupId: String, enabled: Boolean) = fail()
             override suspend fun setSourceEnabled(sourceId: String, enabled: Boolean) = fail()
             override suspend fun removeSource(sourceId: String) = fail()
+            override suspend fun countRooms() = fail()
             override suspend fun transferRoute(routeId: String, target: Target) = fail()
             override suspend fun startSource(inputId: String, target: Target) = fail()
             override suspend fun playLink(uri: String, target: Target) = fail()

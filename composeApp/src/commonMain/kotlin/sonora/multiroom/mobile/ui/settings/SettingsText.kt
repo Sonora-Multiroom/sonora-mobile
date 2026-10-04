@@ -116,3 +116,11 @@ fun addedLineText(line: AddedLine): String? {
 }
 
 fun keepsPlayingMessage(name: String): String = "$name is off. What's playing from it keeps playing."
+
+/** The status box of the connection test; null before one ran. */
+fun testText(test: TestState): String? = when (test) {
+    TestState.Idle -> null
+    TestState.Checking -> "Checking…"
+    is TestState.Found -> "Hub found · ${test.rooms} ${if (test.rooms == 1) "room" else "rooms"}"
+    TestState.Failed -> "Can't reach the hub at this address"
+}

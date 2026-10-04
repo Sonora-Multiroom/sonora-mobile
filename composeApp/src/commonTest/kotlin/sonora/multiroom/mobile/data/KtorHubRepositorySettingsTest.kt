@@ -120,4 +120,47 @@ class KtorHubRepositorySettingsTest {
         val down = KtorHubRepository(HubAddress("http://hub:8080"), createHubHttpClient(MockEngine { throw kotlinx.io.IOException("down") }))
         assertEquals(HubResult.Err(HubError.Unreachable), down.removeSource("x"))
     }
+
+    // ---- 5: countRooms ----------------------------------------------------------------------
+
+    @Test
+    fun countRoomsRequestsEveryOutputAndCountsThem() = runTest {
+        val (repo, log) = repository(body = Fixtures.OUTPUTS)
+        assertEquals(HubResult.Ok(3), repo.countRooms())
+        assertEquals(HttpMethod.Get, log.single().method)
+        assertEquals("/api/v2/outputs", log.single().path)
+        assertEquals("includeDisabled=true", log.single().query)
+    }
+
+    @Test
+    fun anEmptyListIsZeroRooms() = runTest {
+        val (repo, _) = repository(body = "[]")
+        assertEquals(HubResult.Ok(0), repo.countRooms())
+    }
+
+    @Test
+    fun aReplyThatIsNotAListOfOutputsIsUnexpected() = runTest {
+        val (html, _) = repository(body = "<html>hello</html>", headers = headersOf(HttpHeaders.ContentType, "text/html"))
+        assertEquals(HubResult.Err(HubError.Unexpected), html.countRooms())
+        val (obj, _) = repository(body = """{"hello":"world"}""")
+        assertEquals(HubResult.Err(HubError.Unexpected), obj.countRooms())
+    }
+
+    @Test
+    fun countRoomsMapsErrors() = runTest {
+        val (repo500, _) = repository(status = HttpStatusCode.InternalServerError, body = "oops", headers = headersOf(HttpHeaders.ContentType, "text/plain"))
+        assertEquals(HubResult.Err(HubError.Rejected(500, null, null, null)), repo500.countRooms())
+        val down = KtorHubRepository(HubAddress("http://hub:8080"), createHubHttpClient(MockEngine { throw kotlinx.io.IOException("down") }))
+        assertEquals(HubResult.Err(HubError.Unreachable), down.countRooms())
+    }
+
+    @Test
+    fun aReplyAfterTheTimeoutIsUnreachable() = runTest {
+        val engine = MockEngine {
+            kotlinx.coroutines.delay(4_000)
+            respond("[]", HttpStatusCode.OK, json)
+        }
+        val repo = KtorHubRepository(HubAddress("http://hub:8080"), createHubHttpClient(engine))
+        assertEquals(HubResult.Err(HubError.Unreachable), repo.countRooms())
+    }
 }

@@ -93,6 +93,7 @@ fun SettingsScreen(viewModel: SettingsViewModel, modifier: Modifier = Modifier) 
                 sheet = sheet,
                 onDraftChange = viewModel::onDraftChange,
                 onSave = viewModel::onSave,
+                onTest = viewModel::onTest,
                 onClose = viewModel::onSheetClosed,
             )
         }

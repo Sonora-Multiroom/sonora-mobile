@@ -564,7 +564,7 @@ save, and Rooms loads (quickstart §2 rows 13–15).
 
 ### Tests for User Story 3 (write first, see them fail)
 
-- [ ] T049 [P] [US3] Extend `test/data/KtorHubRepositorySettingsTest.kt` with contract tests 5 and 6
+- [X] T049 [P] [US3] Extend `test/data/KtorHubRepositorySettingsTest.kt` with contract tests 5 and 6
   for `countRooms`:
   - `GET /api/v2/outputs?includeDisabled=true`
   - three outputs, one disabled → `Ok(3)`; `[]` → `Ok(0)`
@@ -572,9 +572,9 @@ save, and Rooms loads (quickstart §2 rows 13–15).
   - 500 → `Rejected(500…)`
   - answering after 4 s (virtual time) → `Unreachable`
   - IO failure → `Unreachable`
-- [ ] T050 [P] [US3] Extend `test/ui/settings/SettingsTextTest.kt`: "Checking…", "Hub found · 1
+- [X] T050 [P] [US3] Extend `test/ui/settings/SettingsTextTest.kt`: "Checking…", "Hub found · 1
   room", "Hub found · 5 rooms" and "Can't reach the hub at this address".
-- [ ] T051 [US3] Extend `test/ui/settings/SettingsViewModelTest.kt` (US3). The view model now takes
+- [X] T051 [US3] Extend `test/ui/settings/SettingsViewModelTest.kt` (US3). The view model now takes
   `repositoryFactory: HubRepositoryFactory`; use `FakeFactory`.
   - `onTest()` with an invalid draft → the 001 message, no repository created, nothing saved
   - a valid draft → `test = Checking`, then `countRooms()` on a repository created for the
@@ -589,14 +589,14 @@ save, and Rooms loads (quickstart §2 rows 13–15).
 
 ### Implementation for User Story 3
 
-- [ ] T052 [US3] `main/data/HubRepository.kt` + `KtorHubRepository.kt`: `countRooms()` =
+- [X] T052 [US3] `main/data/HubRepository.kt` + `KtorHubRepository.kt`: `countRooms()` =
   `hubCall { outputs.listOutputs(includeDisabled = true) }`, mapped to the count of entries whose
   `toRoom()` is non-null. `FakeRepository`: `var countRoomsResult: () -> HubResult<Int>` with a
   delay. In `SettingsText.kt` add `testText(test)`. Make T049–T050 pass.
-- [ ] T053 [US3] In `SettingsViewModel` add `onTest()` with one cancellable test job and the
+- [X] T053 [US3] In `SettingsViewModel` add `onTest()` with one cancellable test job and the
   cancellation rules of T051. In `AppGraph.settingsViewModel()` pass `repositoryFactory`. Make T051
   pass.
-- [ ] T054 [US3] In `main/ui/settings/HubAddressSheet.kt`:
+- [X] T054 [US3] In `main/ui/settings/HubAddressSheet.kt`:
   - enable "Test connection" (`text` on `surfaceRaised`)
   - add the status box: padding 12 14, r14, 14 sp 500, an 8 dp dot, `textSoft`/`surfaceRaised`
     while checking, `positive`/`positiveContainer` when found, `danger`/`dangerContainer` when

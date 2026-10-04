@@ -66,6 +66,16 @@ class FakeRepository(private val time: () -> Long) : HubRepository {
     override suspend fun setSourceEnabled(sourceId: String, enabled: Boolean) = action("setSourceEnabled", sourceId, enabled)
     override suspend fun removeSource(sourceId: String) = action("removeSource", sourceId)
 
+    /** What the connection test answers, after [countDelayMs]. */
+    var countRoomsResult: () -> HubResult<Int> = { HubResult.Ok(5) }
+    var countDelayMs = 0L
+
+    override suspend fun countRooms(): HubResult<Int> {
+        calls += Call("countRooms", emptyList(), time())
+        if (countDelayMs > 0) delay(countDelayMs)
+        return countRoomsResult()
+    }
+
     /** What a transfer answers; the default hands back a route "moved". */
     var transferResult: () -> HubResult<Route> =
         { HubResult.Ok(Route("moved", "input", Target.Room("a"), sonora.multiroom.mobile.domain.RouteStatus.Active, false, false, true)) }
@@ -102,9 +112,12 @@ class FakeFactory(private val time: () -> Long) : HubRepositoryFactory {
     val repositories = linkedMapOf<HubAddress, FakeRepository>()
     val created = mutableListOf<HubAddress>()
 
+    /** Runs on every repository right after it is created, e.g. to set what it answers. */
+    var onCreate: (FakeRepository) -> Unit = {}
+
     override fun create(address: HubAddress): HubRepository {
         created += address
-        return FakeRepository(time).also { repositories[address] = it }
+        return FakeRepository(time).also { onCreate(it); repositories[address] = it }
     }
 
     val last: FakeRepository get() = repositories.values.last()

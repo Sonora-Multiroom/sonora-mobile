@@ -100,6 +100,12 @@ class KtorHubRepository(address: HubAddress, client: HttpClient) : HubRepository
     override suspend fun removeSource(sourceId: String): HubResult<Unit> =
         hubCallUnit { inputs.deleteInput(sourceId) }
 
+    override suspend fun countRooms(): HubResult<Int> =
+        when (val result = hubCall { outputs.listOutputs(includeDisabled = true) }) {
+            is HubResult.Err -> result
+            is HubResult.Ok -> HubResult.Ok(result.value.count { it.toRoom() != null })
+        }
+
     override suspend fun startSource(inputId: String, target: Target): HubResult<Route> {
         val request = when (target) {
             is Target.Room -> CreateRouteRequest(inputId, target.id, CreateRouteRequest.TargetType.SINGLE_OUTPUT)

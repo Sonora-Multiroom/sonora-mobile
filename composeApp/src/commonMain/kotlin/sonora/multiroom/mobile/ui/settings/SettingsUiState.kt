@@ -8,10 +8,19 @@ import sonora.multiroom.mobile.domain.RoomRow
 import sonora.multiroom.mobile.domain.RuntimeSourceRow
 import sonora.multiroom.mobile.ui.session.SettingsTab
 
+/** The connection test of the drafted address; nothing is saved by it. */
+sealed interface TestState {
+    data object Idle : TestState
+    data object Checking : TestState
+    data class Found(val rooms: Int) : TestState
+    data object Failed : TestState
+}
+
 /** The address sheet's state; null [SettingsUiState.sheet] means it is closed. */
 data class SheetState(
     val draft: String,
     val error: String? = null,
+    val test: TestState = TestState.Idle,
 )
 
 /**

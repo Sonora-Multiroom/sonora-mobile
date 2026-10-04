@@ -38,6 +38,12 @@ interface HubRepository {
     suspend fun removeSource(sourceId: String): HubResult<Unit>
 
     /**
+     * The connection test: how many rooms the hub at this repository's address lists, on or off.
+     * A reply that is not a list of outputs is Unexpected.
+     */
+    suspend fun countRooms(): HubResult<Int>
+
+    /**
      * Moves a playback. [target] is [Target.Room] or [Target.Group] (`Target.Unknown` throws
      * [IllegalArgumentException] and is never sent). Returns the hub's NEW route: the old id is
      * gone after success.

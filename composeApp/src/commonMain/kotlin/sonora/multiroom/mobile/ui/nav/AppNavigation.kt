@@ -40,7 +40,10 @@ fun AppNavigation(graph: AppGraph, backStack: AppBackStack, onExit: () -> Unit) 
                 entry<Destination.Rooms> {
                     RoomsScreen(
                         viewModel = viewModel { graph.roomsViewModel() },
-                        onOpenSettings = { backStack.selectTab(Destination.Settings) },
+                        onOpenSettings = {
+                            graph.settingsNavigator.openSheet()
+                            backStack.selectTab(Destination.Settings)
+                        },
                         onOpenCard = { routeId -> backStack.push(Destination.NowPlaying(routeId)) },
                         onPlayInRoom = { roomId -> backStack.push(Destination.StartPlayback(roomId)) },
                         onPlaySomething = { backStack.push(Destination.StartPlayback(null)) },
@@ -65,7 +68,10 @@ fun AppNavigation(graph: AppGraph, backStack: AppBackStack, onExit: () -> Unit) 
                         onStarted = { started ->
                             if (backStack.top is Destination.StartPlayback) backStack.replaceTop(Destination.NowPlaying(started.routeId, started.startedAfterSeq, started.targetName))
                         },
-                        onOpenSettings = { backStack.selectTab(Destination.Settings) },
+                        onOpenSettings = {
+                            graph.settingsNavigator.openSheet()
+                            backStack.selectTab(Destination.Settings)
+                        },
                     )
                 }
             },

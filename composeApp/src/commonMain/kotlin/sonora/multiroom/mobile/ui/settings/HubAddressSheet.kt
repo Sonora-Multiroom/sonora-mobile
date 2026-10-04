@@ -31,7 +31,9 @@ import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
@@ -52,6 +54,7 @@ fun HubAddressSheet(
     sheet: SheetState,
     onDraftChange: (String) -> Unit,
     onSave: () -> Unit,
+    onTest: () -> Unit,
     onClose: () -> Unit,
 ) {
     val colors = SonoraTheme.colors
@@ -134,9 +137,10 @@ fun HubAddressSheet(
                 )
             }
 
+            TestStatus(sheet.test)
+
             Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                // "Test connection" is drawn but unused until the connection test lands (US3).
-                SheetButton("Test connection", colors.text, colors.surfaceRaised, enabled = false, onClick = {}, Modifier.weight(1f))
+                SheetButton("Test connection", colors.text, colors.surfaceRaised, enabled = true, onClick = onTest, Modifier.weight(1f))
                 SheetButton("Save", colors.onAccent, colors.accent, enabled = true, onClick = onSave, Modifier.weight(1f))
             }
         }
@@ -162,5 +166,29 @@ private fun SheetButton(
         contentAlignment = Alignment.Center,
     ) {
         Text(label, style = SonoraTheme.type.body15.copy(fontWeight = FontWeight.SemiBold), color = textColor)
+    }
+}
+
+/** The status box (UI contract "Hub address sheet"), announced politely when it appears or changes. */
+@Composable
+private fun TestStatus(test: TestState) {
+    val text = testText(test) ?: return
+    val colors = SonoraTheme.colors
+    val (content, container) = when (test) {
+        is TestState.Found -> colors.positive to colors.positiveContainer
+        TestState.Failed -> colors.danger to colors.dangerContainer
+        else -> colors.textSoft to colors.surfaceRaised
+    }
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(container, SonoraTheme.shapes.tile)
+            .padding(horizontal = 14.dp, vertical = 12.dp)
+            .semantics { liveRegion = LiveRegionMode.Polite },
+        horizontalArrangement = Arrangement.spacedBy(10.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Box(Modifier.size(8.dp).background(content, androidx.compose.foundation.shape.CircleShape))
+        Text(text, style = SonoraTheme.type.body14.copy(fontWeight = FontWeight.Medium), color = content)
     }
 }

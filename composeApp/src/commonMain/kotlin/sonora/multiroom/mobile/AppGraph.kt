@@ -45,7 +45,7 @@ class AppGraph(
     /** Runs Settings' switch changes so they outlive the screen (research R5). */
     val settingsActions = SettingsActions(appScope, session, messages)
 
-    fun settingsViewModel() = SettingsViewModel(session, addressStore, settingsNavigator, settingsActions)
+    fun settingsViewModel() = SettingsViewModel(session, addressStore, settingsNavigator, settingsActions, repositoryFactory)
 
     fun nowPlayingViewModel(routeId: String, savedState: SavedStateHandle, startedAfterSeq: Long? = null, targetName: String? = null) =
         NowPlayingViewModel(routeId, savedState, session, messages, startedAfterSeq, targetName)

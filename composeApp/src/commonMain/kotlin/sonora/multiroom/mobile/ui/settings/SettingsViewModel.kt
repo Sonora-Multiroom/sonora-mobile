@@ -1,6 +1,8 @@
 package sonora.multiroom.mobile.ui.settings
 
 import sonora.multiroom.mobile.data.HubAddressStore
+import sonora.multiroom.mobile.data.HubRepositoryFactory
+import sonora.multiroom.mobile.data.HubResult
 import sonora.multiroom.mobile.domain.HubAddress
 import sonora.multiroom.mobile.domain.HubSnapshot
 import sonora.multiroom.mobile.domain.ItemKey
@@ -21,6 +23,7 @@ import sonora.multiroom.mobile.ui.session.SettingsNavigator
 import sonora.multiroom.mobile.ui.session.SettingsTab
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -43,6 +46,7 @@ class SettingsViewModel(
     private val store: HubAddressStore,
     private val navigator: SettingsNavigator,
     private val actions: SettingsActions,
+    private val repositoryFactory: HubRepositoryFactory,
     private val now: () -> Instant = { Clock.System.now() },
     private val zone: () -> TimeZone = { TimeZone.currentSystemDefault() },
 ) : ViewModel() {
@@ -200,8 +204,36 @@ class SettingsViewModel(
         local.update { it.copy(sheet = SheetState(draft = saved)) }
     }
 
-    fun onDraftChange(text: String) = local.update { l ->
-        l.copy(sheet = l.sheet?.copy(draft = text, error = null))
+    fun onDraftChange(text: String) {
+        cancelTest()
+        local.update { l -> l.copy(sheet = l.sheet?.copy(draft = text, error = null, test = TestState.Idle)) }
+    }
+
+    /** The one connection test; editing, Save, Close and a new test cancel it. */
+    private var testJob: Job? = null
+
+    private fun cancelTest() {
+        testJob?.cancel()
+        testJob = null
+    }
+
+    /** Asks the hub at the drafted address how many rooms it has; nothing is saved (FR-007). */
+    fun onTest() {
+        val sheet = local.value.sheet ?: return
+        when (val result = HubAddress.parse(sheet.draft)) {
+            is HubAddress.ParseResult.Invalid ->
+                local.update { it.copy(sheet = it.sheet?.copy(error = result.message, test = TestState.Idle)) }
+
+            is HubAddress.ParseResult.Valid -> {
+                cancelTest()
+                local.update { it.copy(sheet = it.sheet?.copy(error = null, test = TestState.Checking)) }
+                testJob = viewModelScope.launch {
+                    val answer = repositoryFactory.create(result.address).countRooms()
+                    val test = if (answer is HubResult.Ok) TestState.Found(answer.value) else TestState.Failed
+                    local.update { it.copy(sheet = it.sheet?.copy(test = test)) }
+                }
+            }
+        }
     }
 
     fun onSave() {
@@ -211,6 +243,7 @@ class SettingsViewModel(
                 local.update { it.copy(sheet = it.sheet?.copy(error = result.message)) }
 
             is HubAddress.ParseResult.Valid -> {
+                cancelTest()
                 local.update { it.copy(sheet = null) }
                 viewModelScope.launch { store.save(result.address) }
             }
@@ -218,5 +251,8 @@ class SettingsViewModel(
     }
 
     /** Close, Back or a swipe: the draft is discarded. */
-    fun onSheetClosed() = local.update { it.copy(sheet = null) }
+    fun onSheetClosed() {
+        cancelTest()
+        local.update { it.copy(sheet = null) }
+    }
 }
