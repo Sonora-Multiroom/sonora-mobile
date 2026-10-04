@@ -82,6 +82,8 @@ internal fun LinkField(
                         onDone()
                         focusManager.clearFocus()
                     }),
+                    // The field is 44 dp tall for touch; without this the text sits at its top.
+                    decorationBox = { inner -> Box(contentAlignment = Alignment.CenterStart) { inner() } },
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(44.dp)
