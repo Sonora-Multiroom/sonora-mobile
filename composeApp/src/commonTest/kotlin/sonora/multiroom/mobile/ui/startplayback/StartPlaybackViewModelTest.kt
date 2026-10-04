@@ -89,6 +89,11 @@ class StartPlaybackViewModelTest {
         session.requestRefresh()
     }
 
+    /** Types [text] one character at a time, as a keyboard does. */
+    private fun StartPlaybackViewModel.type(text: String) {
+        for (i in text.indices) onLinkChange(text.substring(0, i + 1))
+    }
+
     private fun Setup.pickJazzInBedroom() {
         vm.onSelectSource("jazz")
         vm.onSelectTarget(bedroom)
@@ -345,5 +350,142 @@ class StartPlaybackViewModelTest {
         assertFalse(s.ui.playEnabled)
         assertIs<ConsequenceLine.WillStop>(s.ui.consequence?.line)
         s.vm.onHidden()
+    }
+
+    // ---- links (US3) ---------------------------------------------------------------------------------
+
+    @Test
+    fun typingALinkDeselectsTheSourceAndPickingASourceClearsTheLink() = runViewModelTest {
+        val s = live()
+        s.vm.onSelectSource("jazz")
+        s.vm.onLinkChange("soundcloud.com/a")
+        assertNull(s.ui.selectedSourceId)
+        assertEquals("soundcloud.com/a", s.ui.linkText)
+        s.vm.onSelectSource("news")
+        assertEquals("", s.ui.linkText)
+        assertEquals("news", s.ui.selectedSourceId)
+        s.vm.onHidden()
+    }
+
+    @Test
+    fun anEmptiedLinkKeepsTheSourceSelectionClear() = runViewModelTest {
+        val s = live()
+        s.vm.onSelectSource("jazz")
+        s.vm.onLinkChange("x")
+        s.vm.onLinkChange("")
+        assertNull(s.ui.selectedSourceId)
+        s.vm.onHidden()
+    }
+
+    @Test
+    fun invalidTextWhileTypingShowsNoMessageAndKeepsPlayDisabled() = runViewModelTest {
+        val s = live()
+        s.vm.onSelectTarget(bedroom)
+        for (text in listOf("h", "h.", "h..")) s.vm.onLinkChange(text)
+        assertFalse(s.ui.linkMessageShown)
+        assertFalse(s.ui.playEnabled)
+        s.vm.onHidden()
+    }
+
+    @Test
+    fun pasteFocusLossAndDoneShowTheMessageForInvalidText() = runViewModelTest {
+        val s = live()
+        s.vm.type("a..")
+        assertFalse(s.ui.linkMessageShown)
+        s.vm.onLinkFocusLost()
+        assertTrue(s.ui.linkMessageShown)
+
+        val d = live()
+        d.vm.type("a..")
+        d.vm.onLinkDone()
+        assertTrue(d.ui.linkMessageShown)
+
+        val p = live()
+        p.vm.onLinkPasted("not a link at all")
+        assertTrue(p.ui.linkMessageShown)
+        assertEquals("not a link at all", p.ui.linkText)
+        s.vm.onHidden(); d.vm.onHidden(); p.vm.onHidden()
+    }
+
+    @Test
+    fun aValueChangeInsertingMoreThanOneCharacterIsAPaste() = runViewModelTest {
+        val s = live()
+        s.vm.onLinkChange("not a link at all")
+        assertTrue(s.ui.linkMessageShown)
+        s.vm.onHidden()
+    }
+
+    @Test
+    fun theMessageClearsAsSoonAsTheTextIsValidOrEmpty() = runViewModelTest {
+        val s = live()
+        s.vm.onLinkPasted("a b")
+        assertTrue(s.ui.linkMessageShown)
+        s.vm.onLinkChange("ab")
+        assertFalse(s.ui.linkMessageShown)
+        s.vm.onLinkPasted("a b")
+        s.vm.onLinkChange("")
+        assertFalse(s.ui.linkMessageShown)
+        s.vm.onHidden()
+    }
+
+    @Test
+    fun aValidLinkAndATargetGiveThePlayLinkLabel() = runViewModelTest {
+        val s = live()
+        s.vm.onLinkChange("soundcloud.com/a/b")
+        s.vm.onSelectTarget(bedroom)
+        assertEquals(PlayLabel.PlayLink("Bedroom"), s.ui.playLabel)
+        assertTrue(s.ui.playEnabled)
+        s.vm.onHidden()
+    }
+
+    @Test
+    fun playSendsTheNormalisedLinkAndStaysStartingUntilTheAnswer() = runViewModelTest {
+        val s = live()
+        s.vm.onLinkChange("  soundcloud.com/a/b ")
+        s.vm.onSelectTarget(bedroom)
+        s.repo.startDelayMs = 20_000
+        s.repo.startResults += HubResult.Ok(Route("r9", "link-1", bedroom, RouteStatus.Starting, false, false, true))
+        s.vm.onPlay(); runCurrent()
+        assertEquals(listOf<Any>("https://soundcloud.com/a/b", bedroom), s.repo.calls.single { it.name == "playLink" }.args)
+        advanceTimeBy(5_000); runCurrent()
+        assertTrue(s.ui.starting)
+        assertEquals(PlayLabel.Starting, s.ui.playLabel)
+        advanceTimeBy(15_001); runCurrent()
+        assertIs<StartExit.Started>(s.ui.exit)
+        s.vm.onHidden()
+    }
+
+    @Test
+    fun aLinkFailureKeepsTheLinkAndTheTargetAndShowsTheCopy() = runViewModelTest {
+        val s = live()
+        s.vm.onLinkChange("soundcloud.com/a/b")
+        s.vm.onSelectTarget(bedroom)
+        s.repo.startResults += HubResult.Err(HubError.Rejected(502, null))
+        s.vm.onPlay(); runCurrent()
+        assertEquals("Couldn't reach that link", s.ui.message)
+        assertEquals("soundcloud.com/a/b", s.ui.linkText)
+        assertEquals(bedroom, s.ui.selectedTarget)
+        assertFalse(s.ui.starting)
+        s.vm.onHidden()
+    }
+
+    @Test
+    fun theLinkConsequenceAlwaysReplaces() = runViewModelTest {
+        val s = live(snapshot = busyBedroom)
+        s.vm.onLinkChange("soundcloud.com/a/b")
+        s.vm.onSelectTarget(bedroom)
+        assertIs<ConsequenceLine.WillStop>(s.ui.consequence?.line)
+        s.vm.onHidden()
+    }
+
+    @Test
+    fun theLinkTextIsRestoredFromTheSavedState() = runViewModelTest {
+        val handle = SavedStateHandle()
+        val first = live(handle = handle)
+        first.vm.onLinkChange("soundcloud.com/a/b")
+        first.vm.onHidden()
+        val restored = live(handle = handle)
+        assertEquals("soundcloud.com/a/b", restored.ui.linkText)
+        restored.vm.onHidden()
     }
 }

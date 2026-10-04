@@ -141,4 +141,26 @@ class MessagesTest {
         assertEquals("Couldn't reach the hub", startFailureMessage(StartFailure.HubUnreachable))
         assertEquals("Couldn't start playback", startFailureMessage(StartFailure.Other))
     }
+
+    private val linkNames = StartNames(null, "Bedroom")
+    private fun link(error: HubError) = startFailure(StartKind.Link, error, linkNames, roomName)
+
+    @Test
+    fun linkFailuresFollowTheStatus() {
+        assertEquals(StartFailure.LinkUnusable, link(HubError.Rejected(400, null)))
+        assertEquals(StartFailure.LinkUnusable, link(HubError.Rejected(422, null)))
+        assertEquals(StartFailure.LinkUnreachable, link(HubError.Rejected(502, null)))
+        assertEquals(StartFailure.ServiceDown, link(HubError.Rejected(503, null)))
+        assertEquals(StartFailure.NoLongerOnHub("Bedroom"), link(HubError.Rejected(404, null)))
+        assertEquals(StartFailure.Other, link(HubError.Rejected(500, null)))
+        assertEquals(StartFailure.HubUnreachable, link(HubError.Unreachable))
+        assertEquals(StartFailure.Other, link(HubError.Unexpected))
+    }
+
+    @Test
+    fun aLinkRefusalReasonStillWinsOverTheStatus() {
+        assertEquals(StartFailure.RoomFull("Kitchen"), link(HubError.Rejected(422, null, "ROUTE_LIMIT_REACHED", "kitchen")))
+        // A link has no source name yet, so this one is not named.
+        assertEquals(StartFailure.Other, link(HubError.Rejected(409, null, "INPUT_ALREADY_ON_OUTPUT", "kitchen")))
+    }
 }

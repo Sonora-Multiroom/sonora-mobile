@@ -28,6 +28,9 @@ data class StartPlaybackUiState(
     val connection: Connection = Connection.Loading,
     /** Null before the first snapshot. */
     val content: StartPlaybackContent? = null,
+    val linkText: String = "",
+    /** "Enter a web address (https://…)" is showing (FR-006). */
+    val linkMessageShown: Boolean = false,
     val selectedSourceId: String? = null,
     val selectedTarget: Target? = null,
     /** Only while something to play and a target are both selected. */

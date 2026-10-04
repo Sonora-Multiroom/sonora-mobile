@@ -426,7 +426,7 @@ unreachable address and a malformed one (quickstart §2 rows 7–9, 12, 13).
 
 ### Tests for User Story 3 (write first, see them fail)
 
-- [ ] T039 [P] [US3] Write `test/domain/LinkAddressTest.kt` for `checkLink(text)` (research R11):
+- [X] T039 [P] [US3] Write `test/domain/LinkAddressTest.kt` for `checkLink(text)` (research R11):
   - `""` and `"   "` → `Empty`
   - `"soundcloud.com/artist/track"` → `Valid("https://soundcloud.com/artist/track")`
   - `" https://x.y/a "` → trimmed
@@ -434,7 +434,7 @@ unreachable address and a malformed one (quickstart §2 rows 7–9, 12, 13).
   - `"jazz"` → `Valid("https://jazz")` (single-label host)
   - `"https://[fe80::1]:8000/x"` → valid
   - `"ftp://x.y"`, `"https://"`, `"https:///path"`, `"hello world"` and `"https://a b.com"` → `Invalid`
-- [ ] T040 [P] [US3] Extend `test/data/KtorHubRepositoryActionsTest.kt` with contract tests 2–5
+- [X] T040 [P] [US3] Extend `test/data/KtorHubRepositoryActionsTest.kt` with contract tests 2–5
   for `POST /api/v2/play`:
   - the body is exactly `{"uri":…,"targetId":…,"targetType":…}`, with no
     `displayName`/`volume`/`joinMode`
@@ -442,7 +442,7 @@ unreachable address and a malformed one (quickstart §2 rows 7–9, 12, 13).
   - 400/404/422/502/503 problem bodies → `Rejected` with `reason`/`outputId`
   - an answer after 10 s (virtual time) succeeds; after 31 s → `Unreachable`
   - `Target.Unknown` throws
-- [ ] T041 [P] [US3] Extend `test/ui/MessagesTest.kt` with the link column of the research R6 table:
+- [X] T041 [P] [US3] Extend `test/ui/MessagesTest.kt` with the link column of the research R6 table:
   - 400 and 422 without reason → `LinkUnusable`
   - 502 → `LinkUnreachable`
   - 503 → `ServiceDown`
@@ -451,7 +451,7 @@ unreachable address and a malformed one (quickstart §2 rows 7–9, 12, 13).
     name, research R6), with `StartNames(null, "Bedroom")`
   - `Unreachable` → `HubUnreachable`
   - each copy exactly as in FR-016
-- [ ] T042 [P] [US3] Extend `test/ui/session/PlaybackStarterTest.kt` (link path):
+- [X] T042 [P] [US3] Extend `test/ui/session/PlaybackStarterTest.kt` (link path):
   - success → `Done`
   - **Unreachable** → a fresh snapshot with a `Runtime` input whose `uri` equals the sent link
     (trimmed; scheme and host case-insensitive) and a live route of it on exactly that target →
@@ -459,7 +459,7 @@ unreachable address and a malformed one (quickstart §2 rows 7–9, 12, 13).
   - an input with a different uri → `HubUnreachable`
   - 404 → `NoLongerOnHub(target)` after the fresh snapshot
   - detached failure posted to `AppMessages`
-- [ ] T043 [P] [US3] Extend `test/ui/startplayback/StartPlaybackViewModelTest.kt` (link path):
+- [X] T043 [P] [US3] Extend `test/ui/startplayback/StartPlaybackViewModelTest.kt` (link path):
   - typing a non-empty link deselects the source, and picking a source clears the link (FR-005)
   - `Invalid` text while typing → `linkMessageShown == false`, Play disabled
   - `onLinkPasted` / `onLinkFocusLost` / `onLinkDone` with invalid text → `true`
@@ -472,9 +472,9 @@ unreachable address and a malformed one (quickstart §2 rows 7–9, 12, 13).
 
 ### Implementation for User Story 3
 
-- [ ] T044 [US3] Implement `main/domain/LinkAddress.kt` (`LinkCheck`, `checkLink`) with a
+- [X] T044 [US3] Implement `main/domain/LinkAddress.kt` (`LinkCheck`, `checkLink`) with a
   hand-written parser and no JVM APIs (Constitution III). Make T039 pass.
-- [ ] T045 [US3] Add `suspend fun playLink(uri: String, target: Target): HubResult<Route>` to
+- [X] T045 [US3] Add `suspend fun playLink(uri: String, target: Target): HubResult<Route>` to
   `main/data/HubRepository.kt`. In `main/data/KtorHubRepository.kt`:
   - create `PlaybackApi(address.baseUrl, linkClient)` where `linkClient = client.config {
     install(HttpTimeout) { requestTimeoutMillis = LINK_TIMEOUT_MILLIS; socketTimeoutMillis =
@@ -483,14 +483,14 @@ unreachable address and a malformed one (quickstart §2 rows 7–9, 12, 13).
   - send `PlaybackRequest(uri, targetId, targetType)` and map `.route` via `toRoute()`
 
   Add `playLink` to `FakeRepository` in `test/ui/rooms/FakeHub.kt`. Make T040 pass.
-- [ ] T046 [P] [US3] Extend `startFailure` in `main/ui/Messages.kt` for `StartKind.Link`. Make T041
+- [X] T046 [P] [US3] Extend `startFailure` in `main/ui/Messages.kt` for `StartKind.Link`. Make T041
   pass.
-- [ ] T047 [US3] Extend `main/ui/session/PlaybackStarter.kt` with `StartWhat.Link` (calls
+- [X] T047 [US3] Extend `main/ui/session/PlaybackStarter.kt` with `StartWhat.Link` (calls
   `playLink`, recovery match per research R8). Make T042 pass.
-- [ ] T048 [US3] Extend `main/ui/startplayback/StartPlaybackViewModel.kt` with `onLinkChange`,
+- [X] T048 [US3] Extend `main/ui/startplayback/StartPlaybackViewModel.kt` with `onLinkChange`,
   `onLinkPasted`, `onLinkFocusLost`, `onLinkDone`, the `linkText` / `linkMessageShown` state,
   FR-005 exclusivity and `StartWhat.Link` for the consequence (always Replace). Make T043 pass.
-- [ ] T049 [US3] Implement `main/ui/startplayback/LinkField.kt` (contracts/start-playback-ui.md):
+- [X] T049 [US3] Implement `main/ui/startplayback/LinkField.kt` (contracts/start-playback-ui.md):
   - label "PASTE A LINK"
   - field h 52, radius 16, `surface`, padding 0/14, `Icons.Link`, 15 sp text, placeholder "SoundCloud,
     YouTube or stream URL" in `textMuted`

@@ -255,4 +255,74 @@ class PlaybackStarterTest {
         advanceTimeBy(100); runCurrent()
         assertEquals(listOf("Couldn't reach the hub"), s.posted)
     }
+
+    // ---- links (research R8) ---------------------------------------------------------------------
+
+    private val linkNames = StartNames(null, "Bedroom")
+    private val link = "https://soundcloud.com/artist/track"
+    private fun Setup.playLink() = starter.start(StartWhat.Link(link), bedroom, linkNames)
+    private fun runtimeInput(uri: String) =
+        Source("link-1", "track", uri, SourceOrigin.Runtime, false, true, SourceKind.Link)
+
+    @Test
+    fun aLinkSuccessIsDone() = runTest {
+        val s = setup()
+        s.repo.startResults += HubResult.Ok(route("r9", input = "link-1"))
+        s.playLink(); runCurrent()
+        assertEquals("r9", assertIs<StartAttempt.Done>(s.attempt).route.id)
+        assertEquals(listOf("playLink"), s.repo.calls.map { it.name })
+        assertEquals(listOf<Any>(link, bedroom), s.repo.calls.single().args)
+    }
+
+    @Test
+    fun anUnreachableLinkIsConfirmedByARuntimeInputWithTheSentAddress() = runTest {
+        val s = setup()
+        s.repo.startResults += unreachableAnswer
+        s.repo.snapshotResult = {
+            HubResult.Ok(snapshot(sources = listOf(runtimeInput("HTTPS://SoundCloud.com/artist/track")), routes = listOf(route("r5", input = "link-1"))))
+        }
+        s.playLink(); runCurrent()
+        assertEquals("r5", assertIs<StartAttempt.Done>(s.attempt).route.id)
+    }
+
+    @Test
+    fun aRuntimeInputWithAnotherAddressDoesNotMatch() = runTest {
+        val s = setup()
+        s.repo.startResults += unreachableAnswer
+        s.repo.snapshotResult = {
+            HubResult.Ok(snapshot(sources = listOf(runtimeInput("https://soundcloud.com/other/thing")), routes = listOf(route("r5", input = "link-1"))))
+        }
+        s.playLink(); runCurrent()
+        assertEquals(StartAttempt.Failed(StartFailure.HubUnreachable), s.attempt)
+    }
+
+    @Test
+    fun aConfiguredInputWithTheSameAddressDoesNotMatchALink() = runTest {
+        val s = setup()
+        s.repo.startResults += unreachableAnswer
+        val configured = runtimeInput(link).copy(origin = SourceOrigin.Configured)
+        s.repo.snapshotResult = { HubResult.Ok(snapshot(sources = listOf(configured), routes = listOf(route("r5", input = "link-1")))) }
+        s.playLink(); runCurrent()
+        assertEquals(StartAttempt.Failed(StartFailure.HubUnreachable), s.attempt)
+    }
+
+    @Test
+    fun aLink404NamesTheTargetAfterAFreshSnapshot() = runTest {
+        val s = setup()
+        s.repo.startResults += notFound
+        s.repo.snapshotResult = { HubResult.Ok(snapshot(rooms = listOf(room("kitchen", "Kitchen")))) }
+        s.playLink(); runCurrent()
+        assertEquals(StartAttempt.Failed(StartFailure.NoLongerOnHub("Bedroom")), s.attempt)
+    }
+
+    @Test
+    fun aLinkFailureWhileDetachedIsPosted() = runTest {
+        val s = setup()
+        s.repo.startDelayMs = 100
+        s.repo.startResults += HubResult.Err(HubError.Rejected(502, null))
+        s.playLink(); runCurrent()
+        s.starter.detach()
+        advanceTimeBy(100); runCurrent()
+        assertEquals(listOf("Couldn't reach that link"), s.posted)
+    }
 }

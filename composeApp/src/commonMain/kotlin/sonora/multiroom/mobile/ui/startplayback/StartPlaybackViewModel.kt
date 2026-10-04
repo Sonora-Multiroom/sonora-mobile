@@ -1,6 +1,8 @@
 package sonora.multiroom.mobile.ui.startplayback
 
 import sonora.multiroom.mobile.domain.HubSnapshot
+import sonora.multiroom.mobile.domain.LinkCheck
+import sonora.multiroom.mobile.domain.checkLink
 import sonora.multiroom.mobile.domain.StartConsequence
 import sonora.multiroom.mobile.domain.StartNames
 import sonora.multiroom.mobile.domain.StartPlaybackBuilder
@@ -44,6 +46,7 @@ class StartPlaybackViewModel(
     init {
         _state.update {
             it.copy(
+                linkText = savedState.get<String>(LINK_KEY).orEmpty(),
                 selectedSourceId = savedState.get<String>(SOURCE_KEY),
                 selectedTarget = savedState.get<String>(TARGET_KEY)?.let(::decodeTarget),
             )
@@ -78,23 +81,32 @@ class StartPlaybackViewModel(
                     target = content.targets.firstOrNull { it.target == Target.Room(initialTargetId) && it.selectable }?.target
                 }
             }
-            if (sourceId != current.selectedSourceId || target != current.selectedTarget) save(sourceId, target)
+            if (sourceId != current.selectedSourceId || target != current.selectedTarget) save(sourceId, target, current.linkText)
             derive(current.copy(content = content, selectedSourceId = sourceId, selectedTarget = target))
         }
     }
 
-    /** Fields that follow from the others: the Play label and whether Play can be tapped. */
+    /** What would be played: the selected source, else a valid link. */
+    private fun whatOf(s: StartPlaybackUiState): StartWhat? = when {
+        s.selectedSourceId != null -> StartWhat.Source(s.selectedSourceId)
+        else -> (checkLink(s.linkText) as? LinkCheck.Valid)?.let { StartWhat.Link(it.uri) }
+    }
+
+    /** Fields that follow from the others: the Play label, the consequence, whether Play can be tapped. */
     private fun derive(s: StartPlaybackUiState): StartPlaybackUiState {
         val content = s.content
+        val what = whatOf(s)
         val sourceName = content?.sources?.firstOrNull { it.id == s.selectedSourceId }?.name
         val targetName = content?.targets?.firstOrNull { it.target == s.selectedTarget }?.name
+        val hasWhat = if (what is StartWhat.Source) sourceName != null else what != null
+        val ready = hasWhat && targetName != null
         val label = when {
             s.starting -> PlayLabel.Starting
-            sourceName != null && targetName != null -> PlayLabel.PlaySource(sourceName, targetName)
+            ready && what is StartWhat.Source -> PlayLabel.PlaySource(sourceName!!, targetName!!)
+            ready -> PlayLabel.PlayLink(targetName!!)
             else -> PlayLabel.Play
         }
-        val ready = sourceName != null && targetName != null
-        val consequence = snapshot?.takeIf { ready }?.let { StartConsequence.of(it, StartWhat.Source(s.selectedSourceId!!), s.selectedTarget!!) }
+        val consequence = snapshot?.takeIf { ready }?.let { StartConsequence.of(it, what!!, s.selectedTarget!!) }
         return s.copy(
             playLabel = label,
             playEnabled = ready && !s.starting && s.connection == Connection.Live,
@@ -102,9 +114,10 @@ class StartPlaybackViewModel(
         )
     }
 
-    private fun save(sourceId: String?, target: Target?) {
+    private fun save(sourceId: String?, target: Target?, link: String) {
         savedState[SOURCE_KEY] = sourceId
         savedState[TARGET_KEY] = target?.let(::encodeTarget)
+        savedState[LINK_KEY] = link
     }
 
     // ---- Selection -----------------------------------------------------------------------------
@@ -112,8 +125,9 @@ class StartPlaybackViewModel(
     fun onSelectSource(id: String) {
         _state.update { current ->
             if (current.starting || current.content?.sources?.any { it.id == id } != true) return@update current
-            save(id, current.selectedTarget)
-            derive(current.copy(selectedSourceId = id))
+            // At most one selection: a source clears the link (FR-005).
+            save(id, current.selectedTarget, "")
+            derive(current.copy(selectedSourceId = id, linkText = "", linkMessageShown = false))
         }
     }
 
@@ -122,8 +136,35 @@ class StartPlaybackViewModel(
             if (current.starting || current.content?.targets?.any { it.target == target && it.selectable } != true) {
                 return@update current
             }
-            save(current.selectedSourceId, target)
+            save(current.selectedSourceId, target, current.linkText)
             derive(current.copy(selectedTarget = target))
+        }
+    }
+
+    // ---- Link ----------------------------------------------------------------------------------
+
+    /** Typing or pasting: a non-empty link deselects the source (FR-005). A bigger jump is a paste (R11). */
+    fun onLinkChange(text: String) {
+        val pasted = text.length - _state.value.linkText.length > 1
+        setLink(text, showMessage = pasted)
+    }
+
+    /** The field's value was replaced by pasted [text]. */
+    fun onLinkPasted(text: String) = setLink(text, showMessage = true)
+
+    fun onLinkFocusLost() = setLink(_state.value.linkText, showMessage = true)
+
+    fun onLinkDone() = setLink(_state.value.linkText, showMessage = true)
+
+    private fun setLink(text: String, showMessage: Boolean) {
+        _state.update { current ->
+            if (current.starting) return@update current
+            val check = checkLink(text)
+            val sourceId = if (check == LinkCheck.Empty) current.selectedSourceId else null
+            // The message appears on request and only for invalid text; it clears once the text is fine.
+            val shown = check == LinkCheck.Invalid && (showMessage || current.linkMessageShown)
+            save(sourceId, current.selectedTarget, text)
+            derive(current.copy(linkText = text, linkMessageShown = shown, selectedSourceId = sourceId))
         }
     }
 
@@ -133,11 +174,12 @@ class StartPlaybackViewModel(
         val s = _state.value
         if (!s.playEnabled) return
         val content = s.content ?: return
-        val source = content.sources.firstOrNull { it.id == s.selectedSourceId } ?: return
+        val what = whatOf(s) ?: return
         val target = content.targets.firstOrNull { it.target == s.selectedTarget } ?: return
-        val names = StartNames(source.name, target.name)
+        val sourceName = (what as? StartWhat.Source)?.let { w -> content.sources.firstOrNull { it.id == w.id }?.name ?: return }
+        val names = StartNames(sourceName, target.name)
         pendingNames = names
-        starter.start(StartWhat.Source(source.id), target.target, names)
+        starter.start(what, target.target, names)
     }
 
     private fun onAttempt(attempt: StartAttempt?) {
@@ -182,6 +224,7 @@ class StartPlaybackViewModel(
     private companion object {
         const val SOURCE_KEY = "sourceId"
         const val TARGET_KEY = "target"
+        const val LINK_KEY = "link"
         const val PRESELECTED_KEY = "preselected"
 
         fun encodeTarget(t: Target): String = when (t) {

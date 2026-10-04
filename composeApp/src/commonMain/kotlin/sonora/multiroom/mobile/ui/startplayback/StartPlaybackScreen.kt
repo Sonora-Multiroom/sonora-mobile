@@ -99,6 +99,9 @@ fun StartPlaybackScreen(
             state = state,
             onClose = viewModel::onClose,
             onOpenSettings = onOpenSettings,
+            onLinkChange = viewModel::onLinkChange,
+            onLinkFocusLost = viewModel::onLinkFocusLost,
+            onLinkDone = viewModel::onLinkDone,
             onSelectSource = viewModel::onSelectSource,
             onSelectTarget = viewModel::onSelectTarget,
             onPlay = viewModel::onPlay,
@@ -121,6 +124,9 @@ internal fun StartPlaybackContentView(
     state: StartPlaybackUiState,
     onClose: () -> Unit,
     onOpenSettings: () -> Unit,
+    onLinkChange: (String) -> Unit,
+    onLinkFocusLost: () -> Unit,
+    onLinkDone: () -> Unit,
     onSelectSource: (String) -> Unit,
     onSelectTarget: (Target) -> Unit,
     onPlay: () -> Unit,
@@ -133,6 +139,16 @@ internal fun StartPlaybackContentView(
         val address = state.address
         val content = state.content
         val connection = state.connection
+        val link = @Composable {
+            LinkField(
+                text = state.linkText,
+                messageShown = state.linkMessageShown,
+                enabled = !state.starting,
+                onChange = onLinkChange,
+                onFocusLost = onLinkFocusLost,
+                onDone = onLinkDone,
+            )
+        }
         when {
             address == null -> Message(
                 title = "Set your hub address",
@@ -141,15 +157,19 @@ internal fun StartPlaybackContentView(
                 onAction = onOpenSettings,
             )
 
-            content == null && connection is Connection.Unreachable -> Message(
-                title = "Can't reach the hub",
-                body = "Tried ${address.baseUrl}. Retrying…",
-                actionLabel = "Open Settings",
-                onAction = onOpenSettings,
-            )
+            content == null && connection is Connection.Unreachable -> {
+                Column(modifier = Modifier.padding(horizontal = 20.dp).padding(top = 12.dp)) { link() }
+                Message(
+                    title = "Can't reach the hub",
+                    body = "Tried ${address.baseUrl}. Retrying…",
+                    actionLabel = "Open Settings",
+                    onAction = onOpenSettings,
+                )
+            }
 
             content == null -> {
                 Body(modifier = Modifier.weight(1f)) {
+                    link()
                     Text("Connecting to ${address.baseUrl}…", style = type.body14, color = colors.textMuted)
                 }
                 Footer(state, onPlay)
@@ -158,6 +178,7 @@ internal fun StartPlaybackContentView(
             else -> {
                 if (connection is Connection.Unreachable) StaleBanner()
                 Body(modifier = Modifier.weight(1f)) {
+                    link()
                     Lists(content, state, onSelectSource, onSelectTarget)
                 }
                 Footer(state, onPlay)
