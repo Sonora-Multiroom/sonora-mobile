@@ -68,5 +68,8 @@ http://multiroom.lan:8080/api/v2/routes` or another client to compare.
     Settings and back to Rooms. The pill does not jump back to the old value before the hub
     confirms.
 12. **Restore after a move (research R3)**: move a playback, then press Home and run
-    `adb shell am kill sonora.multiroom.mobile`. Reopen the app: it shows Now Playing for the moved
-    playback on its new target, with no "ended" message.
+    `adb shell am kill sonora.multiroom.mobile`. `am kill` only kills a background process and
+    prints nothing either way, so check with `adb shell pidof sonora.multiroom.mobile`: empty means
+    killed. If a pid is still printed, run `adb shell run-as sonora.multiroom.mobile kill -9 <pid>`
+    (debug build). Reopen the app from recent apps (`pidof` now prints a new pid): it shows Now
+    Playing for the moved playback on its new target, with no "ended" message.
