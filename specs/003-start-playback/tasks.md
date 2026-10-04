@@ -171,7 +171,7 @@ shows it (quickstart §2 rows 1–3).
 
 ### Tests for User Story 1 (write first, see them fail)
 
-- [ ] T014 [P] [US1] Write `test/domain/StartPlaybackBuilderTest.kt` against
+- [X] T014 [P] [US1] Write `test/domain/StartPlaybackBuilderTest.kt` against
   `StartPlaybackBuilder.build(snapshot)` (data-model.md `StartPlaybackContent`):
   - **sources**: turned-off sources are left out, runtime (ephemeral) ones are included; sorted by
     name case-insensitively ("alpha" < "Beta"), id as tie-break; `kind` from `inferSourceKind`
@@ -198,14 +198,14 @@ shows it (quickstart §2 rows 1–3).
       selectable
     - an announcement route on a room is ignored (room reads `Idle`)
   - `selectable` is false exactly for `TurnedOff`, `NotConnected` and `NoRooms` (FR-009)
-- [ ] T015 [P] [US1] Write `test/ui/startplayback/StartPlaybackTextTest.kt` (status part):
+- [X] T015 [P] [US1] Write `test/ui/startplayback/StartPlaybackTextTest.kt` (status part):
   - "Idle", "Playing · Jazz24", "Paused · Morning playlist", "Starting… · X", "Stopping… · X",
     "Couldn't play · X", "Unknown · X", "Playing · Jazz24 + Doorbell"
   - "In Downstairs", "Group · Radio Paradise", "Group · Kitchen + Patio"
   - "Turned off", "Not connected", "No rooms"
   - Play label: "Play" when nothing or only one side is selected, "Play Jazz24 in Bedroom",
     "Starting…"
-- [ ] T016 [P] [US1] Extend `test/data/KtorHubRepositoryActionsTest.kt` with contract tests 1, 3
+- [X] T016 [P] [US1] Extend `test/data/KtorHubRepositoryActionsTest.kt` with contract tests 1, 3
   (for `POST /api/v2/routes`), 5 and 6:
   - `startSource("jazz", Room("bedroom"))` sends exactly `POST /api/v2/routes` with
     `{"inputId":"jazz","targetId":"bedroom","targetType":"SINGLE_OUTPUT"}` and no `joinMode` key; a
@@ -215,7 +215,7 @@ shows it (quickstart §2 rows 1–3).
   - IO failure or a 4 s delay (virtual time) → `Unreachable`
   - garbage 2xx body → `Unexpected`
   - `Target.Unknown` throws and sends nothing
-- [ ] T017 [P] [US1] Extend `test/ui/MessagesTest.kt` with the `StartFailure` copy (data-model.md)
+- [X] T017 [P] [US1] Extend `test/ui/MessagesTest.kt` with the `StartFailure` copy (data-model.md)
   and the source column of the research R6 table, via
   `startFailure(StartKind.Source, error, StartNames("Jazz24", "Bedroom"), roomName)` where
   `roomName: (outputId: String) -> String?` is a lookup stub:
@@ -226,11 +226,11 @@ shows it (quickstart §2 rows 1–3).
   - `Unreachable` → `HubUnreachable`
   - `Unexpected` → `Other`
   - each copy string exactly as in FR-016
-- [ ] T018 [P] [US1] Extend `test/ui/session/HubSessionTest.kt`: `awaitFreshSnapshot(timeoutMillis)`
+- [X] T018 [P] [US1] Extend `test/ui/session/HubSessionTest.kt`: `awaitFreshSnapshot(timeoutMillis)`
   - captures `startedSeq` and calls `requestRefresh()`
   - with a refresh in flight it does **not** return that refresh's snapshot, but the next one's
   - returns `null` after the timeout when refreshes fail or no screen holds the session
-- [ ] T019 [P] [US1] Write `test/ui/session/PlaybackStarterTest.kt` (source path, `FakeRepository` +
+- [X] T019 [P] [US1] Write `test/ui/session/PlaybackStarterTest.kt` (source path, `FakeRepository` +
   `HubSession` on the test scheduler, `AppMessages`):
   - success → `StartAttempt.Done(route, startedAfterSeq)` with `startedAfterSeq` =
     `session.startedSeq` captured right after the answer, and `requestRefresh()` called
@@ -247,7 +247,7 @@ shows it (quickstart §2 rows 1–3).
   - a second `start` while one runs is ignored
   - **detached** (the screen called `detach()`, i.e. it closed): a failure posts its copy to
     `AppMessages` once; a success posts nothing
-- [ ] T020 [P] [US1] Write `test/ui/startplayback/StartPlaybackViewModelTest.kt` (source path):
+- [X] T020 [P] [US1] Write `test/ui/startplayback/StartPlaybackViewModelTest.kt` (source path):
   - opened with `initialTargetId = null` → nothing selected, `playLabel = Play`, Play disabled
   - opened with an idle room id → that room selected; with an id that is unselectable or unknown on
     the first snapshot → nothing selected
@@ -266,30 +266,30 @@ shows it (quickstart §2 rows 1–3).
 
 ### Implementation for User Story 1
 
-- [ ] T021 [US1] Create `main/domain/StartRequest.kt` with the plain types `sealed interface StartWhat
+- [X] T021 [US1] Create `main/domain/StartRequest.kt` with the plain types `sealed interface StartWhat
   { Source(id), Link(uri) }` and `data class StartNames(source: String?, target: String)`
   (data-model.md; no logic, so no test of their own). The starter, the view model and, later,
   `StartConsequence` (T035) use them. Then implement `main/domain/StartPlaybackBuilder.kt`: `StartPlaybackContent`,
   `SourceOption`, `TargetOption`, `TargetStatus`, `object StartPlaybackBuilder { fun build(snapshot):
   StartPlaybackContent }`, using `routesByRoom`, `cardStatus`, `inferSourceKind` and the data-model
   rules verbatim. Make T014 pass.
-- [ ] T022 [P] [US1] Implement `main/ui/startplayback/StartPlaybackText.kt`:
+- [X] T022 [P] [US1] Implement `main/ui/startplayback/StartPlaybackText.kt`:
   `targetStatusText(TargetStatus)` (maps `CardStatus.LiveStream` → "Playing", reusing
   `statusWord` for the rest) and `playLabelText(PlayLabel)`. Make T015 pass.
-- [ ] T023 [US1] Add `suspend fun startSource(inputId: String, target: Target): HubResult<Route>` to
+- [X] T023 [US1] Add `suspend fun startSource(inputId: String, target: Target): HubResult<Route>` to
   `main/data/HubRepository.kt` and implement it in `main/data/KtorHubRepository.kt` with
   `RoutesApi.createRoute(CreateRouteRequest(inputId, targetId, targetType))`, joinMode left null and
   the response mapped via `toRoute()`, else `Unexpected`. Add a scriptable `startSource` (and a
   `startResults` queue) to `FakeRepository` in `test/ui/rooms/FakeHub.kt`. Make T016 pass.
-- [ ] T024 [P] [US1] In `main/ui/Messages.kt` add `sealed interface StartFailure` (data-model.md),
+- [X] T024 [P] [US1] In `main/ui/Messages.kt` add `sealed interface StartFailure` (data-model.md),
   `enum class StartKind { Source, Link }`, `fun startFailure(kind: StartKind, error: HubError,
   names: StartNames, roomName: (outputId: String) -> String?): StartFailure` and
   `fun startFailureMessage(StartFailure): String`. This is the only
   place these strings exist. Make T017 pass.
-- [ ] T025 [US1] Add `suspend fun awaitFreshSnapshot(timeoutMillis: Long = 5000): HubSnapshot?` to
+- [X] T025 [US1] Add `suspend fun awaitFreshSnapshot(timeoutMillis: Long = 5000): HubSnapshot?` to
   `main/ui/session/HubSession.kt` (fence on `startedSeq`, `requestRefresh()`, first `Connected`
   state with `refreshSeq > captured`, `withTimeoutOrNull`). Make T018 pass.
-- [ ] T026 [US1] Implement `main/ui/session/PlaybackStarter.kt`:
+- [X] T026 [US1] Implement `main/ui/session/PlaybackStarter.kt`:
   - `class PlaybackStarter(scope, session, messages)` with `val attempt: StateFlow<StartAttempt?>`
   - `StartAttempt` = `Starting | Done(route, startedAfterSeq) | Failed(StartFailure)`
   - `fun start(what: StartWhat, target: Target, names: StartNames)` (types from T021), `fun
@@ -301,7 +301,7 @@ shows it (quickstart §2 rows 1–3).
   - runs in the app scope (research R9); recovery per research R7/R8 using `awaitFreshSnapshot`
 
   Create it once in `main/AppGraph.kt`. Make T019 pass.
-- [ ] T027 [US1] Implement `main/ui/startplayback/StartPlaybackUiState.kt` (data-model.md "UI
+- [X] T027 [US1] Implement `main/ui/startplayback/StartPlaybackUiState.kt` (data-model.md "UI
   state": `PlayLabel`, `StartExit`) and `main/ui/startplayback/StartPlaybackViewModel.kt`
   `(initialTargetId: String?, savedState: SavedStateHandle, session: HubSession, starter: PlaybackStarter)`:
   - collects the session, rebuilds via `StartPlaybackBuilder`, prunes selections (research R12)
@@ -310,17 +310,17 @@ shows it (quickstart §2 rows 1–3).
   - selections stored in `SavedStateHandle`
 
   Add `startPlaybackViewModel(targetId, savedState)` to `main/AppGraph.kt`. Make T020 pass.
-- [ ] T028 [P] [US1] In `main/ui/rooms/RoomsScreen.kt` make the "Set your hub address" /
+- [X] T028 [P] [US1] In `main/ui/rooms/RoomsScreen.kt` make the "Set your hub address" /
   "Can't reach the hub" message block (`Message`) and `StaleBanner` `internal` and reusable,
   without changing Rooms' output.
-- [ ] T029 [P] [US1] Implement `main/ui/startplayback/SourceRow.kt` (min-h 54, radius 14, kind tile
+- [X] T029 [P] [US1] Implement `main/ui/startplayback/SourceRow.kt` (min-h 54, radius 14, kind tile
   38 r10 via the existing `KindStyle`, name 15 sp 600, kind label 12 sp `textMuted`, radio 20 accent,
   selected `selectedBg` + 1 dp `selectedOutline` ring) and `main/ui/startplayback/TargetTile.kt`
   (min-h 64, radius 14, padding 10/12, name 15 sp 600, status 12 sp `textMuted` one line with
   ellipsis, radio 18, opacity 0.5 when unselectable). Both are `selectable(role = Role.RadioButton)`
   with merged semantics "<name>, <kind>" / "<name>, <status>" and disabled when unselectable
   (contracts/start-playback-ui.md "Accessibility").
-- [ ] T030 [US1] Implement `main/ui/startplayback/StartPlaybackScreen.kt` per
+- [X] T030 [US1] Implement `main/ui/startplayback/StartPlaybackScreen.kt` per
   contracts/start-playback-ui.md:
   - header: Close `IconButton` 44 dp, "Close" content description, `Icons.Close` in `textSoft`;
     title "Play something" Sora 20 sp 600
@@ -335,7 +335,7 @@ shows it (quickstart §2 rows 1–3).
 
   Leave a slot above the source list for the link field (US3) and above the button for the
   footer lines (US2).
-- [ ] T031 [US1] Wire `main/ui/nav/AppNavigation.kt`: replace the `StartPlayback` placeholder entry
+- [X] T031 [US1] Wire `main/ui/nav/AppNavigation.kt`: replace the `StartPlayback` placeholder entry
   with `StartPlaybackScreen(viewModel { graph.startPlaybackViewModel(key.targetId,
   createSavedStateHandle()) }, …)`. `Closed` → `backStack.pop()`. `Started(routeId, seq, name)` →
   `backStack.replaceTop(Destination.NowPlaying(routeId, seq, name))` (FR-015).

@@ -230,7 +230,7 @@ internal fun StaleBanner() {
 }
 
 @Composable
-private fun Message(title: String, body: String, actionLabel: String, onAction: () -> Unit) {
+internal fun Message(title: String, body: String, actionLabel: String, onAction: () -> Unit) {
     val colors = SonoraTheme.colors
     val type = SonoraTheme.type
     Column(

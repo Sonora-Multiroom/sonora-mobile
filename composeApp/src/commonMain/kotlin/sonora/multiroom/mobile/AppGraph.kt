@@ -10,6 +10,8 @@ import sonora.multiroom.mobile.ui.nowplaying.NowPlayingViewModel
 import sonora.multiroom.mobile.ui.rooms.RoomsViewModel
 import sonora.multiroom.mobile.ui.session.AppMessages
 import sonora.multiroom.mobile.ui.session.HubSession
+import sonora.multiroom.mobile.ui.session.PlaybackStarter
+import sonora.multiroom.mobile.ui.startplayback.StartPlaybackViewModel
 import sonora.multiroom.mobile.ui.settings.SettingsViewModel
 import androidx.lifecycle.SavedStateHandle
 import kotlinx.coroutines.CoroutineScope
@@ -25,15 +27,23 @@ class AppGraph(
     constructor(dataStorePath: String) : this(DataStoreHubAddressStore(dataStorePath))
 
     /** The one poll loop of the app, shared by every screen (research R1). */
-    val session = HubSession(addressStore, repositoryFactory, CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate))
+    private val appScope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
+
+    val session = HubSession(addressStore, repositoryFactory, appScope)
 
     /** One-shot messages that cross screens. */
     val messages = AppMessages()
+
+    /** Runs starts so they outlive their screen (research R9). */
+    val starter = PlaybackStarter(appScope, session, messages)
 
     fun settingsViewModel() = SettingsViewModel(addressStore)
 
     fun nowPlayingViewModel(routeId: String, savedState: SavedStateHandle, startedAfterSeq: Long? = null, targetName: String? = null) =
         NowPlayingViewModel(routeId, savedState, session, messages, startedAfterSeq, targetName)
+
+    fun startPlaybackViewModel(targetId: String?, savedState: SavedStateHandle) =
+        StartPlaybackViewModel(targetId, savedState, session, starter)
 
     fun roomsViewModel() = RoomsViewModel(session, messages)
 }

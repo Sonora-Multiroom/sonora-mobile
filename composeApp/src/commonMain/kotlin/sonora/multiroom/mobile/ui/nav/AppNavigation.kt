@@ -5,6 +5,7 @@ import sonora.multiroom.mobile.ui.nowplaying.NowPlayingScreen
 import sonora.multiroom.mobile.ui.placeholder.PlaceholderScreen
 import sonora.multiroom.mobile.ui.rooms.RoomsScreen
 import sonora.multiroom.mobile.ui.settings.SettingsScreen
+import sonora.multiroom.mobile.ui.startplayback.StartPlaybackScreen
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.safeDrawingPadding
@@ -57,11 +58,15 @@ fun AppNavigation(graph: AppGraph, backStack: AppBackStack, onExit: () -> Unit) 
                         onExit = { backStack.pop() },
                     )
                 }
-                entry<Destination.StartPlayback> {
-                    PlaceholderScreen(
-                        title = "Start Playback",
-                        description = "Pick a source to play here.",
-                        onBack = { backStack.pop() },
+                entry<Destination.StartPlayback> { key ->
+                    StartPlaybackScreen(
+                        viewModel = viewModel { graph.startPlaybackViewModel(key.targetId, createSavedStateHandle()) },
+                        onClose = { backStack.pop() },
+                        // Back from Now Playing returns to where Start Playback was opened (FR-015).
+                        onStarted = { started ->
+                            backStack.replaceTop(Destination.NowPlaying(started.routeId, started.startedAfterSeq, started.targetName))
+                        },
+                        onOpenSettings = { backStack.selectTab(Destination.Settings) },
                     )
                 }
             },

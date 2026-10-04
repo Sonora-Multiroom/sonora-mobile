@@ -219,4 +219,78 @@ class KtorHubRepositoryActionsTest {
         val (repo, _) = repository(status = HttpStatusCode.Conflict, body = "<html>", headers = headersOf(HttpHeaders.ContentType, "text/html"))
         assertEquals(HubResult.Err(HubError.Rejected(409, null, null, null)), repo.transferRoute("r1", Target.Room("kitchen")))
     }
+
+    // ---- Start a configured source (003, contract tests 1, 3, 4, 5, 6) -----------------------
+
+    private val startedRoute = """{"routeId":"r9","inputId":"jazz","targetId":"bedroom","targetType":"SINGLE_OUTPUT",
+        "status":"STARTING","transferable":true,"pauseable":false,"paused":false,"joinMode":"REPLACE"}"""
+
+    private val r9 = Route("r9", "jazz", Target.Room("bedroom"), RouteStatus.Starting, false, false, true, JoinMode.Replace)
+
+    @Test
+    fun startSourceOnARoomSendsExactlyTheDocumentedRequest() = runTest {
+        for (status in listOf(HttpStatusCode.Created, HttpStatusCode.OK)) {
+            val (repo, log) = repository(status = status, body = startedRoute)
+            assertEquals(HubResult.Ok(r9), repo.startSource("jazz", Target.Room("bedroom")))
+            val r = log.single()
+            assertEquals(HttpMethod.Post, r.method)
+            assertEquals("/api/v2/routes", r.path)
+            assertEquals("""{"inputId":"jazz","targetId":"bedroom","targetType":"SINGLE_OUTPUT"}""", r.body)
+        }
+    }
+
+    @Test
+    fun startSourceOnAGroupSendsOutputGroup() = runTest {
+        val (repo, log) = repository(status = HttpStatusCode.Created, body = startedRoute.replace("bedroom", "down").replace("SINGLE_OUTPUT", "OUTPUT_GROUP"))
+        val result = repo.startSource("jazz", Target.Group("down"))
+        assertEquals(Target.Group("down"), (result as HubResult.Ok).value.target)
+        assertEquals("""{"inputId":"jazz","targetId":"down","targetType":"OUTPUT_GROUP"}""", log.single().body)
+    }
+
+    @Test
+    fun startSourceProblemDetailsBecomeRejectedWithReasonAndOutputId() = runTest {
+        val refusal = """{"type":"urn:multiroom:error:conflict","status":409,"reason":"INPUT_ALREADY_ON_OUTPUT","outputId":"bedroom"}"""
+        for (status in listOf(HttpStatusCode.BadRequest, HttpStatusCode.NotFound, HttpStatusCode.UnprocessableEntity)) {
+            val (repo, _) = repository(status = status, body = Fixtures.PROBLEM_NOT_FOUND, headers = problem)
+            assertEquals(
+                HubResult.Err(HubError.Rejected(status.value, "urn:multiroom:error:not-found")),
+                repo.startSource("jazz", Target.Room("bedroom")),
+            )
+        }
+        val (repo, _) = repository(status = HttpStatusCode.UnprocessableEntity, body = refusal, headers = problem)
+        assertEquals(
+            HubResult.Err(HubError.Rejected(422, "urn:multiroom:error:conflict", "INPUT_ALREADY_ON_OUTPUT", "bedroom")),
+            repo.startSource("jazz", Target.Room("bedroom")),
+        )
+    }
+
+    @Test
+    fun startSourceWithAnIoFailureIsUnreachable() = runTest {
+        val engine = MockEngine { throw kotlinx.io.IOException("down") }
+        val repo = KtorHubRepository(HubAddress("http://hub:8080"), createHubHttpClient(engine))
+        assertEquals(HubResult.Err(HubError.Unreachable), repo.startSource("jazz", Target.Room("bedroom")))
+    }
+
+    @Test
+    fun startSourceAnsweringAfterTheShortTimeoutIsUnreachable() = runTest {
+        val engine = MockEngine {
+            kotlinx.coroutines.delay(4_000)
+            respond(startedRoute, HttpStatusCode.Created, json)
+        }
+        val repo = KtorHubRepository(HubAddress("http://hub:8080"), createHubHttpClient(engine))
+        assertEquals(HubResult.Err(HubError.Unreachable), repo.startSource("jazz", Target.Room("bedroom")))
+    }
+
+    @Test
+    fun startSourceWithAGarbageBodyIsUnexpected() = runTest {
+        val (repo, _) = repository(status = HttpStatusCode.Created, body = "not json at all")
+        assertEquals(HubResult.Err(HubError.Unexpected), repo.startSource("jazz", Target.Room("bedroom")))
+    }
+
+    @Test
+    fun startSourceOnAnUnknownTargetThrowsAndSendsNothing() = runTest {
+        val (repo, log) = repository(body = startedRoute)
+        assertFailsWith<IllegalArgumentException> { repo.startSource("jazz", Target.Unknown("x")) }
+        assertTrue(log.isEmpty())
+    }
 }

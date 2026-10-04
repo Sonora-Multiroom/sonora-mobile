@@ -8,12 +8,16 @@ import sonora.multiroom.mobile.hub.generated.apis.GroupsApi
 import sonora.multiroom.mobile.hub.generated.apis.InputsApi
 import sonora.multiroom.mobile.hub.generated.apis.MasterMuteApi
 import sonora.multiroom.mobile.hub.generated.apis.OutputsApi
+import sonora.multiroom.mobile.hub.generated.apis.PlaybackApi
 import sonora.multiroom.mobile.hub.generated.apis.RoutesApi
+import sonora.multiroom.mobile.hub.generated.models.CreateRouteRequest
 import sonora.multiroom.mobile.hub.generated.models.MuteRequest
 import sonora.multiroom.mobile.hub.generated.models.PauseRequest
+import sonora.multiroom.mobile.hub.generated.models.PlaybackRequest
 import sonora.multiroom.mobile.hub.generated.models.TransferRequest
 import sonora.multiroom.mobile.hub.generated.models.VolumeRequest
 import io.ktor.client.HttpClient
+import io.ktor.client.plugins.HttpTimeout
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
 
@@ -24,6 +28,18 @@ class KtorHubRepository(address: HubAddress, client: HttpClient) : HubRepository
     private val routes = RoutesApi(address.baseUrl, client)
     private val inputs = InputsApi(address.baseUrl, client)
     private val masterMute = MasterMuteApi(address.baseUrl, client)
+
+    // Same engine, longer request/socket timeouts; connecting still fails fast.
+    private val playback = PlaybackApi(
+        address.baseUrl,
+        client.config {
+            install(HttpTimeout) {
+                requestTimeoutMillis = LINK_TIMEOUT_MILLIS
+                socketTimeoutMillis = LINK_TIMEOUT_MILLIS
+                connectTimeoutMillis = HUB_TIMEOUT_MILLIS
+            }
+        },
+    )
 
     override suspend fun snapshot(): HubResult<HubSnapshot> = coroutineScope {
         // The hub omits disabled items by default; Rooms must show them as "Off".
@@ -70,6 +86,32 @@ class KtorHubRepository(address: HubAddress, client: HttpClient) : HubRepository
 
     override suspend fun setGroupMute(groupId: String, muted: Boolean): HubResult<Unit> =
         hubCallUnit { groups.setGroupMute(groupId, MuteRequest(muted)) }
+
+    override suspend fun startSource(inputId: String, target: Target): HubResult<Route> {
+        val request = when (target) {
+            is Target.Room -> CreateRouteRequest(inputId, target.id, CreateRouteRequest.TargetType.SINGLE_OUTPUT)
+            is Target.Group -> CreateRouteRequest(inputId, target.id, CreateRouteRequest.TargetType.OUTPUT_GROUP)
+            is Target.Unknown -> throw IllegalArgumentException("Cannot start playback on an unknown target type")
+        }
+        // joinMode stays null: the hub applies the source's default, else replace.
+        return when (val result = hubCall { routes.createRoute(request) }) {
+            is HubResult.Err -> result
+            is HubResult.Ok -> result.value.toRoute()?.let { HubResult.Ok(it) } ?: HubResult.Err(HubError.Unexpected)
+        }
+    }
+
+    override suspend fun playLink(uri: String, target: Target): HubResult<Route> {
+        val request = when (target) {
+            is Target.Room -> PlaybackRequest(uri, target.id, PlaybackRequest.TargetType.SINGLE_OUTPUT)
+            is Target.Group -> PlaybackRequest(uri, target.id, PlaybackRequest.TargetType.OUTPUT_GROUP)
+            is Target.Unknown -> throw IllegalArgumentException("Cannot play a link on an unknown target type")
+        }
+        // No displayName, volume or joinMode: the hub names the link and each room keeps its volume.
+        return when (val result = hubCall { playback.playback(request) }) {
+            is HubResult.Err -> result
+            is HubResult.Ok -> result.value.route?.toRoute()?.let { HubResult.Ok(it) } ?: HubResult.Err(HubError.Unexpected)
+        }
+    }
 
     override suspend fun transferRoute(routeId: String, target: Target): HubResult<Route> {
         val request = when (target) {

@@ -26,6 +26,9 @@ internal val HubJson = Json {
 
 internal const val HUB_TIMEOUT_MILLIS = 3000L
 
+/** `POST /api/v2/play`: the hub fetches and resolves the link before it answers (FR-014). */
+internal const val LINK_TIMEOUT_MILLIS = 30_000L
+
 /** No retries (the poll loop is the retry) and no auth; status codes are mapped explicitly. */
 fun createHubHttpClient(engine: HttpClientEngine): HttpClient = HttpClient(engine) {
     expectSuccess = false

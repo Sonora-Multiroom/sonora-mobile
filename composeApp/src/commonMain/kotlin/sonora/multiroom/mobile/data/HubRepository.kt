@@ -33,6 +33,21 @@ interface HubRepository {
      * gone after success.
      */
     suspend fun transferRoute(routeId: String, target: Target): HubResult<Route>
+
+    /**
+     * Starts a configured source on a room or group. No join mode is sent, so the hub applies the
+     * source's default, else replace. Returns the hub's route, which may be an existing one when
+     * the source already plays on exactly that target. [target] is [Target.Room] or [Target.Group]
+     * (`Target.Unknown` throws [IllegalArgumentException] and is never sent).
+     */
+    suspend fun startSource(inputId: String, target: Target): HubResult<Route>
+
+    /**
+     * Plays a link (an http/https address, already normalised) on a room or group; the hub adds it
+     * as a runtime source. No name, volume or join mode is sent. Allows 30 s (the hub resolves the
+     * link first), unlike every other call.
+     */
+    suspend fun playLink(uri: String, target: Target): HubResult<Route>
 }
 
 sealed interface HubResult<out T> {
