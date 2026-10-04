@@ -166,6 +166,10 @@ Record the build (CI build number and commit), the device and each row's evidenc
   group pill shows the loudest member; dragging scales each member by new/old loudest (rounded,
   clamped 0–100) via `PUT /api/v2/outputs/{id}/volume`, throttled; if all members are 0, each is
   set to the new value.
+- No rooms in a playback's answer: `RouteResponse` names only the group it was addressed to. Since
+  turning a room off drops it from group playback (and turning it on does not add it back), a group
+  route may play on fewer rooms than its group has; the app cannot tell and still counts the room
+  as part of it (feature 004).
 
 ## Design
 
