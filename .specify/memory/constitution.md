@@ -140,12 +140,18 @@ Rationale: each dependency is a multiplatform compatibility risk and a future iO
 - Every plan MUST pass the Constitution Check against these principles; any deviation is recorded
   in the plan's complexity tracking with its justification.
 - GitHub Actions CI (`.github/workflows/android-apk.yml`) builds the debug APK and runs the
-  Android host tests on every pull request and every push to `main`; uploading the APK to
-  Appetize.io is a manual option only. Dependabot proposes dependency updates as pull requests
-  that go through the same CI.
+  Android host tests on every pull request and every push to `main`, except documentation-only
+  changes: when every changed file matches its `paths-ignore` list (`**.md`, `specs/**`,
+  `docs/**`, `design/**`), the workflow is skipped. It can always be run by hand
+  (`workflow_dispatch`). Uploading the APK to Appetize.io is a manual option only. Dependabot
+  proposes dependency updates as pull requests that go through the same CI.
 - The merge gate is a green CI run on the pull request plus all the Principle IV checks green in
-  a local or cloud session (CI does not run `:composeApp:allTests` or `:composeApp:check`).
-  Changes reach `main` only through pull requests.
+  a local or cloud session (CI does not run `:composeApp:allTests` or `:composeApp:check`). A
+  documentation-only pull request has no CI run; its gate is review alone. Changes reach `main`
+  only through pull requests.
+- If branch protection ever makes the CI check required, the documentation-only skip MUST move
+  inside the job (a path-filter step that skips the Gradle steps), so the check always reports
+  and documentation-only pull requests are not blocked.
 - iOS builds will run on a separate GitHub Actions macOS runner once the iOS target is enabled.
 - Commits use Conventional Commit messages that explain why, not just what.
 
@@ -160,4 +166,4 @@ Rationale: each dependency is a multiplatform compatibility risk and a future iO
 - Reviews of specs, plans and implementations MUST check compliance with every principle;
   unjustified complexity or deviation is a blocking finding.
 
-**Version**: 1.2.1 | **Ratified**: 2026-10-01 | **Last Amended**: 2026-10-03
+**Version**: 1.3.0 | **Ratified**: 2026-10-01 | **Last Amended**: 2026-10-04
