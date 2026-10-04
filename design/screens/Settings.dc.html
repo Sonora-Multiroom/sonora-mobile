@@ -58,7 +58,7 @@ a:focus-visible,button:focus-visible,input:focus-visible{outline:2px solid #F2A5
 </div>
 <div style="flex-grow: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px">
 <span style="font-size: 16px; font-weight: 600; color: {{o.nameColor}}">{{o.name}}</span>
-<span style="font-size: 13px; color: #9A9DA6">{{o.sub}}</span>
+<span style="font-size: 13px; color: {{o.subColor}}">{{o.sub}}</span>
 </div>
 <input type="checkbox" role="switch" class="sw" aria-label="{{o.name}}" checked="{{o.on}}" onChange="{{o.toggle}}">
 </label>
@@ -77,6 +77,9 @@ a:focus-visible,button:focus-visible,input:focus-visible{outline:2px solid #F2A5
 <div style="flex-grow: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px">
 <span style="font-size: 16px; font-weight: 600; color: {{g.nameColor}}">{{g.name}}</span>
 <span style="font-size: 13px; color: #9A9DA6; line-height: 1.35">{{g.members}}</span>
+<sc-if value="{{g.isPlaying}}" hint-placeholder-val="{{ false }}">
+<span style="font-size: 13px; color: #F2A541">{{g.playingText}}</span>
+</sc-if>
 </div>
 <input type="checkbox" role="switch" class="sw" aria-label="{{g.name}}" checked="{{g.on}}" onChange="{{g.toggle}}">
 </label>
@@ -147,6 +150,8 @@ a:focus-visible,button:focus-visible,input:focus-visible{outline:2px solid #F2A5
 </sc-if>
 </main>
 
+<footer style="padding: 12px 20px 14px; text-align: center; font-size: 12px; line-height: 1.4; color: #8A8D96; user-select: text">Sonora 0.3.0 Alpha - Build 23 (abcdef)</footer>
+
 <nav aria-label="Main" style="height: 76px; box-sizing: border-box; border-top: 1px solid #1F2228; display: flex; justify-content: space-around; align-items: flex-start; padding-top: 6px">
 <a href="Main.dc.html" style="min-width: 72px; height: 52px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; font-size: 12px; font-weight: 500; color: #9A9DA6">
 <svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 11l9-7 9 7v9a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"></path></svg>
@@ -190,6 +195,22 @@ Settings
 </section>
 </div>
 </sc-if>
+
+<sc-if value="{{confirmOpen}}" hint-placeholder-val="{{ false }}">
+<div style="position: absolute; inset: 0; background: rgba(5, 6, 8, 0.72); display: flex; align-items: center; justify-content: center; padding: 24px">
+<section role="alertdialog" aria-modal="true" aria-labelledby="off-title" aria-describedby="off-body" style="width: 100%; background: #17191E; border-radius: 24px; padding: 24px 20px 20px; display: flex; flex-direction: column; gap: 10px">
+<div style="width: 44px; height: 44px; border-radius: 14px; background: #3A1A16; color: #FF8A7A; display: flex; align-items: center; justify-content: center">
+<svg class="i" viewBox="0 0 24 24" aria-hidden="true"><rect x="6" y="6" width="12" height="12" rx="2"></rect></svg>
+</div>
+<h2 id="off-title" style="margin: 6px 0 0; font-family: Sora, sans-serif; font-size: 20px; font-weight: 600">{{confirmTitle}}</h2>
+<p id="off-body" style="margin: 0; font-size: 15px; line-height: 1.5; color: #C9CBD1">{{confirmBody}}</p>
+<div style="margin-top: 10px; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px">
+<button onClick="{{cancelOff}}" style="height: 52px; border-radius: 16px; background: #22252B; color: #F2F1EE; font-size: 15px; font-weight: 600">Keep playing</button>
+<button onClick="{{confirmOff}}" style="height: 52px; border-radius: 16px; background: #FF8A7A; color: #2A0D08; font-size: 15px; font-weight: 600">Turn off</button>
+</div>
+</section>
+</div>
+</sc-if>
 </div>
 </x-dc>
 <script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
@@ -201,6 +222,8 @@ class Component extends DCLogic {
       on: { living: true, kitchen: true, bedroom: true, office: true, patio: false,
             downstairs: true, everywhere: true, rp: true, jazz: true, turntable: true, morning: false },
       runtime: true,
+      playing: { living: 'Radio Paradise', kitchen: 'Radio Paradise', bedroom: 'Jazz24', downstairs: 'Radio Paradise' },
+      confirm: null,
       hubUrl: 'http://192.168.1.40:8080',
       hubConnected: true,
       hubOpen: false,
@@ -226,17 +249,32 @@ class Component extends DCLogic {
       fg: s.tab === id ? '#F2F1EE' : '#9A9DA6',
       pick: () => this.setState({ tab: id })
     }));
+    const P = s.playing;
+    // Switching OFF something that is playing asks first; idle ones and switching ON go straight through.
+    const guard = (x, kind) => () => {
+      if (s.on[x.id] && P[x.id]) this.setState({ confirm: { id: x.id, kind, name: x.name, source: P[x.id], memberIds: x.memberIds, members: x.members } });
+      else flip(x.id)();
+    };
     const outputs = [
       { id: 'living', name: 'Living Room', sub: 'In Downstairs' },
       { id: 'kitchen', name: 'Kitchen', sub: 'In Downstairs' },
       { id: 'bedroom', name: 'Bedroom', sub: 'Speaker' },
       { id: 'office', name: 'Office', sub: 'Speaker' },
       { id: 'patio', name: 'Patio', sub: 'Speaker' }
-    ].map((x, i, arr) => Object.assign(row(x, i, arr), { sub: s.on[x.id] ? x.sub : 'Off' }));
+    ].map((x, i, arr) => Object.assign(row(x, i, arr), {
+      toggle: guard(x, 'room'),
+      sub: !s.on[x.id] ? 'Off' : P[x.id] ? 'Playing · ' + P[x.id] : x.sub,
+      subColor: s.on[x.id] && P[x.id] ? '#F2A541' : '#9A9DA6'
+    }));
     const groups = [
-      { id: 'downstairs', name: 'Downstairs', members: 'Living Room, Kitchen' },
-      { id: 'everywhere', name: 'Everywhere', members: 'Living Room, Kitchen, Bedroom, Office, Patio' }
-    ].map(row);
+      { id: 'downstairs', name: 'Downstairs', members: 'Living Room, Kitchen', memberIds: ['living', 'kitchen'] },
+      { id: 'everywhere', name: 'Everywhere', members: 'Living Room, Kitchen, Bedroom, Office, Patio', memberIds: ['living', 'kitchen', 'bedroom', 'office', 'patio'] }
+    ].map((x, i, arr) => Object.assign(row(x, i, arr), {
+      toggle: guard(x, 'group'),
+      isPlaying: !!(s.on[x.id] && P[x.id]),
+      playingText: 'Playing · ' + (P[x.id] || '')
+    }));
+    const c = s.confirm;
     const kinds = {
       stream: { bg: '#3A2A12', fg: '#F2A541' },
       line: { bg: '#12302E', fg: '#5FD3C4' },
@@ -274,6 +312,18 @@ class Component extends DCLogic {
     };
     const tv = tests[s.test] || tests.checking;
     return {
+      confirmOpen: !!c,
+      confirmTitle: c ? 'Turn off ' + c.name + '?' : '',
+      confirmBody: !c ? '' : c.kind === 'group'
+        ? c.source + ' is playing on ' + c.members + '. Turning the group off stops playback in all of these rooms.'
+        : c.source + ' is playing in ' + c.name + '. Turning the room off stops playback there.',
+      cancelOff: () => this.setState({ confirm: null }),
+      confirmOff: () => {
+        const stopped = Object.assign({}, P);
+        delete stopped[c.id];
+        (c.memberIds || []).forEach((m) => { delete stopped[m]; });
+        this.setState({ confirm: null, playing: stopped, on: Object.assign({}, s.on, { [c.id]: false }) });
+      },
       hubUrl: s.hubUrl,
       hubStatus: s.hubConnected ? 'Connected' : 'Not connected',
       hubStatusFg: s.hubConnected ? '#5FD3C4' : '#FF8A7A',
