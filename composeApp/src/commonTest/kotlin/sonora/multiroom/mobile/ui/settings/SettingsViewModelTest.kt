@@ -604,4 +604,24 @@ class SettingsViewModelTest {
         assertEquals(2, s.repo.extensionsCalls)
         s.vm.onHidden()
     }
+
+    @Test
+    fun anAddressChangeForgetsTheListAndDropsALateAnswerFromTheOldHub() = runViewModelTest {
+        val s = setup()
+        s.repo.extensionsResult = { HubResult.Ok(inventory) }
+        s.onExtensionsTab()
+        s.vm.onVisible(); runCurrent()
+        assertIs<ExtensionsContent.Rows>(s.state.extensions)
+
+        // The old hub answers slowly; the address changes meanwhile.
+        s.repo.extensionsDelayMs = 1000
+        advanceTimeBy(2500); runCurrent()
+        s.store.save(HubAddress("http://other.lan:8080")); runCurrent()
+        // The old list is gone (the new hub may already have answered with its own).
+        assertTrue(s.state.extensions !is ExtensionsContent.Rows)
+        advanceTimeBy(1500); runCurrent()
+        // Only the new hub's own answer (an empty inventory by default) may show.
+        assertTrue(s.state.extensions == null || s.state.extensions == ExtensionsContent.Empty)
+        s.vm.onHidden()
+    }
 }

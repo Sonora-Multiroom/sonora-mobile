@@ -138,6 +138,17 @@ class SettingsViewModel(
                 .distinctUntilChanged()
                 .collectLatest { active -> if (active) followExtensions() }
         }
+        // Another hub has other extensions: forget the old list when the address changes.
+        viewModelScope.launch {
+            var address: HubAddress? = (session.state.value as? SessionState.Connected)?.address
+            session.state.collect { s ->
+                val now = (s as? SessionState.Connected)?.address
+                if (now != address) {
+                    address = now
+                    extensions.value = null
+                }
+            }
+        }
         // The open dialog follows the hub: its text is rebuilt per snapshot, and kept when the
         // item no longer plays or is gone (spec Edge Cases).
         viewModelScope.launch {
@@ -163,7 +174,10 @@ class SettingsViewModel(
     }
 
     private suspend fun fetchExtensions() {
-        val answer = session.repository?.extensions() ?: return
+        val repo = session.repository ?: return
+        val answer = repo.extensions()
+        // An answer from the previous hub must not land after the address changed.
+        if (session.repository !== repo) return
         if (answer is HubResult.Ok) extensions.value = extensionRows(answer.value)
     }
 
