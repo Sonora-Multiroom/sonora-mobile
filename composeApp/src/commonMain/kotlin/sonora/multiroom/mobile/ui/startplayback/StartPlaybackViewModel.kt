@@ -1,6 +1,7 @@
 package sonora.multiroom.mobile.ui.startplayback
 
 import sonora.multiroom.mobile.domain.HubSnapshot
+import sonora.multiroom.mobile.domain.StartConsequence
 import sonora.multiroom.mobile.domain.StartNames
 import sonora.multiroom.mobile.domain.StartPlaybackBuilder
 import sonora.multiroom.mobile.domain.StartPlaybackContent
@@ -93,7 +94,12 @@ class StartPlaybackViewModel(
             else -> PlayLabel.Play
         }
         val ready = sourceName != null && targetName != null
-        return s.copy(playLabel = label, playEnabled = ready && !s.starting && s.connection == Connection.Live)
+        val consequence = snapshot?.takeIf { ready }?.let { StartConsequence.of(it, StartWhat.Source(s.selectedSourceId!!), s.selectedTarget!!) }
+        return s.copy(
+            playLabel = label,
+            playEnabled = ready && !s.starting && s.connection == Connection.Live,
+            consequence = consequence,
+        )
     }
 
     private fun save(sourceId: String?, target: Target?) {

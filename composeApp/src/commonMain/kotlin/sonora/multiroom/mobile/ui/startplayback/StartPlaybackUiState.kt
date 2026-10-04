@@ -1,5 +1,6 @@
 package sonora.multiroom.mobile.ui.startplayback
 
+import sonora.multiroom.mobile.domain.Consequence
 import sonora.multiroom.mobile.domain.HubAddress
 import sonora.multiroom.mobile.domain.StartPlaybackContent
 import sonora.multiroom.mobile.domain.Target
@@ -29,6 +30,8 @@ data class StartPlaybackUiState(
     val content: StartPlaybackContent? = null,
     val selectedSourceId: String? = null,
     val selectedTarget: Target? = null,
+    /** Only while something to play and a target are both selected. */
+    val consequence: Consequence? = null,
     val starting: Boolean = false,
     val playLabel: PlayLabel = PlayLabel.Play,
     val playEnabled: Boolean = false,

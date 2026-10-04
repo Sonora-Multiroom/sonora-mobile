@@ -1,5 +1,6 @@
 package sonora.multiroom.mobile.ui.startplayback
 
+import sonora.multiroom.mobile.domain.ConsequenceLine
 import sonora.multiroom.mobile.domain.StartPlaybackContent
 import sonora.multiroom.mobile.domain.Target
 import sonora.multiroom.mobile.ui.rooms.IconCircleButton
@@ -247,6 +248,20 @@ private fun Footer(state: StartPlaybackUiState, onPlay: () -> Unit) {
         modifier = Modifier.fillMaxWidth().padding(start = 20.dp, end = 20.dp, top = 12.dp, bottom = 28.dp),
         verticalArrangement = Arrangement.spacedBy(10.dp),
     ) {
+        state.consequence?.let { c ->
+            c.line?.let { line ->
+                if (line is ConsequenceLine.WillStop) {
+                    Row(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
+                        Icon(SonoraIcons.Info, contentDescription = null, tint = colors.warningText, modifier = Modifier.size(16.dp))
+                        Text(consequenceLineText(line), style = SonoraTheme.type.body13, color = colors.warningText)
+                    }
+                } else {
+                    Text(consequenceLineText(line), style = SonoraTheme.type.body13, color = colors.textMuted)
+                }
+            }
+            c.wontPlay?.let { Text(wontPlayText(it), style = SonoraTheme.type.body13, color = colors.textMuted) }
+            c.mute?.let { Text(muteNoteText(it), style = SonoraTheme.type.body13, color = colors.textMuted) }
+        }
         val look = if (state.playEnabled || state.starting) colors.accent else colors.accent.copy(alpha = 0.38f)
         Row(
             modifier = Modifier

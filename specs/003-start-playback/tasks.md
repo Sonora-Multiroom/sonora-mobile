@@ -357,7 +357,7 @@ does after Play (quickstart §2 rows 4–6, 10).
 
 ### Tests for User Story 2 (write first, see them fail)
 
-- [ ] T032 [P] [US2] Write `test/domain/StartConsequenceTest.kt` against
+- [X] T032 [P] [US2] Write `test/domain/StartConsequenceTest.kt` against
   `StartConsequence.of(snapshot, what, target)` and `effectiveJoinMode` (data-model.md
   "Consequence"):
   - **Replace**:
@@ -381,7 +381,7 @@ does after Play (quickstart §2 rows 4–6, 10).
     - room muted → `TargetMuted("Bedroom")`
     - group muted, or every member muted → `TargetMuted(group)`
     - master mute → `AllRoomsMuted` instead of `TargetMuted`
-- [ ] T033 [P] [US2] Extend `test/ui/startplayback/StartPlaybackTextTest.kt` (consequence part):
+- [X] T033 [P] [US2] Extend `test/ui/startplayback/StartPlaybackTextTest.kt` (consequence part):
   - "Radio Paradise will stop in Bedroom"
   - "Jazz24 will stop in Office and Morning playlist in Kitchen"; three items → "A in X, B in Y and C in Z"
   - "Plays alongside Jazz24 in Bedroom"
@@ -391,22 +391,22 @@ does after Play (quickstart §2 rows 4–6, 10).
     one line
   - "Bedroom is muted"
   - "All rooms are muted"
-- [ ] T034 [P] [US2] Extend `test/ui/startplayback/StartPlaybackViewModelTest.kt`:
+- [X] T034 [P] [US2] Extend `test/ui/startplayback/StartPlaybackViewModelTest.kt`:
   - `consequence` is `null` until both a source and a target are selected
   - it follows the next snapshot when the target's state changes (spec edge case)
   - it stays visible while Play is disabled by a stale connection
 
 ### Implementation for User Story 2
 
-- [ ] T035 [US2] Implement `main/domain/StartConsequence.kt` (using `StartWhat` from T021):
+- [X] T035 [US2] Implement `main/domain/StartConsequence.kt` (using `StartWhat` from T021):
   `effectiveJoinMode(what, snapshot)` (`null`/`Unknown` → Replace), `AffectedPlayback`, `ConsequenceLine`, `WontPlay`,
   `MuteNote`, `Consequence` and `object StartConsequence { fun of(...) }`, per research R4 and
   data-model.md, using `routesByRoom`, `describeTarget` and `isAnnouncement`. Make T032 pass.
-- [ ] T036 [P] [US2] Add `consequenceLineText`, `wontPlayText` and `muteNoteText` to
+- [X] T036 [P] [US2] Add `consequenceLineText`, `wontPlayText` and `muteNoteText` to
   `main/ui/startplayback/StartPlaybackText.kt`, joining with the `joinNames` style. Make T033 pass.
-- [ ] T037 [US2] In `main/ui/startplayback/StartPlaybackViewModel.kt` compute `consequence` on every
+- [X] T037 [US2] In `main/ui/startplayback/StartPlaybackViewModel.kt` compute `consequence` on every
   rebuild and selection change. Make T034 pass.
-- [ ] T038 [US2] Render the footer lines in `main/ui/startplayback/StartPlaybackScreen.kt`
+- [X] T038 [US2] Render the footer lines in `main/ui/startplayback/StartPlaybackScreen.kt`
   (contracts/start-playback-ui.md "Footer"):
   - `WillStop`: 13 sp `warningText` with the 16 dp warning icon, gap 6
   - every other line and note: 13 sp `textMuted` in the same layout without an icon

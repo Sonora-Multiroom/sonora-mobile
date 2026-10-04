@@ -3,6 +3,7 @@ package sonora.multiroom.mobile.ui.startplayback
 import sonora.multiroom.mobile.data.HubError
 import sonora.multiroom.mobile.data.HubResult
 import sonora.multiroom.mobile.data.InMemoryHubAddressStore
+import sonora.multiroom.mobile.domain.ConsequenceLine
 import sonora.multiroom.mobile.domain.Group
 import sonora.multiroom.mobile.domain.HubAddress
 import sonora.multiroom.mobile.domain.HubSnapshot
@@ -308,5 +309,41 @@ class StartPlaybackViewModelTest {
         assertEquals("news", restored.ui.selectedSourceId)
         assertEquals(Target.Group("down"), restored.ui.selectedTarget)
         restored.vm.onHidden()
+    }
+
+    // ---- consequence (US2) -----------------------------------------------------------------------
+
+    private val busyBedroom = snapshot(routes = listOf(Route("r1", "news", bedroom, RouteStatus.Active, false, false, true)))
+
+    @Test
+    fun theConsequenceIsNullUntilASourceAndATargetAreSelected() = runViewModelTest {
+        val s = live(snapshot = busyBedroom)
+        assertNull(s.ui.consequence)
+        s.vm.onSelectSource("jazz")
+        assertNull(s.ui.consequence)
+        s.vm.onSelectTarget(bedroom)
+        assertEquals("News", (s.ui.consequence?.line as ConsequenceLine.WillStop).items.single().source)
+        s.vm.onHidden()
+    }
+
+    @Test
+    fun theConsequenceFollowsTheNextSnapshot() = runViewModelTest {
+        val s = live(snapshot = busyBedroom)
+        s.pickJazzInBedroom()
+        assertIs<ConsequenceLine.WillStop>(s.ui.consequence?.line)
+        s.refresh(snapshot()); runCurrent()
+        assertNull(s.ui.consequence?.line)
+        s.vm.onHidden()
+    }
+
+    @Test
+    fun theConsequenceStaysVisibleWhilePlayIsDisabledByAStaleConnection() = runViewModelTest {
+        val s = live(snapshot = busyBedroom)
+        s.pickJazzInBedroom()
+        s.repo.snapshotResult = { unreachable }
+        s.session.requestRefresh(); runCurrent()
+        assertFalse(s.ui.playEnabled)
+        assertIs<ConsequenceLine.WillStop>(s.ui.consequence?.line)
+        s.vm.onHidden()
     }
 }
