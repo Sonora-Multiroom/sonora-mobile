@@ -71,6 +71,26 @@ class FakeRepository(private val time: () -> Long) : HubRepository {
         if (actionDelayMs > 0) delay(actionDelayMs)
         return transferResult()
     }
+
+    /** What a start answers: the queue first, else a started route. [startDelayMs] delays the answer. */
+    val startResults = ArrayDeque<HubResult<Route>>()
+    var startDelayMs = 0L
+    var startResult: () -> HubResult<Route> = {
+        startResults.removeFirstOrNull()
+            ?: HubResult.Ok(Route("started", "input", Target.Room("a"), sonora.multiroom.mobile.domain.RouteStatus.Starting, false, false, true))
+    }
+
+    override suspend fun startSource(inputId: String, target: Target): HubResult<Route> {
+        calls += Call("startSource", listOf(inputId, target), time())
+        if (startDelayMs > 0) delay(startDelayMs)
+        return startResult()
+    }
+
+    override suspend fun playLink(uri: String, target: Target): HubResult<Route> {
+        calls += Call("playLink", listOf(uri, target), time())
+        if (startDelayMs > 0) delay(startDelayMs)
+        return startResult()
+    }
 }
 
 /** Hands out one [FakeRepository] per address, remembering them. */

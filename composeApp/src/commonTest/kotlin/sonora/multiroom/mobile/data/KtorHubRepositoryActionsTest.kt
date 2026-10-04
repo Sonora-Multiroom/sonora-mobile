@@ -1,6 +1,7 @@
 package sonora.multiroom.mobile.data
 
 import sonora.multiroom.mobile.domain.HubAddress
+import sonora.multiroom.mobile.domain.JoinMode
 import sonora.multiroom.mobile.domain.Route
 import sonora.multiroom.mobile.domain.RouteStatus
 import sonora.multiroom.mobile.domain.Target
@@ -142,7 +143,7 @@ class KtorHubRepositoryActionsTest {
         val (repo, log) = repository(body = movedRoute)
         val result = repo.transferRoute("r1", Target.Room("kitchen"))
         assertEquals(
-            HubResult.Ok(Route("r2", "radio", Target.Room("kitchen"), RouteStatus.Active, false, false, true)),
+            HubResult.Ok(Route("r2", "radio", Target.Room("kitchen"), RouteStatus.Active, false, false, true, JoinMode.Unknown)),
             result,
         )
         val r = log.single()
@@ -187,6 +188,181 @@ class KtorHubRepositoryActionsTest {
     fun transferToAnUnknownTargetThrowsAndSendsNothing() = runTest {
         val (repo, log) = repository(body = movedRoute)
         assertFailsWith<IllegalArgumentException> { repo.transferRoute("r1", Target.Unknown("x")) }
+        assertTrue(log.isEmpty())
+    }
+
+    // ---- Admission refusals (003, research R6) ----------------------------------------------
+
+    @Test
+    fun admissionRefusalsKeepReasonAndOutputIdOn409And422() = runTest {
+        val body = """{"type":"urn:multiroom:error:conflict","status":409,"reason":"ROUTE_LIMIT_REACHED","outputId":"kitchen"}"""
+        for (status in listOf(HttpStatusCode.Conflict, HttpStatusCode.UnprocessableEntity)) {
+            val (repo, _) = repository(status = status, body = body, headers = problem)
+            assertEquals(
+                HubResult.Err(HubError.Rejected(status.value, "urn:multiroom:error:conflict", "ROUTE_LIMIT_REACHED", "kitchen")),
+                repo.transferRoute("r1", Target.Room("kitchen")),
+            )
+        }
+    }
+
+    @Test
+    fun problemWithoutReasonHasNullReasonAndOutputId() = runTest {
+        val (repo, _) = repository(status = HttpStatusCode.NotFound, body = Fixtures.PROBLEM_NOT_FOUND, headers = problem)
+        assertEquals(
+            HubResult.Err(HubError.Rejected(404, "urn:multiroom:error:not-found", null, null)),
+            repo.transferRoute("r1", Target.Room("kitchen")),
+        )
+    }
+
+    @Test
+    fun nonJsonErrorBodyHasNoReasonEither() = runTest {
+        val (repo, _) = repository(status = HttpStatusCode.Conflict, body = "<html>", headers = headersOf(HttpHeaders.ContentType, "text/html"))
+        assertEquals(HubResult.Err(HubError.Rejected(409, null, null, null)), repo.transferRoute("r1", Target.Room("kitchen")))
+    }
+
+    // ---- Start a configured source (003, contract tests 1, 3, 4, 5, 6) -----------------------
+
+    private val startedRoute = """{"routeId":"r9","inputId":"jazz","targetId":"bedroom","targetType":"SINGLE_OUTPUT",
+        "status":"STARTING","transferable":true,"pauseable":false,"paused":false,"joinMode":"REPLACE"}"""
+
+    private val r9 = Route("r9", "jazz", Target.Room("bedroom"), RouteStatus.Starting, false, false, true, JoinMode.Replace)
+
+    @Test
+    fun startSourceOnARoomSendsExactlyTheDocumentedRequest() = runTest {
+        for (status in listOf(HttpStatusCode.Created, HttpStatusCode.OK)) {
+            val (repo, log) = repository(status = status, body = startedRoute)
+            assertEquals(HubResult.Ok(r9), repo.startSource("jazz", Target.Room("bedroom")))
+            val r = log.single()
+            assertEquals(HttpMethod.Post, r.method)
+            assertEquals("/api/v2/routes", r.path)
+            assertEquals("""{"inputId":"jazz","targetId":"bedroom","targetType":"SINGLE_OUTPUT"}""", r.body)
+        }
+    }
+
+    @Test
+    fun startSourceOnAGroupSendsOutputGroup() = runTest {
+        val (repo, log) = repository(status = HttpStatusCode.Created, body = startedRoute.replace("bedroom", "down").replace("SINGLE_OUTPUT", "OUTPUT_GROUP"))
+        val result = repo.startSource("jazz", Target.Group("down"))
+        assertEquals(Target.Group("down"), (result as HubResult.Ok).value.target)
+        assertEquals("""{"inputId":"jazz","targetId":"down","targetType":"OUTPUT_GROUP"}""", log.single().body)
+    }
+
+    @Test
+    fun startSourceProblemDetailsBecomeRejectedWithReasonAndOutputId() = runTest {
+        val refusal = """{"type":"urn:multiroom:error:conflict","status":409,"reason":"INPUT_ALREADY_ON_OUTPUT","outputId":"bedroom"}"""
+        for (status in listOf(HttpStatusCode.BadRequest, HttpStatusCode.NotFound, HttpStatusCode.UnprocessableEntity)) {
+            val (repo, _) = repository(status = status, body = Fixtures.PROBLEM_NOT_FOUND, headers = problem)
+            assertEquals(
+                HubResult.Err(HubError.Rejected(status.value, "urn:multiroom:error:not-found")),
+                repo.startSource("jazz", Target.Room("bedroom")),
+            )
+        }
+        val (repo, _) = repository(status = HttpStatusCode.UnprocessableEntity, body = refusal, headers = problem)
+        assertEquals(
+            HubResult.Err(HubError.Rejected(422, "urn:multiroom:error:conflict", "INPUT_ALREADY_ON_OUTPUT", "bedroom")),
+            repo.startSource("jazz", Target.Room("bedroom")),
+        )
+    }
+
+    @Test
+    fun startSourceWithAnIoFailureIsUnreachable() = runTest {
+        val engine = MockEngine { throw kotlinx.io.IOException("down") }
+        val repo = KtorHubRepository(HubAddress("http://hub:8080"), createHubHttpClient(engine))
+        assertEquals(HubResult.Err(HubError.Unreachable), repo.startSource("jazz", Target.Room("bedroom")))
+    }
+
+    @Test
+    fun startSourceAnsweringAfterTheShortTimeoutIsUnreachable() = runTest {
+        val engine = MockEngine {
+            kotlinx.coroutines.delay(4_000)
+            respond(startedRoute, HttpStatusCode.Created, json)
+        }
+        val repo = KtorHubRepository(HubAddress("http://hub:8080"), createHubHttpClient(engine))
+        assertEquals(HubResult.Err(HubError.Unreachable), repo.startSource("jazz", Target.Room("bedroom")))
+    }
+
+    @Test
+    fun startSourceWithAGarbageBodyIsUnexpected() = runTest {
+        val (repo, _) = repository(status = HttpStatusCode.Created, body = "not json at all")
+        assertEquals(HubResult.Err(HubError.Unexpected), repo.startSource("jazz", Target.Room("bedroom")))
+    }
+
+    @Test
+    fun startSourceOnAnUnknownTargetThrowsAndSendsNothing() = runTest {
+        val (repo, log) = repository(body = startedRoute)
+        assertFailsWith<IllegalArgumentException> { repo.startSource("jazz", Target.Unknown("x")) }
+        assertTrue(log.isEmpty())
+    }
+
+    // ---- Play a link (003, contract tests 2, 3, 4, 5) ------------------------------------------
+
+    private val playedLink = """{"inputId":"link-1","message":"ok","route":$startedRoute}"""
+
+    @Test
+    fun playLinkSendsOnlyUriTargetIdAndTargetType() = runTest {
+        val (repo, log) = repository(body = playedLink)
+        assertEquals(HubResult.Ok(r9), repo.playLink("https://soundcloud.com/a/b", Target.Room("bedroom")))
+        val r = log.single()
+        assertEquals(HttpMethod.Post, r.method)
+        assertEquals("/api/v2/play", r.path)
+        assertEquals("""{"uri":"https://soundcloud.com/a/b","targetId":"bedroom","targetType":"SINGLE_OUTPUT"}""", r.body)
+    }
+
+    @Test
+    fun playLinkOnAGroupSendsOutputGroup() = runTest {
+        val (repo, log) = repository(body = playedLink)
+        repo.playLink("https://x.y", Target.Group("down"))
+        assertEquals("""{"uri":"https://x.y","targetId":"down","targetType":"OUTPUT_GROUP"}""", log.single().body)
+    }
+
+    @Test
+    fun playLinkWithoutARouteIsUnexpected() = runTest {
+        val (repo, _) = repository(body = """{"inputId":"link-1","message":"ok"}""")
+        assertEquals(HubResult.Err(HubError.Unexpected), repo.playLink("https://x.y", Target.Room("bedroom")))
+    }
+
+    @Test
+    fun playLinkProblemDetailsBecomeRejected() = runTest {
+        for (status in listOf(400, 404, 422, 502, 503)) {
+            val (repo, _) = repository(status = HttpStatusCode.fromValue(status), body = Fixtures.PROBLEM_NOT_FOUND, headers = problem)
+            assertEquals(
+                HubResult.Err(HubError.Rejected(status, "urn:multiroom:error:not-found")),
+                repo.playLink("https://x.y", Target.Room("bedroom")),
+                status.toString(),
+            )
+        }
+        val refusal = """{"type":"urn:multiroom:error:conflict","reason":"ROUTE_LIMIT_REACHED","outputId":"kitchen"}"""
+        val (repo, _) = repository(status = HttpStatusCode.Conflict, body = refusal, headers = problem)
+        assertEquals(
+            HubResult.Err(HubError.Rejected(409, "urn:multiroom:error:conflict", "ROUTE_LIMIT_REACHED", "kitchen")),
+            repo.playLink("https://x.y", Target.Room("bedroom")),
+        )
+    }
+
+    @Test
+    fun playLinkWaitsLongerThanTheShortTimeout() = runTest {
+        val engine = MockEngine {
+            kotlinx.coroutines.delay(10_000)
+            respond(playedLink, HttpStatusCode.OK, json)
+        }
+        val repo = KtorHubRepository(HubAddress("http://hub:8080"), createHubHttpClient(engine))
+        assertEquals(HubResult.Ok(r9), repo.playLink("https://x.y", Target.Room("bedroom")))
+    }
+
+    @Test
+    fun playLinkGivesUpAfterThirtySeconds() = runTest {
+        val engine = MockEngine {
+            kotlinx.coroutines.delay(31_000)
+            respond(playedLink, HttpStatusCode.OK, json)
+        }
+        val repo = KtorHubRepository(HubAddress("http://hub:8080"), createHubHttpClient(engine))
+        assertEquals(HubResult.Err(HubError.Unreachable), repo.playLink("https://x.y", Target.Room("bedroom")))
+    }
+
+    @Test
+    fun playLinkOnAnUnknownTargetThrowsAndSendsNothing() = runTest {
+        val (repo, log) = repository(body = playedLink)
+        assertFailsWith<IllegalArgumentException> { repo.playLink("https://x.y", Target.Unknown("x")) }
         assertTrue(log.isEmpty())
     }
 }

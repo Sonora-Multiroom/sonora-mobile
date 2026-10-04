@@ -148,4 +148,24 @@ class ContrastTest {
         // The selected row's #6B4C1F outline (2.24:1) is a redundant cue drawn as in the design:
         // the selection is also carried by the accent radio dot above and by the row's semantics.
     }
+
+    @Test
+    fun startPlaybackPairs() {
+        // Source rows are transparent over the background when not selected; tiles are surface.
+        for ((bgName, bg) in listOf("background" to c.background, "surface" to c.surface, "selected" to c.selectedBg)) {
+            assertText("name on $bgName", c.text, bg)
+            assertText("kind or status on $bgName", c.textMuted, bg)
+            assertGraphic("radio on $bgName", c.textMuted, bg)
+        }
+        assertGraphic("selected radio on selected", c.accent, c.selectedBg)
+        assertText("link text on its field", c.text, c.surface)
+        assertText("link placeholder on its field", c.textMuted, c.surface)
+        assertGraphic("link icon on its field", c.textMuted, c.surface)
+        assertText("link message on background", c.warningText, c.background)
+        assertGraphic("Close icon on background", c.textSoft, c.background)
+        assertText("warning line on background", c.warningText, c.background)
+        assertText("muted lines on background", c.textMuted, c.background)
+        assertText("Play label on accent", c.onAccent, c.accent)
+        // Dimmed unselectable tiles are exempt (Constitution VI).
+    }
 }

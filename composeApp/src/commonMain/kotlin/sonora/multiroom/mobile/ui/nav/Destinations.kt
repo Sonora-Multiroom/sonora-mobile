@@ -10,8 +10,16 @@ sealed interface Destination {
     data object Sources : Destination
     data object Settings : Destination
 
-    /** Placeholder in this feature; [routeId] is the card's route. */
-    data class NowPlaying(val routeId: String) : Destination
+    /**
+     * [routeId] is the card's route. Start Playback sets [startedAfterSeq] (the session's
+     * `startedSeq` when the playback began) and [targetName], so Now Playing does not announce "ended"
+     * before a snapshot that can contain the new playback. Neither is saved (research R10).
+     */
+    data class NowPlaying(
+        val routeId: String,
+        val startedAfterSeq: Long? = null,
+        val targetName: String? = null,
+    ) : Destination
 
     /** Placeholder in this feature; [targetId] is the room to play in, if any. */
     data class StartPlayback(val targetId: String?) : Destination
@@ -37,6 +45,11 @@ class AppBackStack(initial: List<Destination> = listOf(Destination.Rooms)) {
 
     fun push(destination: Destination) {
         stack.add(destination)
+    }
+
+    /** Swaps the top destination, e.g. Start Playback for the Now Playing it started. */
+    fun replaceTop(destination: Destination) {
+        stack[stack.lastIndex] = destination
     }
 
     /** Pops one destination; false when the root is already showing (the app should exit). */

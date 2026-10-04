@@ -586,4 +586,56 @@ class NowPlayingViewModelTest {
         assertEquals(emptyList(), s.calls("transferRoute"))
         s.vm.onHidden()
     }
+
+    // ---- 003: opened for a playback the snapshot may not know yet ---------------------------------
+
+    /** Session with one refresh done and a second, slow one in flight; the VM is fenced at that moment. */
+    private fun TestScope.fenced(): Setup {
+        val factory = FakeFactory { currentTime }
+        val session = HubSession(InMemoryHubAddressStore(address), factory, backgroundScope, now = { currentTime })
+        val messages = AppMessages()
+        val posted = mutableListOf<String>()
+        backgroundScope.launch { messages.messages.collect { posted += it } }
+        runCurrent()
+        factory.last.snapshotResult = { HubResult.Ok(snapshot()) }
+        session.acquire(); runCurrent()
+        factory.last.snapshotDelayMs = 500
+        session.requestRefresh(); runCurrent()
+        val handle = SavedStateHandle()
+        val vm = NowPlayingViewModel("r9", handle, session, messages, startedAfterSeq = session.startedSeq, targetName = "Bedroom")
+        runCurrent()
+        return Setup(vm, session, factory, messages, posted, handle)
+    }
+
+    @Test
+    fun aFencedViewModelIgnoresTheRefreshInFlightWhenItWasCreated() = runViewModelTest {
+        val s = fenced()
+        assertNull(s.ui.exit)
+        advanceTimeBy(600); runCurrent()
+        assertNull(s.ui.exit)
+        assertEquals(emptyList(), s.posted)
+        s.vm.onHidden()
+    }
+
+    @Test
+    fun aRefreshStartedAfterTheFenceThatHasTheRouteShowsIt() = runViewModelTest {
+        val s = fenced()
+        advanceTimeBy(600); runCurrent()
+        s.repo.snapshotDelayMs = 0
+        s.refresh(snapshot(extra = listOf(route("r9", "radio", Target.Room("bedroom"))))); runCurrent()
+        assertNull(s.ui.exit)
+        assertEquals("Bedroom", s.content().target.name)
+        s.vm.onHidden()
+    }
+
+    @Test
+    fun aRefreshStartedAfterTheFenceThatStillLacksTheRouteEndsItWithTheSeededName() = runViewModelTest {
+        val s = fenced()
+        advanceTimeBy(600); runCurrent()
+        s.repo.snapshotDelayMs = 0
+        s.refresh(snapshot()); runCurrent()
+        assertEquals(Exit.Ended("Bedroom"), s.ui.exit)
+        assertEquals(listOf("Playback on Bedroom ended"), s.posted)
+        s.vm.onHidden()
+    }
 }

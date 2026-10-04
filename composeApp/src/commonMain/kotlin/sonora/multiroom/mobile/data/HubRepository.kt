@@ -33,6 +33,21 @@ interface HubRepository {
      * gone after success.
      */
     suspend fun transferRoute(routeId: String, target: Target): HubResult<Route>
+
+    /**
+     * Starts a configured source on a room or group. No join mode is sent, so the hub applies the
+     * source's default, else replace. Returns the hub's route, which may be an existing one when
+     * the source already plays on exactly that target. [target] is [Target.Room] or [Target.Group]
+     * (`Target.Unknown` throws [IllegalArgumentException] and is never sent).
+     */
+    suspend fun startSource(inputId: String, target: Target): HubResult<Route>
+
+    /**
+     * Plays a link (an http/https address, already normalised) on a room or group; the hub adds it
+     * as a runtime source. No name, volume or join mode is sent. Allows 30 s (the hub resolves the
+     * link first), unlike every other call.
+     */
+    suspend fun playLink(uri: String, target: Target): HubResult<Route>
 }
 
 sealed interface HubResult<out T> {
@@ -44,8 +59,17 @@ sealed interface HubError {
     /** Connect failure, timeout or other IO problem. */
     data object Unreachable : HubError
 
-    /** The hub answered with an error status; [problemType] is the RFC 7807 `type` if present. */
-    data class Rejected(val status: Int, val problemType: String?) : HubError
+    /**
+     * The hub answered with an error status; [problemType] is the RFC 7807 `type` if present.
+     * [reason] (e.g. `ROUTE_LIMIT_REACHED`) and [outputId] name an admission refusal (API 0.1.21).
+     * They are never shown as text.
+     */
+    data class Rejected(
+        val status: Int,
+        val problemType: String?,
+        val reason: String? = null,
+        val outputId: String? = null,
+    ) : HubError
 
     /** Undecodable body or anything else unexpected. */
     data object Unexpected : HubError

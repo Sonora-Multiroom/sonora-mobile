@@ -22,6 +22,12 @@ enum class SourceOrigin { Configured, Runtime, Unknown }
 
 enum class SourceKind { Stream, LineIn, File, Link }
 
+/**
+ * How a playback joined its target (API 0.1.21). [Announcement] is the hub's `DUCK_OTHERS`:
+ * it lowers the others instead of replacing them. [Unknown] is a value this app does not know.
+ */
+enum class JoinMode { Replace, Mix, Announcement, Unknown }
+
 data class Source(
     val id: String,
     val name: String,
@@ -30,6 +36,8 @@ data class Source(
     val pauseable: Boolean,
     val enabled: Boolean,
     val kind: SourceKind,
+    /** The mode the hub applies to a start that names none; null when the source declares none. */
+    val defaultJoinMode: JoinMode? = null,
 )
 
 sealed interface Target {
@@ -50,6 +58,7 @@ data class Route(
     val paused: Boolean,
     val pauseable: Boolean,
     val transferable: Boolean,
+    val joinMode: JoinMode = JoinMode.Replace,
 )
 
 /** One successful refresh of everything the Rooms screen needs. */

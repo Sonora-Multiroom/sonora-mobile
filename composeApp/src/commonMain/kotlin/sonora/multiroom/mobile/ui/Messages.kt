@@ -1,6 +1,7 @@
 package sonora.multiroom.mobile.ui
 
 import sonora.multiroom.mobile.data.HubError
+import sonora.multiroom.mobile.domain.StartNames
 
 /** What the user was doing when a request failed. */
 sealed interface UserAction {
@@ -63,4 +64,64 @@ private fun verbMessage(verb: String, targetName: String, unreachable: Boolean, 
     unreachable -> "Couldn't $verb $targetName. Can't reach the hub."
     gone -> "That playback has already ended."
     else -> "Couldn't $verb $targetName."
+}
+
+/** Why starting playback failed (research R6); the copy is in [startFailureMessage]. */
+sealed interface StartFailure {
+    data class RoomFull(val room: String) : StartFailure
+    data class AlreadyThere(val source: String, val room: String) : StartFailure
+    data object LinkUnusable : StartFailure
+    data object LinkUnreachable : StartFailure
+    data object ServiceDown : StartFailure
+    data class NoLongerOnHub(val name: String) : StartFailure
+    data object HubUnreachable : StartFailure
+    data object Other : StartFailure
+}
+
+enum class StartKind { Source, Link }
+
+/**
+ * Maps a hub answer to a [StartFailure]. A `reason` decides whatever the status (the contract does
+ * not document the status of admission refusals). [roomName] looks an `outputId` up in the latest
+ * snapshot; a missing or unknown one falls back to the chosen target. A 404 cannot tell which of
+ * source and target vanished, so the caller refines the name from a fresh snapshot (research R7).
+ * `Unreachable` is only the answer when recovery (research R8) found nothing.
+ */
+fun startFailure(
+    kind: StartKind,
+    error: HubError,
+    names: StartNames,
+    roomName: (outputId: String) -> String?,
+): StartFailure = when (error) {
+    HubError.Unreachable -> StartFailure.HubUnreachable
+    HubError.Unexpected -> StartFailure.Other
+    is HubError.Rejected -> {
+        val room = error.outputId?.let(roomName) ?: names.target
+        val source = names.source
+        when {
+            error.reason == "ROUTE_LIMIT_REACHED" -> StartFailure.RoomFull(room)
+            error.reason == "INPUT_ALREADY_ON_OUTPUT" ->
+                if (kind == StartKind.Source && source != null) StartFailure.AlreadyThere(source, room) else StartFailure.Other
+            error.status == 404 ->
+                StartFailure.NoLongerOnHub(if (kind == StartKind.Source) source ?: names.target else names.target)
+            kind == StartKind.Link -> when (error.status) {
+                400, 422 -> StartFailure.LinkUnusable
+                502 -> StartFailure.LinkUnreachable
+                503 -> StartFailure.ServiceDown
+                else -> StartFailure.Other
+            }
+            else -> StartFailure.Other
+        }
+    }
+}
+
+fun startFailureMessage(failure: StartFailure): String = when (failure) {
+    is StartFailure.RoomFull -> "${failure.room} can't play more at once"
+    is StartFailure.AlreadyThere -> "${failure.source} is already playing in ${failure.room}"
+    StartFailure.LinkUnusable -> "The hub couldn't play this link"
+    StartFailure.LinkUnreachable -> "Couldn't reach that link"
+    StartFailure.ServiceDown -> "That service isn't available right now. Try again later."
+    is StartFailure.NoLongerOnHub -> "${failure.name} is no longer on the hub"
+    StartFailure.HubUnreachable -> "Couldn't reach the hub"
+    StartFailure.Other -> "Couldn't start playback"
 }

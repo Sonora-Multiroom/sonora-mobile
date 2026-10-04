@@ -11,6 +11,7 @@ import sonora.multiroom.mobile.domain.Target
 import sonora.multiroom.mobile.ui.rooms.FakeFactory
 import sonora.multiroom.mobile.ui.rooms.oneRoomSnapshot
 import sonora.multiroom.mobile.ui.rooms.unreachable
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.advanceTimeBy
 import kotlinx.coroutines.test.advanceUntilIdle
@@ -45,6 +46,8 @@ private class CountingFactory : HubRepositoryFactory {
             override suspend fun setRoomMute(roomId: String, muted: Boolean) = fail()
             override suspend fun setGroupMute(groupId: String, muted: Boolean) = fail()
             override suspend fun transferRoute(routeId: String, target: Target) = fail()
+            override suspend fun startSource(inputId: String, target: Target) = fail()
+            override suspend fun playLink(uri: String, target: Target) = fail()
         }
     }
 }
@@ -401,5 +404,72 @@ class HubSessionTest {
         advanceTimeBy(2500); runCurrent()
         assertEquals(seq, s.connected().refreshSeq)
         s.session.release()
+    }
+
+    // ---- awaitFreshSnapshot (003, research R7/R8) ------------------------------------------------
+
+    private fun muted(on: Boolean) = oneRoomSnapshot.copy(masterMuted = on)
+
+    @Test
+    fun awaitFreshSnapshotRefreshesAndReturnsTheNewResult() = runTest {
+        val s = setup()
+        s.repo.snapshotResult = { HubResult.Ok(muted(false)) }
+        s.session.acquire(); runCurrent()
+        val before = s.repo.snapshotCalls
+        s.repo.snapshotResult = { HubResult.Ok(muted(true)) }
+        var result: HubSnapshot? = null
+        backgroundScope.launch { result = s.session.awaitFreshSnapshot() }
+        runCurrent()
+        assertEquals(before + 1, s.repo.snapshotCalls)
+        assertEquals(true, result?.masterMuted)
+        s.session.release()
+    }
+
+    @Test
+    fun awaitFreshSnapshotIgnoresARefreshAlreadyInFlight() = runTest {
+        val s = setup()
+        s.repo.snapshotResult = { HubResult.Ok(muted(false)) }
+        s.session.acquire(); runCurrent()
+        // A slow refresh is running; the answer of the first one that STARTS after the call is wanted.
+        s.repo.snapshotDelayMs = 500
+        s.repo.snapshotResult = { HubResult.Ok(muted(s.repo.snapshotCalls >= 3)) }
+        s.session.requestRefresh(); runCurrent()
+        assertEquals(2, s.repo.snapshotCalls)
+        var result: HubSnapshot? = null
+        backgroundScope.launch { result = s.session.awaitFreshSnapshot() }
+        runCurrent()
+        advanceTimeBy(501); runCurrent()
+        assertNull(result)
+        advanceTimeBy(501); runCurrent()
+        assertEquals(3, s.repo.snapshotCalls)
+        assertEquals(true, result?.masterMuted)
+        s.session.release()
+    }
+
+    @Test
+    fun awaitFreshSnapshotIsNullAfterTheTimeoutWhenRefreshesFail() = runTest {
+        val s = setup()
+        s.repo.snapshotResult = { HubResult.Ok(muted(false)) }
+        s.session.acquire(); runCurrent()
+        s.repo.snapshotResult = { unreachable }
+        var result: HubSnapshot? = muted(true)
+        var finishedAt = -1L
+        backgroundScope.launch { result = s.session.awaitFreshSnapshot(5000); finishedAt = currentTime }
+        advanceTimeBy(4_999); runCurrent()
+        assertEquals(-1L, finishedAt)
+        advanceTimeBy(2); runCurrent()
+        assertNull(result)
+        assertEquals(5000L, finishedAt)
+        s.session.release()
+    }
+
+    @Test
+    fun awaitFreshSnapshotIsNullWhenNoScreenHoldsTheSession() = runTest {
+        val s = setup()
+        var result: HubSnapshot? = muted(true)
+        backgroundScope.launch { result = s.session.awaitFreshSnapshot(5000) }
+        advanceTimeBy(5_001); runCurrent()
+        assertNull(result)
+        assertEquals(0, s.repo.snapshotCalls)
     }
 }

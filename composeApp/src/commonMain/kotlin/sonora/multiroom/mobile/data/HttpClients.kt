@@ -26,6 +26,9 @@ internal val HubJson = Json {
 
 internal const val HUB_TIMEOUT_MILLIS = 3000L
 
+/** `POST /api/v2/play`: the hub fetches and resolves the link before it answers (FR-014). */
+internal const val LINK_TIMEOUT_MILLIS = 30_000L
+
 /** No retries (the poll loop is the retry) and no auth; status codes are mapped explicitly. */
 fun createHubHttpClient(engine: HttpClientEngine): HttpClient = HttpClient(engine) {
     expectSuccess = false
@@ -66,16 +69,16 @@ private suspend fun <T> guarded(block: suspend () -> HubResult<T>): HubResult<T>
     }
 
 /**
- * The problem's `type` is kept when the body is RFC 7807; its `title`/`detail` never leave this
- * function, so hub wording cannot reach the UI (Constitution V).
+ * The problem's `type`, `reason` and `outputId` are kept when the body is RFC 7807; its
+ * `title`/`detail` never leave this function, so hub wording cannot reach the UI (Constitution V).
  */
 private suspend fun HttpResponse<*>.rejection(): HubError.Rejected {
-    val type = try {
-        typedBody<ErrorResponse>(io.ktor.util.reflect.typeInfo<ErrorResponse>()).type
+    val problem = try {
+        typedBody<ErrorResponse>(io.ktor.util.reflect.typeInfo<ErrorResponse>())
     } catch (e: CancellationException) {
         throw e
     } catch (e: Exception) {
         null
     }
-    return HubError.Rejected(status, type)
+    return HubError.Rejected(status, problem?.type, problem?.reason, problem?.outputId)
 }

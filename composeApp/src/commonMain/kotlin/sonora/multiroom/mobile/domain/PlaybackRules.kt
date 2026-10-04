@@ -100,3 +100,23 @@ internal fun occupancy(snapshot: HubSnapshot): Map<String, Route> {
     }
     return result
 }
+
+/**
+ * Room id -> every live route covering it, in hub order (API 0.1.21 lets a room carry several). A
+ * group route is listed under every known member; a route with an unknown target covers nothing.
+ * Only Start Playback uses this; Rooms and Now Playing keep [occupancy].
+ */
+internal fun routesByRoom(snapshot: HubSnapshot): Map<String, List<Route>> {
+    val rooms = snapshot.rooms.associateBy { it.id }
+    val groups = snapshot.groups.associateBy { it.id }
+    val result = linkedMapOf<String, MutableList<Route>>()
+    for (route in liveRoutes(snapshot)) {
+        for (id in describeTarget(route.target, rooms, groups, masterMuted = false).occupies) {
+            result.getOrPut(id) { mutableListOf() } += route
+        }
+    }
+    return result
+}
+
+/** A playback the hub runs lowering the others instead of replacing them. `Unknown` is not one. */
+internal val Route.isAnnouncement: Boolean get() = joinMode == JoinMode.Announcement

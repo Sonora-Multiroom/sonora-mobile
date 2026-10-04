@@ -12,6 +12,8 @@ import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.mapNotNull
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
@@ -100,6 +102,21 @@ class HubSession(
 
     fun requestRefresh() {
         refreshNow.trySend(Unit)
+    }
+
+    /**
+     * Asks for a refresh and returns the snapshot of the first one that *started after this call*
+     * (the fence rule above), or null after [timeoutMillis] when none succeeds, e.g. the hub does
+     * not answer or no visible screen holds the session.
+     */
+    suspend fun awaitFreshSnapshot(timeoutMillis: Long = 5000): HubSnapshot? {
+        val fence = startedSeq
+        requestRefresh()
+        return withTimeoutOrNull(timeoutMillis) {
+            state.mapNotNull { s ->
+                (s as? SessionState.Connected)?.takeIf { it.refreshSeq > fence }?.snapshot
+            }.first()
+        }
     }
 
     private fun restartLoop() {

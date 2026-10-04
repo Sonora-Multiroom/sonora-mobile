@@ -38,6 +38,7 @@ androidApp/                            # MainActivity, AndroidManifest, network_
 iosApp/                                # Xcode project stub (not built)
 design/screens/*.dc.html               # design source, see "Design"
 docs/licenses/                         # OFL licences for the bundled fonts
+docs/backlog/                          # proposed features not yet specified, see "Backlog"
 ```
 
 Use the current stable versions of Kotlin, Compose Multiplatform, AGP and Ktor; look them up, do
@@ -55,11 +56,66 @@ There is no emulator and no hub in the cloud. Verification here = the build pass
 pass. The user installs the APK and tries it against the real hub locally; record the results in
 `specs/NNN-*/verification.md` and link it from the pull request.
 
+## On-device verification (local sessions)
+
+A local session (Windows, Git Bash) can reach the hub and the user's phone, so it can run most of
+the `quickstart.md` §2 checks itself instead of handing them all to the user.
+
+**Before running Gradle locally**
+- Set `ANDROID_HOME="$LOCALAPPDATA/Android/Sdk"`; Gradle does not find the SDK otherwise.
+- Read Gradle's own exit code (`./gradlew … > log; echo $?`). A pipe through `tail` or `grep -v`
+  reports the exit code of the last command, which has hidden a failed build before.
+
+**The phone** (wireless debugging)
+- `adb` is `$LOCALAPPDATA/Android/Sdk/platform-tools/adb.exe`, not on `PATH`. Other devices may be
+  paired, so pass `-s <serial>` from `adb devices -l` (match on `model:`, the wireless serial can
+  change after re-pairing); never act on a device the user did not name, and ask when unsure.
+- Export `MSYS_NO_PATHCONV=1`, or Git Bash rewrites `/sdcard/…` into a Windows path.
+- Check the lock before the first step (`dumpsys window | grep isKeyguardShowing`). A locked phone
+  cannot be unlocked over adb: ask the user to unlock it with the question tool (AskUserQuestion in
+  Claude Code), so the run waits for their answer, and continue once they confirm.
+- Keep it awake for the run with a long screen timeout: save `settings get system
+  screen_off_timeout`, set `settings put system screen_off_timeout 1800000`, and restore the saved
+  value at the end. `svc power stayon true` does not help on battery: it only applies while the
+  phone is charging. Between steps the adb taps reset the timeout anyway; long pauses let it lock.
+- Read the screen with `uiautomator dump` (text, content descriptions, bounds) and
+  `exec-out screencap -p`. A dump takes ~2.5 s, so never time anything with it; for timings
+  ("Now Playing within ~3 s") capture `screencap` in a loop with timestamps and read the frames.
+- Checks that cut the phone's Wi-Fi also cut wireless adb: the user runs them, and adb may need
+  re-pairing afterwards.
+- Find out which build is installed (`dumpsys package sonora.multiroom.mobile | grep versionName`;
+  CI builds carry `+<build>`) and map it to a commit with `gh run list`. A local debug APK installs
+  over a CI one (`adb install -r`).
+
+**The hub is the user's real system**: test playback plays on speakers in their home.
+- Before the first start, note every output's volume and set them all to 1. At the end, stop the
+  test routes **first**, then restore the volumes, so nothing plays loud.
+- Starting on a busy room replaces what the user was listening to; say so before starting.
+- Turning an output or input off for a check: turn it back on afterwards.
+- Python on Windows prints `\r\n`; strip `\r` before putting printed IDs into URLs.
+- Use `curl` against `/api/v2` to set up states (a group playing, every room busy) and to confirm
+  what the app shows.
+
+**Known hub behaviour seen during testing (2026-10-04, API 0.1.21)**
+- A failed start (422) still stops the playback it would have replaced.
+- Not every configured stream works: DJ FM did not answer, and Lounge FM sat in STARTING and was
+  then dropped. KissFM, KissFM 2.0 Deep, Kraina FM and Radio NV started reliably. Retry with a
+  known-good source before calling a failure an app bug.
+- Links: `soundcloud.com/forss/flickermood` starts in ~2 s (a 3-minute track, after which the hub
+  removes its runtime input); `https://example.com/` is refused at once;
+  `http://10.255.255.1/stream.mp3` is refused after ~10 s, which is useful for "answer arrives
+  after the screen closed" checks. No link was found that takes the full 30 s timeout.
+
+Record the build (CI build number and commit), the device and each row's evidence in
+`verification.md`; issues found go under "Issues found", hub-side ones as observations.
+
 ## API
 
 - [api/openapi.json](api/openapi.json) was fetched from the production hub on 2026-10-01
-  (API version **0.1.20**). It also contains v1 paths (`/api/*` without `v2`) and TTS extension
+  (API version **0.1.21**). It also contains v1 paths (`/api/*` without `v2`) and TTS extension
   paths (`/api/tts/*`): **use only `/api/v2/**`**.
+- 0.1.21 added join modes (`RouteResponse.joinMode`, `InputResponse.defaultJoinMode`) and admission
+  refusals on errors (`ErrorResponse.reason`, `outputId`). The app never sends a `joinMode`.
 - Generate a Kotlin multiplatform client (Ktor + kotlinx.serialization) from it at build time,
   e.g. OpenAPI Generator `kotlin` with `library=multiplatform`. Do not commit generated code. Wrap
   it behind a small hand-written repository interface so screens never touch generated types.
@@ -83,7 +139,10 @@ pass. The user installs the APK and tries it against the real hub locally; recor
 
 ### Domain rules the UI depends on
 
-- An output plays **at most one route**. A group route occupies every member output. A route's
+- Since 0.1.21 an output may carry **several routes** (mixed sources, announcements). Rooms and Now
+  Playing still show one per room, see
+  [docs/backlog/rooms-with-several-playbacks.md](docs/backlog/rooms-with-several-playbacks.md); only
+  Start Playback reads them all. A group route occupies every member output. A route's
   `targetId` names only what was addressed, so to find "what plays on output X" check both
   single-output routes on X and group routes whose group contains X.
 - `enabled = false` on an output/group/input means "cannot start new playback"; show it as "Off".
@@ -172,6 +231,23 @@ the SessionStart hook [scripts/cloud-speckit-init.sh](scripts/cloud-speckit-init
 `specify init --script sh` (pinned CLI v1.0.12, installed by the environment's setup script,
 whose reference copy is [scripts/cloud-setup.sh](scripts/cloud-setup.sh)). If
 `/speckit-*` skills are missing, run that script by hand and read `/tmp/speckit-init.log`.
+
+## Backlog (`docs/backlog/`)
+
+The default place for proposed features, deferred work and ideas that are not yet a spec.
+
+- **When to use:** when the user describes a future feature or asks to note something "for the
+  backlog" or "for later", write it here as one Markdown file per item, not in `specs/`. When a
+  spec or plan defers work to a follow-up, record that work here and link it from the spec.
+- **Format:** follow the existing files. Start with a header block giving `Status`, `Origin`,
+  `Depends on` and `Effort`, followed by Problem, Proposal and Open questions sections. Link
+  related items to each other. Items have no feature number; `/speckit-specify` assigns one when
+  the item becomes a spec.
+- **Rules:** a backlog item is a proposal, not a requirement. When its feature is specified, link
+  the spec from the item; once the feature ships, delete the item, or update it if part of the work
+  remains. Hub-side changes belong in the `multiroom-ai` backlog, not here.
+- [docs/backlog/INDEX.md](docs/backlog/INDEX.md) lists every item with a priority (P1–P4); keep it
+  in sync when you add, ship or delete one.
 
 ## Scope of the first feature (input for `/speckit-specify`)
 

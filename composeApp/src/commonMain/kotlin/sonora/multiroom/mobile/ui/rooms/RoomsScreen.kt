@@ -230,7 +230,7 @@ internal fun StaleBanner() {
 }
 
 @Composable
-private fun Message(title: String, body: String, actionLabel: String, onAction: () -> Unit) {
+internal fun Message(title: String, body: String, actionLabel: String, onAction: () -> Unit) {
     val colors = SonoraTheme.colors
     val type = SonoraTheme.type
     Column(
@@ -309,19 +309,21 @@ private fun RoomsList(
                     }
                 }
             }
-            item(key = "play-something") {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(56.dp)
-                        .background(colors.accent, SonoraTheme.shapes.pill)
-                        .clickable(role = Role.Button, onClick = actions.onPlaySomething),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.CenterHorizontally),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    Icon(SonoraIcons.Plus, contentDescription = null, tint = colors.onAccent, modifier = Modifier.size(20.dp))
-                    Text("Play something", style = SonoraTheme.type.button16, color = colors.onAccent)
-                }
+        }
+        // Below the sections, not inside Idle: with every room busy it is the only way to start
+        // something (design Main).
+        item(key = "play-something") {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(56.dp)
+                    .background(colors.accent, SonoraTheme.shapes.pill)
+                    .clickable(role = Role.Button, onClick = actions.onPlaySomething),
+                horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.CenterHorizontally),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Icon(SonoraIcons.Plus, contentDescription = null, tint = colors.onAccent, modifier = Modifier.size(20.dp))
+                Text("Play something", style = SonoraTheme.type.button16, color = colors.onAccent)
             }
         }
     }
