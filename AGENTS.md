@@ -52,7 +52,8 @@ not rely on memory. The cloud environment provides JDK 17+ and the Android SDK v
 ```
 
 There is no emulator and no hub in the cloud. Verification here = the build passes and unit tests
-pass. The user installs the APK and tries it against the real hub locally.
+pass. The user installs the APK and tries it against the real hub locally; record the results in
+`specs/NNN-*/verification.md` and link it from the pull request.
 
 ## API
 
@@ -91,6 +92,8 @@ pass. The user installs the APK and tries it against the real hub locally.
   configuration. Only ephemeral ones get a delete action.
 - There is **no "kind" field** on inputs (stream / line-in / file). Infer it from `uri`
   (`http(s)` → stream, `file:` or a path → file, otherwise line-in) and keep that in one function.
+- The hub does not persist routes: after a hub restart nothing plays. To test recovery from an
+  outage with playback intact, cut the phone's network instead of restarting the hub.
 - There is **no track metadata or artwork** and **no playback position**. Never draw a progress
   bar; the only sliders are volume.
 
@@ -154,7 +157,8 @@ Specs are written **locally** (where the hub and the `multiroom-ai` source are r
 Spec Kit: `/speckit-specify` → `/speckit-clarify` → `/speckit-plan` → `/speckit-tasks`, committed on
 a feature branch `NNN-short-name` and pushed. **Cloud sessions implement**: check out that branch,
 run `/speckit-implement`, keep commits on the same branch. If a task turns out to need a decision
-the spec does not cover, stop and ask rather than inventing behaviour.
+the spec does not cover, stop and ask rather than inventing behaviour. Commit messages, pull
+requests and merges follow [CONTRIBUTING.md](CONTRIBUTING.md).
 
 **Bump the app version first.** The first commit when starting to implement feature `NNN` sets, in
 [gradle.properties](gradle.properties), `sonora.versionName=0.N.0-alpha` (N = the feature number
