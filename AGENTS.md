@@ -38,6 +38,7 @@ androidApp/                            # MainActivity, AndroidManifest, network_
 iosApp/                                # Xcode project stub (not built)
 design/screens/*.dc.html               # design source, see "Design"
 docs/licenses/                         # OFL licences for the bundled fonts
+docs/backlog/                          # proposed features not yet specified, see "Backlog"
 ```
 
 Use the current stable versions of Kotlin, Compose Multiplatform, AGP and Ktor; look them up, do
@@ -172,6 +173,23 @@ the SessionStart hook [scripts/cloud-speckit-init.sh](scripts/cloud-speckit-init
 `specify init --script sh` (pinned CLI v1.0.12, installed by the environment's setup script,
 whose reference copy is [scripts/cloud-setup.sh](scripts/cloud-setup.sh)). If
 `/speckit-*` skills are missing, run that script by hand and read `/tmp/speckit-init.log`.
+
+## Backlog (`docs/backlog/`)
+
+The default place for proposed features, deferred work and ideas that are not yet a spec.
+
+- **When to use:** when the user describes a future feature or asks to note something "for the
+  backlog" or "for later", write it here as one Markdown file per item, not in `specs/`. When a
+  spec or plan defers work to a follow-up, record that work here and link it from the spec.
+- **Format:** follow the existing files. Start with a header block giving `Status`, `Origin`,
+  `Depends on` and `Effort`, followed by Problem, Proposal and Open questions sections. Link
+  related items to each other. Items have no feature number; `/speckit-specify` assigns one when
+  the item becomes a spec.
+- **Rules:** a backlog item is a proposal, not a requirement. When its feature is specified, link
+  the spec from the item; once the feature ships, delete the item, or update it if part of the work
+  remains. Hub-side changes belong in the `multiroom-ai` backlog, not here.
+- [docs/backlog/INDEX.md](docs/backlog/INDEX.md) lists every item with a priority (P1–P4); keep it
+  in sync when you add, ship or delete one.
 
 ## Scope of the first feature (input for `/speckit-specify`)
 
