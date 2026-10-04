@@ -2,6 +2,7 @@ package sonora.multiroom.mobile.ui.settings
 
 import sonora.multiroom.mobile.domain.ConfiguredSourceRow
 import sonora.multiroom.mobile.domain.Confirmation
+import sonora.multiroom.mobile.domain.ExtensionsContent
 import sonora.multiroom.mobile.domain.GroupRow
 import sonora.multiroom.mobile.domain.ItemKey
 import sonora.multiroom.mobile.domain.RoomRow
@@ -67,6 +68,8 @@ data class SettingsUiState(
     val body: SettingsBody = SettingsBody.Initial,
     val sheet: SheetState? = null,
     val confirm: ConfirmState? = null,
+    /** The Extensions tab's content; null before the first answer. */
+    val extensions: ExtensionsContent? = null,
     /** One-shot snackbar text. */
     val message: String? = null,
 )

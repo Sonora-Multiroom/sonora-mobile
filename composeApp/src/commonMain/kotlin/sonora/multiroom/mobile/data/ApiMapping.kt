@@ -1,5 +1,9 @@
 package sonora.multiroom.mobile.data
 
+import sonora.multiroom.mobile.domain.Extension
+import sonora.multiroom.mobile.domain.ExtensionConnection
+import sonora.multiroom.mobile.domain.ExtensionInventory
+import sonora.multiroom.mobile.domain.ExtensionStatus
 import sonora.multiroom.mobile.domain.Group
 import sonora.multiroom.mobile.domain.JoinMode
 import sonora.multiroom.mobile.domain.Room
@@ -10,6 +14,8 @@ import sonora.multiroom.mobile.domain.SourceOrigin
 import sonora.multiroom.mobile.domain.Target
 import sonora.multiroom.mobile.domain.inferSourceKind
 import sonora.multiroom.mobile.hub.generated.models.GroupResponse
+import sonora.multiroom.mobile.hub.generated.models.ExtensionInventory as ExtensionInventoryResponse
+import sonora.multiroom.mobile.hub.generated.models.Extension as ExtensionResponse
 import sonora.multiroom.mobile.hub.generated.models.InputResponse
 import sonora.multiroom.mobile.hub.generated.models.OutputResponse
 import sonora.multiroom.mobile.hub.generated.models.RouteResponse
@@ -101,3 +107,35 @@ internal fun RouteResponse.toRoute(): Route? {
         },
     )
 }
+
+/**
+ * Missing or unrecognised values (coerced to null by `HubJson`) become `Unknown`; a blank name is
+ * the id, and an entry with neither is dropped. `rejectionReason`, version and directory are
+ * never mapped: the app shows none of them (FR-019).
+ */
+internal fun ExtensionResponse.toExtension(): Extension? {
+    val key = id.idOrNull()
+    val label = name.idOrNull() ?: key ?: return null
+    return Extension(
+        id = key ?: label,
+        name = label,
+        status = when (status) {
+            ExtensionResponse.Status.ACTIVE -> ExtensionStatus.Active
+            ExtensionResponse.Status.DISABLED -> ExtensionStatus.Disabled
+            ExtensionResponse.Status.REJECTED -> ExtensionStatus.Rejected
+            ExtensionResponse.Status.INERT -> ExtensionStatus.Inactive
+            null -> ExtensionStatus.Unknown
+        },
+        connection = when (connectionState) {
+            ExtensionResponse.ConnectionState.CONNECTED -> ExtensionConnection.Connected
+            ExtensionResponse.ConnectionState.DISCONNECTED -> ExtensionConnection.Disconnected
+            ExtensionResponse.ConnectionState.NOT_APPLICABLE -> ExtensionConnection.NotApplicable
+            null -> ExtensionConnection.Unknown
+        },
+    )
+}
+
+internal fun ExtensionInventoryResponse.toInventory(): ExtensionInventory = ExtensionInventory(
+    loadingEnabled = loadingEnabled ?: true,
+    extensions = extensions.orEmpty().mapNotNull { it.toExtension() },
+)

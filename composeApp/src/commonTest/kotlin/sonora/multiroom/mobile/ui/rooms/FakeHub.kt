@@ -66,6 +66,18 @@ class FakeRepository(private val time: () -> Long) : HubRepository {
     override suspend fun setSourceEnabled(sourceId: String, enabled: Boolean) = action("setSourceEnabled", sourceId, enabled)
     override suspend fun removeSource(sourceId: String) = action("removeSource", sourceId)
 
+    /** What the extensions call answers, after [extensionsDelayMs]. */
+    var extensionsResult: () -> HubResult<sonora.multiroom.mobile.domain.ExtensionInventory> =
+        { HubResult.Ok(sonora.multiroom.mobile.domain.ExtensionInventory(true, emptyList())) }
+    var extensionsDelayMs = 0L
+    val extensionsCalls get() = calls.count { it.name == "extensions" }
+
+    override suspend fun extensions(): HubResult<sonora.multiroom.mobile.domain.ExtensionInventory> {
+        calls += Call("extensions", emptyList(), time())
+        if (extensionsDelayMs > 0) delay(extensionsDelayMs)
+        return extensionsResult()
+    }
+
     /** What the connection test answers, after [countDelayMs]. */
     var countRoomsResult: () -> HubResult<Int> = { HubResult.Ok(5) }
     var countDelayMs = 0L

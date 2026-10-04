@@ -2,6 +2,8 @@ package sonora.multiroom.mobile.ui.settings
 
 import sonora.multiroom.mobile.domain.ConfiguredSourceRow
 import sonora.multiroom.mobile.domain.Confirmation
+import sonora.multiroom.mobile.domain.ExtensionBadge
+import sonora.multiroom.mobile.domain.ExtensionLine
 import sonora.multiroom.mobile.domain.GroupRow
 import sonora.multiroom.mobile.domain.HubAddress
 import sonora.multiroom.mobile.domain.RoomStatus
@@ -118,5 +120,23 @@ class SettingsTextTest {
         assertEquals("Hub found · 1 room", testText(TestState.Found(1)))
         assertEquals("Hub found · 5 rooms", testText(TestState.Found(5)))
         assertEquals("Can't reach the hub at this address", testText(TestState.Failed))
+    }
+
+    @Test
+    fun extensionTexts() {
+        assertEquals(
+            listOf("Active", "Disabled", "Rejected", "Inactive", "Unknown"),
+            ExtensionBadge.entries.map(::extensionBadgeText),
+        )
+        assertEquals(
+            listOf(
+                "Couldn't be loaded", "Turned off in configuration", "Not in use", "Connected", "Disconnected",
+                "No connection needed", "Connection unknown",
+            ),
+            ExtensionLine.entries.map(::extensionLineText),
+        )
+        assertEquals("Extensions are set in the server's configuration. This list is read-only.", EXTENSIONS_NOTE)
+        assertEquals("Extensions are turned off in the hub's configuration.", EXTENSIONS_OFF)
+        assertEquals("No extensions installed on the hub.", EXTENSIONS_EMPTY)
     }
 }

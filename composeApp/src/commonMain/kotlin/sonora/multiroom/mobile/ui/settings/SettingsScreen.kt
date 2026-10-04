@@ -1,5 +1,6 @@
 package sonora.multiroom.mobile.ui.settings
 
+import sonora.multiroom.mobile.domain.ExtensionsContent
 import sonora.multiroom.mobile.domain.ItemKey
 import sonora.multiroom.mobile.domain.ItemKind
 import sonora.multiroom.mobile.domain.appVersionLabel
@@ -178,7 +179,15 @@ fun SettingsContentView(
                             }
                         }
 
-                        SettingsTab.Extensions -> Unit
+                        SettingsTab.Extensions -> {
+                            Intro(EXTENSIONS_NOTE)
+                            when (val content = state.extensions) {
+                                null -> Unit
+                                ExtensionsContent.LoadingOff -> Intro(EXTENSIONS_OFF)
+                                ExtensionsContent.Empty -> Intro(EXTENSIONS_EMPTY)
+                                is ExtensionsContent.Rows -> SettingsCard(content.rows) { ExtensionSettingRow(it) }
+                            }
+                        }
                     }
                 }
             }

@@ -1,5 +1,9 @@
 package sonora.multiroom.mobile.data
 
+import sonora.multiroom.mobile.domain.Extension
+import sonora.multiroom.mobile.domain.ExtensionConnection
+import sonora.multiroom.mobile.domain.ExtensionInventory
+import sonora.multiroom.mobile.domain.ExtensionStatus
 import sonora.multiroom.mobile.domain.HubAddress
 import io.ktor.client.engine.mock.MockEngine
 import io.ktor.client.engine.mock.respond
@@ -162,5 +166,59 @@ class KtorHubRepositorySettingsTest {
         }
         val repo = KtorHubRepository(HubAddress("http://hub:8080"), createHubHttpClient(engine))
         assertEquals(HubResult.Err(HubError.Unreachable), repo.countRooms())
+    }
+
+    // ---- 4: extensions ----------------------------------------------------------------------
+
+    private suspend fun inventoryOf(body: String): ExtensionInventory {
+        val (repo, log) = repository(body = body)
+        val result = repo.extensions()
+        assertEquals("/api/v2/extensions", log.single().path)
+        return (result as HubResult.Ok).value
+    }
+
+    @Test
+    fun theSampleMapsToFiveExtensions() = runTest {
+        val inventory = inventoryOf(Fixtures.EXTENSIONS)
+        assertTrue(inventory.loadingEnabled)
+        assertEquals(
+            listOf(
+                Extension("tts", "Text to speech", ExtensionStatus.Active, ExtensionConnection.NotApplicable),
+                Extension("dlna", "DLNA renderer", ExtensionStatus.Active, ExtensionConnection.Connected),
+                Extension("mqtt", "MQTT bridge", ExtensionStatus.Active, ExtensionConnection.Disconnected),
+                Extension("legacy", "Legacy plugin", ExtensionStatus.Rejected, ExtensionConnection.NotApplicable),
+                Extension("spare", "Spare", ExtensionStatus.Inactive, ExtensionConnection.NotApplicable),
+            ),
+            inventory.extensions,
+        )
+    }
+
+    @Test
+    fun anUnknownStatusOrConnectionIsUnknownAndNeverFailsTheCall() = runTest {
+        val e = inventoryOf("""{"extensions":[{"id":"x","name":"X","status":"SOMETHING_NEW","connectionState":"SOMETHING_ELSE"}]}""").extensions.single()
+        assertEquals(ExtensionStatus.Unknown, e.status)
+        assertEquals(ExtensionConnection.Unknown, e.connection)
+        val missing = inventoryOf("""{"extensions":[{"id":"x","name":"X"}]}""").extensions.single()
+        assertEquals(ExtensionStatus.Unknown, missing.status)
+    }
+
+    @Test
+    fun aMissingNameIsTheIdAndAnEntryWithNeitherIsDropped() = runTest {
+        val inventory = inventoryOf("""{"extensions":[{"id":"x","status":"ACTIVE"},{"status":"ACTIVE"},{"id":" ","name":" "}]}""")
+        assertEquals(listOf("x"), inventory.extensions.map { it.name })
+    }
+
+    @Test
+    fun loadingEnabledFalseAndMissing() = runTest {
+        val off = inventoryOf("""{"loadingEnabled":false,"extensions":[]}""")
+        assertEquals(false, off.loadingEnabled)
+        assertTrue(off.extensions.isEmpty())
+        assertEquals(true, inventoryOf("""{"extensions":[]}""").loadingEnabled)
+    }
+
+    @Test
+    fun extensionsUnreachable() = runTest {
+        val down = KtorHubRepository(HubAddress("http://hub:8080"), createHubHttpClient(MockEngine { throw kotlinx.io.IOException("down") }))
+        assertEquals(HubResult.Err(HubError.Unreachable), down.extensions())
     }
 }

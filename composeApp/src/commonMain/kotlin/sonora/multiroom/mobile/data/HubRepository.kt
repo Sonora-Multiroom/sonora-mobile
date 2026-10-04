@@ -1,5 +1,6 @@
 package sonora.multiroom.mobile.data
 
+import sonora.multiroom.mobile.domain.ExtensionInventory
 import sonora.multiroom.mobile.domain.HubAddress
 import sonora.multiroom.mobile.domain.HubSnapshot
 import sonora.multiroom.mobile.domain.Route
@@ -36,6 +37,9 @@ interface HubRepository {
 
     /** Removes a runtime source. 404 stays Rejected(404) here; the caller treats it as removed. */
     suspend fun removeSource(sourceId: String): HubResult<Unit>
+
+    /** The hub's extension inventory (captured at hub start-up; connection states change later). */
+    suspend fun extensions(): HubResult<ExtensionInventory>
 
     /**
      * The connection test: how many rooms the hub at this repository's address lists, on or off.

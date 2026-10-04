@@ -4,6 +4,8 @@ import sonora.multiroom.mobile.domain.AddedAt
 import sonora.multiroom.mobile.domain.AddedLine
 import sonora.multiroom.mobile.domain.ConfiguredSourceRow
 import sonora.multiroom.mobile.domain.Confirmation
+import sonora.multiroom.mobile.domain.ExtensionBadge
+import sonora.multiroom.mobile.domain.ExtensionLine
 import sonora.multiroom.mobile.domain.RoomStatus
 import sonora.multiroom.mobile.domain.joinNames
 import sonora.multiroom.mobile.domain.kindLabel
@@ -123,4 +125,26 @@ fun testText(test: TestState): String? = when (test) {
     TestState.Checking -> "Checking…"
     is TestState.Found -> "Hub found · ${test.rooms} ${if (test.rooms == 1) "room" else "rooms"}"
     TestState.Failed -> "Can't reach the hub at this address"
+}
+
+const val EXTENSIONS_NOTE = "Extensions are set in the server's configuration. This list is read-only."
+const val EXTENSIONS_OFF = "Extensions are turned off in the hub's configuration."
+const val EXTENSIONS_EMPTY = "No extensions installed on the hub."
+
+fun extensionBadgeText(badge: ExtensionBadge): String = when (badge) {
+    ExtensionBadge.Active -> "Active"
+    ExtensionBadge.Disabled -> "Disabled"
+    ExtensionBadge.Rejected -> "Rejected"
+    ExtensionBadge.Inactive -> "Inactive"
+    ExtensionBadge.Unknown -> "Unknown"
+}
+
+fun extensionLineText(line: ExtensionLine): String = when (line) {
+    ExtensionLine.CouldNotLoad -> "Couldn't be loaded"
+    ExtensionLine.TurnedOffInConfig -> "Turned off in configuration"
+    ExtensionLine.NotInUse -> "Not in use"
+    ExtensionLine.Connected -> "Connected"
+    ExtensionLine.Disconnected -> "Disconnected"
+    ExtensionLine.NoConnectionNeeded -> "No connection needed"
+    ExtensionLine.ConnectionUnknown -> "Connection unknown"
 }

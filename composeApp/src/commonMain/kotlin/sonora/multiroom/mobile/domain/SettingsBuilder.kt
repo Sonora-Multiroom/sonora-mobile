@@ -145,3 +145,53 @@ internal fun sourceNames(snapshot: HubSnapshot): Map<String, String> = snapshot.
 /** Source names of [routes] in order, without duplicates; an input the hub no longer lists shows its id. */
 internal fun playingNames(routes: List<Route>, names: Map<String, String>): List<String> =
     routes.mapNotNull { r -> r.inputId.takeIf { it.isNotBlank() }?.let { names[it] ?: it } }.distinct()
+
+// ---- Extensions (FR-019, FR-020) --------------------------------------------------------------------
+
+sealed interface ExtensionsContent {
+    /** The hub has extension loading turned off. */
+    data object LoadingOff : ExtensionsContent
+    data object Empty : ExtensionsContent
+    data class Rows(val rows: List<ExtensionRow>) : ExtensionsContent
+}
+
+/** The badge is the status; the line says why, or how the connection is. */
+data class ExtensionRow(val id: String, val name: String, val badge: ExtensionBadge, val line: ExtensionLine)
+
+enum class ExtensionBadge { Active, Disabled, Rejected, Inactive, Unknown }
+
+enum class ExtensionLine {
+    CouldNotLoad, TurnedOffInConfig, NotInUse, Connected, Disconnected, NoConnectionNeeded, ConnectionUnknown,
+}
+
+/** Rejected, Disabled and Inactive override the connection line; otherwise it is the connection. */
+fun extensionRows(inventory: ExtensionInventory): ExtensionsContent = when {
+    !inventory.loadingEnabled -> ExtensionsContent.LoadingOff
+    inventory.extensions.isEmpty() -> ExtensionsContent.Empty
+    else -> ExtensionsContent.Rows(
+        inventory.extensions.sortedWith(ByName { it.name to it.id }).map { e ->
+            ExtensionRow(
+                id = e.id,
+                name = e.name,
+                badge = when (e.status) {
+                    ExtensionStatus.Active -> ExtensionBadge.Active
+                    ExtensionStatus.Disabled -> ExtensionBadge.Disabled
+                    ExtensionStatus.Rejected -> ExtensionBadge.Rejected
+                    ExtensionStatus.Inactive -> ExtensionBadge.Inactive
+                    ExtensionStatus.Unknown -> ExtensionBadge.Unknown
+                },
+                line = when {
+                    e.status == ExtensionStatus.Rejected -> ExtensionLine.CouldNotLoad
+                    e.status == ExtensionStatus.Disabled -> ExtensionLine.TurnedOffInConfig
+                    e.status == ExtensionStatus.Inactive -> ExtensionLine.NotInUse
+                    else -> when (e.connection) {
+                        ExtensionConnection.Connected -> ExtensionLine.Connected
+                        ExtensionConnection.Disconnected -> ExtensionLine.Disconnected
+                        ExtensionConnection.NotApplicable -> ExtensionLine.NoConnectionNeeded
+                        ExtensionConnection.Unknown -> ExtensionLine.ConnectionUnknown
+                    }
+                },
+            )
+        },
+    )
+}

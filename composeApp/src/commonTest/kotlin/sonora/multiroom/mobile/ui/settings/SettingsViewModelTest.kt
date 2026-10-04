@@ -3,6 +3,11 @@ package sonora.multiroom.mobile.ui.settings
 import sonora.multiroom.mobile.data.InMemoryHubAddressStore
 import sonora.multiroom.mobile.data.HubResult
 import sonora.multiroom.mobile.domain.Confirmation
+import sonora.multiroom.mobile.domain.Extension
+import sonora.multiroom.mobile.domain.ExtensionConnection
+import sonora.multiroom.mobile.domain.ExtensionInventory
+import sonora.multiroom.mobile.domain.ExtensionStatus
+import sonora.multiroom.mobile.domain.ExtensionsContent
 import sonora.multiroom.mobile.domain.HubAddress
 import sonora.multiroom.mobile.domain.HubSnapshot
 import sonora.multiroom.mobile.domain.ItemKey
@@ -526,5 +531,77 @@ class SettingsViewModelTest {
         assertEquals(TestState.Found(2), s.state.sheet?.test)
         advanceTimeBy(3000); runCurrent()
         assertEquals(TestState.Found(2), s.state.sheet?.test)
+    }
+
+    // ---- Extensions (US4, research R8) ---------------------------------------------------------
+
+    private val inventory = ExtensionInventory(true, listOf(Extension("tts", "Text to speech", ExtensionStatus.Active, ExtensionConnection.NotApplicable)))
+
+    private fun Setup.onExtensionsTab() = navigator.select(SettingsTab.Extensions)
+
+    @Test
+    fun extensionsAreFetchedOnceWhenTheTabIsShownAndAfterEachRefresh() = runViewModelTest {
+        val s = setup()
+        s.repo.extensionsResult = { HubResult.Ok(inventory) }
+        s.onExtensionsTab()
+        s.vm.onVisible(); runCurrent()
+        assertEquals(1, s.repo.extensionsCalls)
+        assertIs<ExtensionsContent.Rows>(s.state.extensions)
+        advanceTimeBy(2500); runCurrent()
+        assertEquals(2, s.repo.extensionsCalls)
+        advanceTimeBy(2500); runCurrent()
+        assertEquals(3, s.repo.extensionsCalls)
+        s.vm.onHidden()
+    }
+
+    @Test
+    fun otherTabsAndAHiddenScreenNeverFetch() = runViewModelTest {
+        val s = setup()
+        s.vm.onVisible(); runCurrent()
+        advanceTimeBy(5000); runCurrent()
+        assertEquals(0, s.repo.extensionsCalls)
+        s.vm.onHidden()
+        s.onExtensionsTab(); runCurrent()
+        advanceTimeBy(5000); runCurrent()
+        assertEquals(0, s.repo.extensionsCalls)
+    }
+
+    @Test
+    fun beforeTheFirstAnswerThereIsNothing() = runViewModelTest {
+        val s = setup()
+        s.repo.extensionsDelayMs = 1000
+        s.repo.extensionsResult = { HubResult.Ok(inventory) }
+        s.onExtensionsTab()
+        s.vm.onVisible(); runCurrent()
+        assertNull(s.state.extensions)
+        advanceTimeBy(1001); runCurrent()
+        assertIs<ExtensionsContent.Rows>(s.state.extensions)
+        s.vm.onHidden()
+    }
+
+    @Test
+    fun aFailureKeepsTheLastInventoryWithoutAMessage() = runViewModelTest {
+        val s = setup()
+        s.repo.extensionsResult = { HubResult.Ok(inventory) }
+        s.onExtensionsTab()
+        s.vm.onVisible(); runCurrent()
+        s.repo.extensionsResult = { sonora.multiroom.mobile.ui.rooms.unreachable }
+        advanceTimeBy(2500); runCurrent()
+        assertEquals(2, s.repo.extensionsCalls)
+        assertIs<ExtensionsContent.Rows>(s.state.extensions)
+        assertNull(s.state.message)
+        s.vm.onHidden()
+    }
+
+    @Test
+    fun switchingAwayAndBackFetchesAgainAtOnce() = runViewModelTest {
+        val s = setup()
+        s.onExtensionsTab()
+        s.vm.onVisible(); runCurrent()
+        assertEquals(1, s.repo.extensionsCalls)
+        s.vm.onTabSelected(SettingsTab.Rooms); runCurrent()
+        s.vm.onTabSelected(SettingsTab.Extensions); runCurrent()
+        assertEquals(2, s.repo.extensionsCalls)
+        s.vm.onHidden()
     }
 }

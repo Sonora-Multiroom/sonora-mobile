@@ -1,6 +1,8 @@
 package sonora.multiroom.mobile.ui.settings
 
 import sonora.multiroom.mobile.domain.ConfiguredSourceRow
+import sonora.multiroom.mobile.domain.ExtensionBadge
+import sonora.multiroom.mobile.domain.ExtensionRow
 import sonora.multiroom.mobile.domain.GroupRow
 import sonora.multiroom.mobile.domain.RoomRow
 import sonora.multiroom.mobile.domain.RoomStatus
@@ -22,6 +24,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.selection.toggleable
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
@@ -215,6 +218,42 @@ fun RuntimeSourceSettingRow(item: Item<RuntimeSourceRow>, controlsEnabled: Boole
             contentAlignment = Alignment.Center,
         ) {
             Icon(SonoraIcons.Trash, contentDescription = null, tint = colors.textSoft, modifier = Modifier.size(22.dp))
+        }
+    }
+}
+
+/** One extension: name, connection line and the status badge. Read-only, not clickable. */
+@Composable
+fun ExtensionSettingRow(row: ExtensionRow) {
+    val colors = SonoraTheme.colors
+    val type = SonoraTheme.type
+    Row(
+        modifier = Modifier.fillMaxWidth().heightIn(min = 60.dp).padding(vertical = 8.dp),
+        horizontalArrangement = Arrangement.spacedBy(12.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+            Text(
+                row.name,
+                style = type.body15.copy(fontWeight = FontWeight.SemiBold),
+                color = colors.text,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+            Text(extensionLineText(row.line), style = type.label12, color = colors.textMuted)
+        }
+        val (content, container) = when (row.badge) {
+            ExtensionBadge.Active -> colors.positive to colors.positiveContainer
+            ExtensionBadge.Rejected -> colors.danger to colors.dangerContainer
+            else -> colors.textMuted to colors.surfaceRaised
+        }
+        Row(
+            modifier = Modifier.background(container, SonoraTheme.shapes.pill).padding(horizontal = 10.dp, vertical = 4.dp),
+            horizontalArrangement = Arrangement.spacedBy(6.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Box(Modifier.size(6.dp).background(content, CircleShape))
+            Text(extensionBadgeText(row.badge), style = type.label12.copy(fontWeight = FontWeight.SemiBold), color = content)
         }
     }
 }

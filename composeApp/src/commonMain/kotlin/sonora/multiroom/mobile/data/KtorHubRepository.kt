@@ -1,9 +1,11 @@
 package sonora.multiroom.mobile.data
 
+import sonora.multiroom.mobile.domain.ExtensionInventory
 import sonora.multiroom.mobile.domain.HubAddress
 import sonora.multiroom.mobile.domain.HubSnapshot
 import sonora.multiroom.mobile.domain.Route
 import sonora.multiroom.mobile.domain.Target
+import sonora.multiroom.mobile.hub.generated.apis.ExtensionsApi
 import sonora.multiroom.mobile.hub.generated.apis.GroupsApi
 import sonora.multiroom.mobile.hub.generated.apis.InputsApi
 import sonora.multiroom.mobile.hub.generated.apis.MasterMuteApi
@@ -29,6 +31,7 @@ class KtorHubRepository(address: HubAddress, client: HttpClient) : HubRepository
     private val routes = RoutesApi(address.baseUrl, client)
     private val inputs = InputsApi(address.baseUrl, client)
     private val masterMute = MasterMuteApi(address.baseUrl, client)
+    private val extensions = ExtensionsApi(address.baseUrl, client)
 
     // Same engine, longer request/socket timeouts; connecting still fails fast.
     private val playback = PlaybackApi(
@@ -99,6 +102,12 @@ class KtorHubRepository(address: HubAddress, client: HttpClient) : HubRepository
 
     override suspend fun removeSource(sourceId: String): HubResult<Unit> =
         hubCallUnit { inputs.deleteInput(sourceId) }
+
+    override suspend fun extensions(): HubResult<ExtensionInventory> =
+        when (val result = hubCall { extensions.listExtensions() }) {
+            is HubResult.Err -> result
+            is HubResult.Ok -> HubResult.Ok(result.value.toInventory())
+        }
 
     override suspend fun countRooms(): HubResult<Int> =
         when (val result = hubCall { outputs.listOutputs(includeDisabled = true) }) {

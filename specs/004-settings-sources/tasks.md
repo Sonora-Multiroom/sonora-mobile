@@ -620,7 +620,7 @@ while the tab is open.
 
 ### Tests for User Story 4 (write first, see them fail)
 
-- [ ] T055 [P] [US4] Extend `test/data/KtorHubRepositorySettingsTest.kt` with contract tests 4 and 6
+- [X] T055 [P] [US4] Extend `test/data/KtorHubRepositorySettingsTest.kt` with contract tests 4 and 6
   for `extensions`, using the live sample of 2026-10-04 (5 extensions; copy the JSON into
   `test/data/Fixtures.kt`):
   - it maps to 5 `Extension`s, with `ACTIVE`/`CONNECTED` and `NOT_APPLICABLE` mapped
@@ -630,7 +630,7 @@ while the tab is open.
   - `{"loadingEnabled":false,"extensions":[]}` → `loadingEnabled = false`
   - missing `loadingEnabled` → `true`
   - IO failure → `Unreachable`
-- [ ] T056 [P] [US4] Write `test/domain/ExtensionRowsTest.kt` for `extensionRows(inventory)`
+- [X] T056 [P] [US4] Write `test/domain/ExtensionRowsTest.kt` for `extensionRows(inventory)`
   (FR-019, FR-020):
   - **badge** = status for each of Active / Disabled / Rejected / Inactive / Unknown
   - **line**: Rejected → `CouldNotLoad`, Disabled → `TurnedOffInConfig` and Inactive → `NotInUse`,
@@ -638,13 +638,13 @@ while the tab is open.
     `Connected` / `Disconnected` / `NoConnectionNeeded` / `ConnectionUnknown`
   - A→Z by name
   - `loadingEnabled = false` → `LoadingOff`; empty → `Empty`
-- [ ] T057 [P] [US4] Extend `test/ui/settings/SettingsTextTest.kt`:
+- [X] T057 [P] [US4] Extend `test/ui/settings/SettingsTextTest.kt`:
   - the badges "Active", "Disabled", "Rejected", "Inactive", "Unknown"
   - the lines "Couldn't be loaded", "Turned off in configuration", "Not in use", "Connected",
     "Disconnected", "No connection needed", "Connection unknown"
   - the tab texts: the read-only note, "Extensions are turned off in the hub's configuration." and
     "No extensions installed on the hub."
-- [ ] T058 [US4] Extend `test/ui/settings/SettingsViewModelTest.kt` (US4) (research R8):
+- [X] T058 [US4] Extend `test/ui/settings/SettingsViewModelTest.kt` (US4) (research R8):
   - on the Extensions tab, `extensions()` is called once when the tab is shown and once after each
     successful session refresh
   - on any other tab, and while hidden, it is never called
@@ -654,19 +654,19 @@ while the tab is open.
 
 ### Implementation for User Story 4
 
-- [ ] T059 [US4] In `main/domain/Models.kt` add `ExtensionInventory`, `Extension`,
+- [X] T059 [US4] In `main/domain/Models.kt` add `ExtensionInventory`, `Extension`,
   `ExtensionStatus` and `ExtensionConnection` (data-model.md "Extensions"). In
   `main/data/ApiMapping.kt` map `ExtensionInventory`/`Extension` per research R8 (no
   `rejectionReason`). In `main/data/HubRepository.kt` + `KtorHubRepository.kt` add `extensions()`
   via `ExtensionsApi.listExtensions()`. `FakeRepository`: add `var extensionsResult` and a call
   counter. Make T055 pass.
-- [ ] T060 [US4] In `main/domain/SettingsBuilder.kt` add `ExtensionsContent`, `ExtensionRow`,
+- [X] T060 [US4] In `main/domain/SettingsBuilder.kt` add `ExtensionsContent`, `ExtensionRow`,
   `ExtensionBadge`, `ExtensionLine` and `extensionRows()`. In `SettingsText.kt` add the badge and
   line texts and the tab texts. Make T056–T057 pass.
-- [ ] T061 [US4] In `SettingsViewModel` fetch the extensions as T058 describes: a job that runs
+- [X] T061 [US4] In `SettingsViewModel` fetch the extensions as T058 describes: a job that runs
   while visible and on the Extensions tab, collecting `session.state` changes of `refreshSeq` on
   `Live`. Expose `extensions: ExtensionsContent?`. Make T058 pass.
-- [ ] T062 [US4] In `SettingRows.kt` add `ExtensionRow`: min-h 60, name 15 sp 600, the line 12 sp
+- [X] T062 [US4] In `SettingRows.kt` add `ExtensionRow`: min-h 60, name 15 sp 600, the line 12 sp
   textMuted, and the badge pill (padding 4 10, 12 sp 600, 6 dp dot). Its colours are `positive` on
   `positiveContainer` (Active), `danger` on `dangerContainer` (Rejected), and `textMuted` on
   `surfaceRaised` otherwise. The row is not clickable. In `SettingsScreen.kt` fill the Extensions

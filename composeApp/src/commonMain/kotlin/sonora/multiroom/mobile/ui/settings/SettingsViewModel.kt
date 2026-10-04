@@ -10,6 +10,8 @@ import sonora.multiroom.mobile.domain.ItemKind
 import sonora.multiroom.mobile.domain.SettingsBuilder
 import sonora.multiroom.mobile.domain.SettingsContent
 import sonora.multiroom.mobile.domain.Confirmation
+import sonora.multiroom.mobile.domain.ExtensionsContent
+import sonora.multiroom.mobile.domain.extensionRows
 import sonora.multiroom.mobile.domain.keepsPlaying
 import sonora.multiroom.mobile.domain.removeConfirmation
 import sonora.multiroom.mobile.domain.turnOffConfirmation
@@ -28,6 +30,10 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.filter
+import kotlinx.coroutines.flow.mapNotNull
+import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
@@ -69,14 +75,22 @@ class SettingsViewModel(
     /** What Settings hides or marks because of removals: (being removed, already removed). */
     private val removals = combine(actions.removing, actions.removed) { removing, removed -> removing to removed }
 
+    private val visible = MutableStateFlow(false)
+    private val extensions = MutableStateFlow<ExtensionsContent?>(null)
+
+    private class Overlay(val removals: Pair<Set<String>, Set<String>>, val extensions: ExtensionsContent?)
+
+    private val overlay = combine(removals, extensions, ::Overlay)
+
     val state: StateFlow<SettingsUiState> =
-        combine(session.state, navigator.tab, local, actions.pending, removals) { s, tab, local, pending, removals ->
+        combine(session.state, navigator.tab, local, actions.pending, overlay) { s, tab, local, pending, overlay ->
             SettingsUiState(
                 hub = hubRow(s),
                 tab = tab,
-                body = bodyOf(s, pending, removals),
+                body = bodyOf(s, pending, overlay.removals),
                 sheet = local.sheet,
                 confirm = local.confirm,
+                extensions = overlay.extensions,
                 message = local.message,
             )
         }.stateIn(viewModelScope, SharingStarted.Eagerly, SettingsUiState(tab = navigator.tab.value))
@@ -118,6 +132,12 @@ class SettingsViewModel(
         viewModelScope.launch {
             actions.messages.collect { text -> local.update { it.copy(message = text) } }
         }
+        // Extensions piggyback on the session's refreshes while their tab is on screen (research R8).
+        viewModelScope.launch {
+            combine(visible, navigator.tab) { v, tab -> v && tab == SettingsTab.Extensions }
+                .distinctUntilChanged()
+                .collectLatest { active -> if (active) followExtensions() }
+        }
         // The open dialog follows the hub: its text is rebuilt per snapshot, and kept when the
         // item no longer plays or is gone (spec Edge Cases).
         viewModelScope.launch {
@@ -132,8 +152,24 @@ class SettingsViewModel(
         }
     }
 
+    /** Fetches once now, then after every successful refresh, until cancelled. A failure keeps the last list. */
+    private suspend fun followExtensions() {
+        fun liveSeq(s: SessionState) =
+            (s as? SessionState.Connected)?.takeIf { it.connection == Connection.Live }?.refreshSeq
+        val start = liveSeq(session.state.value)
+        fetchExtensions()
+        session.state.mapNotNull(::liveSeq).distinctUntilChanged().filter { it != start }
+            .collectLatest { fetchExtensions() }
+    }
+
+    private suspend fun fetchExtensions() {
+        val answer = session.repository?.extensions() ?: return
+        if (answer is HubResult.Ok) extensions.value = extensionRows(answer.value)
+    }
+
     /** Foreground only: the screen calls this when it becomes visible. */
     fun onVisible() {
+        visible.value = true
         session.acquire()
         actions.attach()
         if (navigator.openSheetRequested.value) {
@@ -143,6 +179,7 @@ class SettingsViewModel(
     }
 
     fun onHidden() {
+        visible.value = false
         actions.detach()
         session.release()
     }

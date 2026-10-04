@@ -73,3 +73,19 @@ data class HubSnapshot(
     val sources: List<Source>,
     val masterMuted: Boolean,
 )
+
+// ---- Extensions (004, research R8) -----------------------------------------------------------------
+
+enum class ExtensionStatus { Active, Disabled, Rejected, Inactive, Unknown }
+
+enum class ExtensionConnection { Connected, Disconnected, NotApplicable, Unknown }
+
+data class Extension(
+    val id: String,
+    val name: String,
+    val status: ExtensionStatus,
+    val connection: ExtensionConnection,
+)
+
+/** What the hub loaded at start-up; only the connection states change afterwards. */
+data class ExtensionInventory(val loadingEnabled: Boolean, val extensions: List<Extension>)
