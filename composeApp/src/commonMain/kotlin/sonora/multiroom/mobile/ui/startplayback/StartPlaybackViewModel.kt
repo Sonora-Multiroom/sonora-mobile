@@ -43,6 +43,12 @@ class StartPlaybackViewModel(
     /** Names captured when Play was tapped, for the hand-off to Now Playing. */
     private var pendingNames: StartNames? = null
 
+    /**
+     * The start succeeded and the screen is leaving. Later snapshots already hold the new playback
+     * and would show it as "already playing" or "will stop" while the screen animates out.
+     */
+    private var started = false
+
     init {
         _state.update {
             it.copy(
@@ -58,12 +64,15 @@ class StartPlaybackViewModel(
     // ---- Session -------------------------------------------------------------------------------
 
     private fun onSession(s: SessionState) {
+        if (started) return
         when (s) {
             SessionState.Initial -> Unit
             SessionState.NoAddress -> _state.update { it.copy(address = null) }
             is SessionState.Connected -> {
-                snapshot = s.snapshot
                 _state.update { it.copy(address = s.address, connection = s.connection) }
+                // While a start runs the hub may already list the new playback; the lists wait for the answer.
+                if (_state.value.starting) return
+                snapshot = s.snapshot
                 s.snapshot?.let { rebuild(StartPlaybackBuilder.build(it)) }
                     ?: _state.update(::derive)
             }
@@ -184,13 +193,13 @@ class StartPlaybackViewModel(
 
     private fun onAttempt(attempt: StartAttempt?) {
         when (attempt) {
-            null -> _state.update { derive(it.copy(starting = false)) }
+            null -> if (!started) _state.update { derive(it.copy(starting = false)) }
             StartAttempt.Starting -> _state.update { derive(it.copy(starting = true)) }
             is StartAttempt.Done -> {
                 val name = pendingNames?.target ?: ""
-                _state.update {
-                    derive(it.copy(starting = false, exit = StartExit.Started(attempt.route.id, attempt.startedAfterSeq, name)))
-                }
+                // Stays as it was ("Starting…", selections locked) until the screen is gone.
+                started = true
+                _state.update { it.copy(exit = StartExit.Started(attempt.route.id, attempt.startedAfterSeq, name)) }
                 starter.consume()
             }
             is StartAttempt.Failed -> {

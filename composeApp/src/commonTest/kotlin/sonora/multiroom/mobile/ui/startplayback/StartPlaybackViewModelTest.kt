@@ -248,9 +248,44 @@ class StartPlaybackViewModelTest {
         val seq = s.session.startedSeq
         s.vm.onPlay(); runCurrent()
         assertEquals(StartExit.Started("r9", seq, "Bedroom"), s.ui.exit)
-        assertFalse(s.ui.starting)
         s.vm.consumeExit()
         assertNull(s.ui.exit)
+        s.vm.onHidden()
+    }
+
+    @Test
+    fun whileStartingASnapshotWithTheNewPlaybackLeavesTheListsAlone() = runViewModelTest {
+        val s = live()
+        s.pickJazzInBedroom()
+        s.repo.startDelayMs = 5_000
+        val before = s.ui
+        s.vm.onPlay(); runCurrent()
+        s.refresh(snapshot(routes = listOf(Route("r9", "jazz", bedroom, RouteStatus.Starting, false, false, true)))); runCurrent()
+        assertEquals(before.content, s.ui.content)
+        assertEquals(before.consequence, s.ui.consequence)
+        assertTrue(s.ui.starting)
+        advanceTimeBy(6_000); runCurrent()
+        s.vm.onHidden()
+    }
+
+    @Test
+    fun afterSuccessTheScreenKeepsItsStateWhileItLeaves() = runViewModelTest {
+        val s = live()
+        s.pickJazzInBedroom()
+        val r9 = Route("r9", "jazz", bedroom, RouteStatus.Active, false, false, true)
+        s.repo.startResults += HubResult.Ok(r9)
+        val before = s.ui
+        s.vm.onPlay(); runCurrent()
+        s.vm.consumeExit()
+        // The snapshot after the start holds the new playback: the closing screen must not show it.
+        s.refresh(snapshot(routes = listOf(r9))); runCurrent()
+        assertTrue(s.ui.starting)
+        assertEquals(PlayLabel.Starting, s.ui.playLabel)
+        assertFalse(s.ui.playEnabled)
+        assertEquals(before.content, s.ui.content)
+        assertEquals(before.consequence, s.ui.consequence)
+        assertEquals("jazz", s.ui.selectedSourceId)
+        assertEquals(bedroom, s.ui.selectedTarget)
         s.vm.onHidden()
     }
 
