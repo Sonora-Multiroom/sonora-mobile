@@ -82,7 +82,7 @@ Buttons: 2 columns, gap 10, h 52, radius 16, 15 sp 600. "Test connection" `text`
 Tile 44 r14 `dangerContainer` with `StopOutline` `danger`. Title Sora 20 sp 600 (margin-top 6).
 Body 15 sp textSoft, 1.5 line height. Buttons (margin-top 10, 2 columns, gap 10, h 52, r16):
 "Keep playing" `text` on `surfaceRaised`; "Turn off"/"Remove" `onDanger` on `danger`. The scrim
-is the platform's dialog dim (R12).
+is the platform's dialog dim (R12, a departure listed in spec Assumptions).
 
 ## Copy
 
@@ -120,7 +120,7 @@ Made in `ui/settings/SettingsText.kt` from domain values. Error copy is in `ui/M
 | Loading, no snapshot | "Connecting…" | nothing yet |
 | Live | "Connected" | lists, controls enabled |
 | Unreachable with a snapshot | "Not connected" | Rooms' `StaleBanner` above the lists, which stay; switches and trash disabled |
-| Unreachable, no snapshot | "Not connected" | Rooms' unreachable message |
+| Unreachable, no snapshot | "Not connected" | Rooms' unreachable `Message` ("Can't reach the hub", "Tried <address>. Retrying…") with the action "Change address", which opens the sheet |
 | Extensions tab before its first answer | — | only the read-only note |
 
 ## Behaviour

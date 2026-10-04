@@ -116,7 +116,8 @@ every switch change and removal, so a request outlives the screen (spec Edge Cas
   Otherwise it records `InFlight`, so the switch shows `value` at once, and calls the repository.
   - **Success**: the phase becomes `AwaitingRefresh(session.startedSeq)` and `requestRefresh()` is
     called. The override is dropped by the first snapshot whose `refreshSeq > fence` (the 002
-    fence rule). From then on the hub's state decides (FR-012: "the hub's answer then decides").
+    fence rule). From then on the hub's state decides (FR-012: "until the request completes and the next
+    refresh confirms it").
     A refresh already in flight cannot overwrite the user's value, which avoids a flicker.
   - **Failure**: the override is dropped at once and a message is reported (R7, FR-013). A 404
     also calls `requestRefresh()`.
@@ -289,8 +290,8 @@ Two named functions in one file keep both rules visible.
 - **Dialog**: `androidx.compose.ui.window.Dialog` with custom content (tile, Sora 20 title, body,
   two buttons). It has `semantics { paneTitle = title }`, and the body is merged into the
   announcement. Back and a tap outside dismiss it (FR-014). The window's dim comes from the
-  platform. If it differs visibly from the `scrim` token, that is recorded in `verification.md`
-  and not worked around with platform code.
+  platform, a departure listed in the spec's Assumptions, and is not worked around with platform
+  code.
 
 **Rationale**: Constitution VI (design fidelity, 44 dp, contrast, announced roles). Constitution
 III (nothing Android-only in common code).

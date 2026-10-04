@@ -79,7 +79,7 @@ objects.
 | III. Shared-First | ✅ | All code is in `commonMain`. Time zones come from a multiplatform library rather than platform code ([R10](research.md#r10-added-when-and-the-time-zone)). No platform source-set changes |
 | IV. Test-First | ✅ | Builder, added line, source detail, confirmations, extension rows, text, failure mapping, repository additions (MockEngine), `SettingsActions` and the view model each get tests first ([quickstart](quickstart.md) §1, covering all of FR-021) |
 | V. Resilient LAN | ✅ | 3 s timeouts on every new call, including the test against a draft address. Stale state keeps the lists and disables controls. Unknown extension status or connection maps to explicit `Unknown`, as does an unknown source origin (configured). An unparseable `createdAt` never fails a snapshot. Problem details become the app's own copy (`settingsFailureMessage`); `rejectionReason` is never shown |
-| VI. Design Fidelity & A11y | ✅ | Layout per `Settings.dc.html` ([UI contract](contracts/settings-ui.md)). The departures are in spec Assumptions: sorting, footer wording and position, undrawn states, extension wording, new tokens. Rows are switches with names, tabs are tabs, there are hub-row and trash labels, alert dialog semantics, ≥ 44 dp targets, and new contrast pairs tested |
+| VI. Design Fidelity & A11y | ✅ | Layout per `Settings.dc.html` ([UI contract](contracts/settings-ui.md)). The departures are in spec Assumptions: sorting, footer wording and position, undrawn states (including "Change address" when unreachable), extension wording, new tokens, the platform dialog dim, one card for runtime rows. Rows are switches with names, tabs are tabs, there are hub-row and trash labels, alert dialog semantics, ≥ 44 dp targets, and new contrast pairs tested |
 | VII. Minimal Dependencies | ✅ | One addition, kotlinx-datetime 0.8.0 (JetBrains, multiplatform), justified in R10/R13, with its version in `libs.versions.toml` |
 
 **Post-design re-check (after Phase 1)**: still passing.
@@ -198,8 +198,9 @@ composeApp/src/commonTest/kotlin/sonora/multiroom/mobile/
   <when>" part, keeps the other parts and sorts it last ([R10](research.md#r10-added-when-and-the-time-zone)).
   The hub always sets it for runtime inputs, so this is defensive only.
 - **The dialog scrim** is the platform's dim, not exactly `rgba(5,6,8,0.72)`
-  ([R12](research.md#r12-ui-building-blocks)). If it looks visibly different on the device, record
-  it in `verification.md`; it is not worked around with platform code.
+  ([R12](research.md#r12-ui-building-blocks)), a departure now listed in the spec's Assumptions.
+  If it looks clearly wrong on the device, raise it in `verification.md` rather than adding
+  platform code.
 
 ## Complexity Tracking
 

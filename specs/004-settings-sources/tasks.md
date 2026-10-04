@@ -211,7 +211,8 @@ states.
     - the session states of the UI contract "States" table: `NoAddress` → Rooms'
       `Message("Set your hub address", …, actionLabel = "Set hub address", onAction = open sheet)`,
       stale → `StaleBanner()` above the content, unreachable without a snapshot → Rooms'
-      unreachable `Message`
+      unreachable `Message("Can't reach the hub", "Tried <address>. Retrying…", actionLabel =
+      "Change address", onAction = open sheet)` (spec Assumptions, departures)
   - `HubRow.kt`:
     - one `Role.Button` with the T012 label
     - tile 40 r12 with `Server`; "Hub" 15 sp 600, the status with its 6 dp dot coloured `positive`
@@ -220,8 +221,9 @@ states.
   - `SettingsTabs.kt`: a 4-way segmented bar (`Role.Tab`, `selected`, 40 dp pill, touch area
     spanning the 48 dp bar)
   - `HubAddressSheet.kt`:
-    - `ModalBottomSheet(scrimColor = scrim)`, with title, Close ("Close"), the "URL" field,
-      the hint (or the 001 error in `warningText`) and "Save"
+    - `ModalBottomSheet(scrimColor = scrim)`, with title, Close ("Close"), the "URL" field
+      (placeholder "http://192.168.1.10:8080", URI keyboard, no autocorrect), the hint "Your phone
+      and the hub need to be on the same network." (or the 001 error in `warningText`) and "Save"
     - "Test connection" is drawn but disabled until T048
     - Back and swipe call `onSheetClosed`
   - Tab bodies are empty placeholders, filled by each story.
@@ -279,7 +281,9 @@ rows 1–8).
     - turned off with its own route → empty
     - members playing on their own → empty
   - **configured sources** (FR-011): origin `Configured` and `Unknown` are listed, `Runtime` isn't;
-    `kind` from `inferSourceKind`; `detail` from `sourceDetail`
+    `kind` from `inferSourceKind`; `detail` from `sourceDetail`. `ConfiguredSourceRow` has no
+    removal field at all, so configured sources can never offer removal (FR-016); assert this with
+    a source that is both configured and unused
   - **ordering**: rooms, groups and configured sources A→Z case-insensitive ("alpha" < "Beta"),
     with the id as tie-break
 - [ ] T018 [P] [US1] Write `test/domain/SettingsConfirmTest.kt` (turn-off part) for
@@ -354,7 +358,9 @@ rows 1–8).
     - for a group → `TurnOffGroup`
     - a source turned off while in use → no dialog, `keepsPlaying = true` passed
   - **dialog text follows the hub**: while `confirm` is open, a new snapshot with another source
-    updates the text; a snapshot where nothing plays keeps the last text (spec Edge Cases)
+    updates the text; a snapshot where nothing plays keeps the last text (spec Edge Cases); a
+    snapshot where the item is gone also keeps the dialog and its last text, and "Turn off" still
+    sends the request, whose 404 then gives "<name> is no longer on the hub"
   - taps are ignored while `controlsEnabled` is false or the row is in flight
   - `onVisible`/`onHidden` attach and detach `SettingsActions`; its `messages` set
     `state.message`, and `consumeMessage()` clears it
@@ -517,19 +523,19 @@ playing one asks, then its playback stops (quickstart §2 rows 9–11).
   `Source.createdAt: Instant? = null` (`kotlin.time.Instant`). In `main/data/ApiMapping.kt` map
   `autoRemove ?: false` and `createdAt?.let { runCatching { Instant.parse(it) }.getOrNull() }`
   (blank → `null`). Make T036 pass.
-- [ ] T046 [US2] Repository and domain:
-  - `main/data/HubRepository.kt` + `KtorHubRepository.kt`: `removeSource(sourceId) =
-    hubCallUnit { inputs.deleteInput(sourceId) }`. `FakeRepository`: record it through `action`.
-  - `main/domain/SettingsBuilder.kt`: add `RuntimeSourceRow`, `AddedLine`, `AddedAt` and the
-    runtime list, built with `kotlinx.datetime` (`toLocalDateTime(zone)`, with today and yesterday
-    compared on local dates).
-  - `main/domain/SettingsConfirm.kt`: add `Confirmation.Remove` and `removeConfirmation()`, with
-    `where` named via `describeTarget(...).title`.
-  - `main/ui/settings/SettingsText.kt`: `addedLineText`, the remove dialog strings, the empty text
-    and "Removing…". English month abbreviations come from a fixed table.
-  - `main/ui/Messages.kt`: the removal cases.
-
-  Make T037–T042 pass.
+- [ ] T046 [US2] Repository, domain and text, as four steps in this order, each a commit that
+  makes its own tests pass before the next starts (one test-first unit at a time):
+  1. **Data**: `main/data/HubRepository.kt` + `KtorHubRepository.kt`: `removeSource(sourceId) =
+     hubCallUnit { inputs.deleteInput(sourceId) }`. `FakeRepository`: record it through `action`.
+     Makes T037 pass.
+  2. **Builder**: `main/domain/SettingsBuilder.kt`: add `RuntimeSourceRow`, `AddedLine`, `AddedAt`
+     and the runtime list, built with `kotlinx.datetime` (`toLocalDateTime(zone)`, with today and
+     yesterday compared on local dates). Makes the T038 values and T039 pass.
+  3. **Confirmation**: `main/domain/SettingsConfirm.kt`: add `Confirmation.Remove` and
+     `removeConfirmation()`, with `where` named via `describeTarget(...).title`. Makes T040 pass.
+  4. **Copy**: `main/ui/settings/SettingsText.kt`: `addedLineText`, the remove dialog strings, the
+     empty text and "Removing…" (English month abbreviations from a fixed table); and
+     `main/ui/Messages.kt`: the removal cases. Makes the T038 strings, T041 and T042 pass.
 - [ ] T047 [US2] Extend `main/ui/session/SettingsActions.kt` with `removing`, `removed` and
   `remove(id, name)` (fenced like the switches). Extend `SettingsViewModel` with the runtime rows,
   `onRemove` and the `Remove` confirmation. Make T043–T044 pass.
@@ -691,8 +697,8 @@ while the tab is open.
   Fix any gap in `main/ui/settings/`.
 - [ ] T065 [P] Design pass: compare each tab, the sheet and the dialog with
   `design/screens/Settings.dc.html` (sizes, radii, gaps, tokens). Only the spec's listed departures
-  are allowed: sorting, footer wording and position, undrawn states, extension wording, one card
-  for runtime rows, and the platform dialog dim.
+  are allowed: sorting, footer wording and position, undrawn states (including "Change address"
+  when unreachable), extension wording, one card for runtime rows, and the platform dialog dim.
 - [ ] T066 Run [quickstart.md](quickstart.md) §1: `./gradlew :androidApp:assembleDebug
   :composeApp:testAndroidHostTest :composeApp:allTests :composeApp:check`, reading Gradle's own
   exit code. Everything MUST be green, with no generated files in `git status`.
@@ -715,7 +721,10 @@ while the tab is open.
   - T011 → T012
   - T013 → T014 (needs T005, T012) → T015 (needs T008, T010, T014)
 - **US1 (Phase 3)**: needs Phase 2.
-  - Tests T016–T021 in parallel; T022 and T023 after T020 (message types).
+  - Tests T016–T021 in parallel. T022 and T023 can be written alongside them, but they reference
+    types from T028 (`SettingsFailure`) and T030 (`SettingsActions`), so they compile only once
+    those exist: seeing them fail means failing assertions after T028/T030's stubs, not a compile
+    error.
   - Then T024 → T025 → T026, with T027 and T028 in parallel, and T029.
   - T030 needs T028 and T029; T031 needs T025–T030.
   - T032 ∥ T033 ∥ T034 (T034 needs T032); T035 needs T031–T034.

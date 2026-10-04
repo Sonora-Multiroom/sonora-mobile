@@ -196,7 +196,9 @@ needed.
   warn about this (see Assumptions).
 - **Several taps on one switch**: a switch cannot be tapped again until its request completes.
 - **Leaving the screen while a request is in flight**: the request continues; its outcome shows on
-  the next visit, and a failure is reported as a short message wherever the user is.
+  the next visit. A failure is reported as a short message on Settings while it is shown, otherwise
+  on Rooms (the only screen reached from Settings); if the user has moved on from Rooms to another
+  screen by then, it shows when Rooms is next visible.
 - **Newer hub with unknown values**: an unknown extension status reads "Unknown" with the neutral
   badge; an unknown connection state reads "Connection unknown"; an unknown source origin is
   treated as configured (no trash button).
@@ -257,8 +259,9 @@ needed.
   and the address without its scheme for a line-in. An empty section reads "No sources in the hub's
   configuration."
 - **FR-012**: Flipping a switch MUST move it at once, ask the hub to turn that room, group or
-  source on or off, and keep the user's value until the request completes; the hub's answer then
-  decides. While in flight the switch cannot be flipped again.
+  source on or off, and keep the user's value until the request completes and the next refresh
+  confirms it; from then on the hub's state decides. While in flight the switch cannot be flipped
+  again.
 - **FR-013**: When a switch request fails, the switch MUST return to the hub's state and a short
   message says why: "<name> is no longer on the hub" (followed by an immediate refresh), "Couldn't
   reach the hub", or otherwise "Couldn't turn <name> off" / "Couldn't turn <name> on".
@@ -406,7 +409,17 @@ needed.
     the design, use the neutral "Disabled" colours.
   - Colours the updated design introduces without a token (the red "Not connected"/"Rejected" text
     `#FF8A7A` on `#3A1A16`, the tile icon grey `#C9CBD1`, the chevron `#6E717A`, the "Turn off"
-    button text `#2A0D08`, the dialog scrim `rgba(5, 6, 8, 0.72)`) become theme tokens.
+    button text `#2A0D08`) become theme tokens. The sheet's scrim uses the existing `scrim` token
+    (`rgba(5, 6, 8, 0.72)`).
+  - The turn-off and removal dialogs dim the screen with the platform's own dialog scrim, so the
+    dim behind them may differ slightly from the design's `rgba(5, 6, 8, 0.72)`. Matching it would
+    need Android-only code in shared code.
+  - Several runtime sources share one card with dividers between rows, like the other lists; the
+    design draws its single sample row as a card of its own.
+  - The footer sits at the end of the scrolling content (FR-001), not fixed above the bottom bar as
+    drawn, so long lists do not squeeze it.
+  - With no snapshot and the hub unreachable, each tab shows Rooms' "Can't reach the hub" message
+    with the action "Change address", which opens the address sheet.
 - Following the project workflow, the first implementation commit sets the app version to
   `0.4.0-alpha` (version code 4).
 - The backlog item [Rooms with several playbacks](../../docs/backlog/rooms-with-several-playbacks.md),
