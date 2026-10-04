@@ -458,19 +458,19 @@ playing one asks, then its playback stops (quickstart §2 rows 9–11).
 
 ### Tests for User Story 2 (write first, see them fail)
 
-- [ ] T036 [P] [US2] Extend `test/data/KtorHubRepositorySnapshotTest.kt` (and payloads in
+- [X] T036 [P] [US2] Extend `test/data/KtorHubRepositorySnapshotTest.kt` (and payloads in
   `test/data/Fixtures.kt`) with contract test 8:
   - `autoRemove` true / false / missing → `true` / `false` / `false`
   - `createdAt` `"2026-10-04T12:30:00Z"` → that `Instant`
   - `null`, missing, `""` and `"yesterday"` → `null`
   - the snapshot never fails because of it
-- [ ] T037 [P] [US2] Extend `test/data/KtorHubRepositorySettingsTest.kt` with contract test 3 and 6
+- [X] T037 [P] [US2] Extend `test/data/KtorHubRepositorySettingsTest.kt` with contract test 3 and 6
   for `removeSource`:
   - `DELETE /api/v2/inputs/{id}`; 204 → `Ok(Unit)`
   - a 400 RFC 7807 body → `Rejected(400, type, null, null)`
   - 404 → `Rejected(404, …)`
   - IO failure → `Unreachable`
-- [ ] T038 [P] [US2] Write `test/domain/AddedLineTest.kt` for the added line (research R10), with
+- [X] T038 [P] [US2] Write `test/domain/AddedLineTest.kt` for the added line (research R10), with
   `now` and `TimeZone.of("Europe/Kyiv")` fixed. `AddedLine` + `addedLineText` give:
   - the same local date → "Added today 14:30"
   - the previous local date → "Added yesterday 09:12", including across local midnight where UTC
@@ -480,28 +480,28 @@ playing one asks, then its playback stops (quickstart §2 rows 9–11).
   - `autoRemove` → + " · removed when it stops"
   - turned off → "Off · " + …
   - undated → "Off · removed when it stops", and the whole line `null` when nothing is left
-- [ ] T039 [P] [US2] Extend `test/domain/SettingsBuilderTest.kt` with runtime sources (FR-015):
+- [X] T039 [P] [US2] Extend `test/domain/SettingsBuilderTest.kt` with runtime sources (FR-015):
   - only `origin == Runtime` is listed
   - newest `createdAt` first, undated last A→Z
   - each row carries `enabled`, `autoRemove` and the `AddedAt` value
-- [ ] T040 [P] [US2] Extend `test/domain/SettingsConfirmTest.kt` with `removeConfirmation`:
+- [X] T040 [P] [US2] Extend `test/domain/SettingsConfirmTest.kt` with `removeConfirmation`:
   - unused source → `null`
   - used by a room route → `Remove(name, ["Bedroom"])`
   - used by a group route → `["Downstairs"]`
   - used by both → both in hub order, without duplicates
   - only a `Stopped` route → `null`
-- [ ] T041 [P] [US2] Extend `test/ui/MessagesTest.kt` with `SettingsAction.Remove` (FR-018):
+- [X] T041 [P] [US2] Extend `test/ui/MessagesTest.kt` with `SettingsAction.Remove` (FR-018):
   - 400 → "<name> comes from the hub's configuration and can't be removed"
   - `Unreachable` → "Couldn't reach the hub"
   - 500 / `Unexpected` → "Couldn't remove <name>"
   - 404 → not a failure (`settingsFailure` returns `null`, so the caller treats it as removed)
-- [ ] T042 [P] [US2] Extend `test/ui/settings/SettingsTextTest.kt` with:
+- [X] T042 [P] [US2] Extend `test/ui/settings/SettingsTextTest.kt` with:
   - the remove dialog title "Remove <name>?" and body "<name> is playing in Bedroom and
     Downstairs. Removing it stops playback there." with the button "Remove"
   - the runtime empty text
   - the "Removing…" line
   - the trash label "Remove <name>"
-- [ ] T043 [US2] Extend `test/ui/session/SettingsActionsTest.kt` with removal (research R6):
+- [X] T043 [US2] Extend `test/ui/session/SettingsActionsTest.kt` with removal (research R6):
   - `remove(id, name)` → `removing` contains the id and one `removeSource` call; a second call
     while removing → ignored
   - 204 → `removed` contains it and a refresh is requested; it stays hidden for a snapshot from a
@@ -509,7 +509,7 @@ playing one asks, then its playback stops (quickstart §2 rows 9–11).
     longer lists it
   - 404 → the same as success
   - 400 / unreachable / other → the T041 message, and the id back in neither set
-- [ ] T044 [US2] Extend `test/ui/settings/SettingsViewModelTest.kt` (US2):
+- [X] T044 [US2] Extend `test/ui/settings/SettingsViewModelTest.kt` (US2):
   - runtime rows exclude `removed` ids and are marked `removing`
   - `onRemove(id)` on an unused source calls `SettingsActions.remove` at once
   - on a used source it opens `confirm` with `Remove` and sends nothing
@@ -519,11 +519,11 @@ playing one asks, then its playback stops (quickstart §2 rows 9–11).
 
 ### Implementation for User Story 2
 
-- [ ] T045 [US2] In `main/domain/Models.kt` add `Source.autoRemove: Boolean = false` and
+- [X] T045 [US2] In `main/domain/Models.kt` add `Source.autoRemove: Boolean = false` and
   `Source.createdAt: Instant? = null` (`kotlin.time.Instant`). In `main/data/ApiMapping.kt` map
   `autoRemove ?: false` and `createdAt?.let { runCatching { Instant.parse(it) }.getOrNull() }`
   (blank → `null`). Make T036 pass.
-- [ ] T046 [US2] Repository, domain and text, as four steps in this order, each a commit that
+- [X] T046 [US2] Repository, domain and text, as four steps in this order, each a commit that
   makes its own tests pass before the next starts (one test-first unit at a time):
   1. **Data**: `main/data/HubRepository.kt` + `KtorHubRepository.kt`: `removeSource(sourceId) =
      hubCallUnit { inputs.deleteInput(sourceId) }`. `FakeRepository`: record it through `action`.
@@ -536,10 +536,10 @@ playing one asks, then its playback stops (quickstart §2 rows 9–11).
   4. **Copy**: `main/ui/settings/SettingsText.kt`: `addedLineText`, the remove dialog strings, the
      empty text and "Removing…" (English month abbreviations from a fixed table); and
      `main/ui/Messages.kt`: the removal cases. Makes the T038 strings, T041 and T042 pass.
-- [ ] T047 [US2] Extend `main/ui/session/SettingsActions.kt` with `removing`, `removed` and
+- [X] T047 [US2] Extend `main/ui/session/SettingsActions.kt` with `removing`, `removed` and
   `remove(id, name)` (fenced like the switches). Extend `SettingsViewModel` with the runtime rows,
   `onRemove` and the `Remove` confirmation. Make T043–T044 pass.
-- [ ] T048 [US2] In `main/ui/settings/SettingRows.kt` add `RuntimeSourceRow`:
+- [X] T048 [US2] In `main/ui/settings/SettingRows.kt` add `RuntimeSourceRow`:
   - min-h 64, card padding 4 6 4 14, link tile, name 15 sp 600, the added line 12 sp textMuted
     ("Removing…" while removing)
   - a 44×44 trash `IconButton` in `textSoft` labelled "Remove <name>", disabled while stale or

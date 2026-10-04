@@ -13,6 +13,7 @@ import sonora.multiroom.mobile.hub.generated.models.GroupResponse
 import sonora.multiroom.mobile.hub.generated.models.InputResponse
 import sonora.multiroom.mobile.hub.generated.models.OutputResponse
 import sonora.multiroom.mobile.hub.generated.models.RouteResponse
+import kotlin.time.Instant
 
 // Generated wire types -> domain types, applying the rules of specs/001-*/data-model.md.
 // Every field of the wire types is optional, so each rule says what a missing value becomes.
@@ -64,6 +65,9 @@ internal fun InputResponse.toSource(): Source? {
             InputResponse.DefaultJoinMode.DUCK_OTHERS -> JoinMode.Announcement
             null -> null
         },
+        autoRemove = autoRemove ?: false,
+        // A date the app cannot read is "undated", never a failed refresh (research R10).
+        createdAt = createdAt?.takeIf { it.isNotBlank() }?.let { runCatching { Instant.parse(it) }.getOrNull() },
     )
 }
 

@@ -4,6 +4,7 @@ import sonora.multiroom.mobile.domain.ConfiguredSourceRow
 import sonora.multiroom.mobile.domain.GroupRow
 import sonora.multiroom.mobile.domain.RoomRow
 import sonora.multiroom.mobile.domain.RoomStatus
+import sonora.multiroom.mobile.domain.RuntimeSourceRow
 import sonora.multiroom.mobile.ui.rooms.forKind
 import sonora.multiroom.mobile.ui.rooms.iconForKind
 import sonora.multiroom.mobile.ui.theme.SonoraIcons
@@ -19,6 +20,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Icon
@@ -164,5 +166,55 @@ fun ConfiguredSourceSettingRow(item: Item<ConfiguredSourceRow>, controlsEnabled:
             overflow = TextOverflow.Ellipsis,
         )
         Text(configuredLine(row), style = type.label12, color = colors.textMuted, maxLines = 1, overflow = TextOverflow.Ellipsis)
+    }
+}
+
+/**
+ * A source added at run time: the added line under its name and a trash button (UI contract "List
+ * card"). Card padding is 4 6 4 14, so the 44 dp button sits close to the edge.
+ */
+@Composable
+fun RuntimeSourceSettingRow(item: Item<RuntimeSourceRow>, controlsEnabled: Boolean, onRemove: () -> Unit) {
+    val colors = SonoraTheme.colors
+    val type = SonoraTheme.type
+    val row = item.row
+    val kind = colors.forKind(sonora.multiroom.mobile.domain.SourceKind.Link)
+    val canRemove = controlsEnabled && !item.removing
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .heightIn(min = 64.dp)
+            .alpha(if (item.removing) 0.5f else 1f)
+            .padding(start = 0.dp, end = 0.dp, top = 4.dp, bottom = 4.dp),
+        horizontalArrangement = Arrangement.spacedBy(12.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Box(
+            Modifier.size(38.dp).background(kind.tile, RoundedCornerShape(10.dp)),
+            contentAlignment = Alignment.Center,
+        ) {
+            Icon(iconForKind(sonora.multiroom.mobile.domain.SourceKind.Link), contentDescription = null, tint = kind.icon, modifier = Modifier.size(20.dp))
+        }
+        Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+            Text(
+                row.name,
+                style = type.body15.copy(fontWeight = FontWeight.SemiBold),
+                color = colors.text,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+            val line = if (item.removing) REMOVING_LINE else addedLineText(row.added)
+            if (line != null) Text(line, style = type.label12, color = colors.textMuted, maxLines = 2, overflow = TextOverflow.Ellipsis)
+        }
+        Box(
+            modifier = Modifier
+                .size(44.dp)
+                .alpha(if (canRemove) 1f else 0.5f)
+                .clickable(enabled = canRemove, role = Role.Button, onClick = onRemove)
+                .semantics { contentDescription = removeLabel(row.name) },
+            contentAlignment = Alignment.Center,
+        ) {
+            Icon(SonoraIcons.Trash, contentDescription = null, tint = colors.textSoft, modifier = Modifier.size(22.dp))
+        }
     }
 }

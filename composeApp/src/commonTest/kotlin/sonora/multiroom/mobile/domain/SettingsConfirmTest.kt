@@ -104,4 +104,35 @@ class SettingsConfirmTest {
         assertFalse(keepsPlaying("radio", base(listOf(route("r", "radio", Target.Room("living"), RouteStatus.Stopped)))))
         assertFalse(keepsPlaying("radio", base()))
     }
+
+    // ---- Remove (US2) -------------------------------------------------------------------------
+
+    private val link = source("link", "A link", SourceOrigin.Runtime, "https://soundcloud.com/x")
+
+    private fun withLink(vararg routes: Route) = base(routes.toList()).copy(sources = listOf(radio, jazz, link))
+
+    @Test
+    fun anUnusedRuntimeSourceIsRemovedAtOnce() = assertNull(removeConfirmation("link", withLink()))
+
+    @Test
+    fun aSourceUsedByARoomRouteAsksWhereItStops() =
+        assertEquals(Confirmation.Remove("A link", listOf("Bedroom")), removeConfirmation("link", withLink(route("r", "link", Target.Room("bedroom")))))
+
+    @Test
+    fun aSourceUsedByAGroupRouteNamesTheGroup() =
+        assertEquals(Confirmation.Remove("A link", listOf("Downstairs")), removeConfirmation("link", withLink(route("r", "link", Target.Group("g")))))
+
+    @Test
+    fun usedByBothListsBothInHubOrderWithoutDuplicates() {
+        val s = withLink(
+            route("r1", "link", Target.Group("g")),
+            route("r2", "link", Target.Room("bedroom")),
+            route("r3", "link", Target.Group("g")),
+        )
+        assertEquals(Confirmation.Remove("A link", listOf("Downstairs", "Bedroom")), removeConfirmation("link", s))
+    }
+
+    @Test
+    fun aStoppedRouteDoesNotCount() =
+        assertNull(removeConfirmation("link", withLink(route("r", "link", Target.Room("bedroom"), RouteStatus.Stopped))))
 }

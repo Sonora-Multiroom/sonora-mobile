@@ -97,6 +97,9 @@ class KtorHubRepository(address: HubAddress, client: HttpClient) : HubRepository
     override suspend fun setSourceEnabled(sourceId: String, enabled: Boolean): HubResult<Unit> =
         hubCallUnit { inputs.setInputEnabled(sourceId, EnabledRequest(enabled)) }
 
+    override suspend fun removeSource(sourceId: String): HubResult<Unit> =
+        hubCallUnit { inputs.deleteInput(sourceId) }
+
     override suspend fun startSource(inputId: String, target: Target): HubResult<Route> {
         val request = when (target) {
             is Target.Room -> CreateRouteRequest(inputId, target.id, CreateRouteRequest.TargetType.SINGLE_OUTPUT)

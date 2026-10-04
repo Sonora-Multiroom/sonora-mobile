@@ -34,6 +34,9 @@ interface HubRepository {
 
     suspend fun setSourceEnabled(sourceId: String, enabled: Boolean): HubResult<Unit>
 
+    /** Removes a runtime source. 404 stays Rejected(404) here; the caller treats it as removed. */
+    suspend fun removeSource(sourceId: String): HubResult<Unit>
+
     /**
      * Moves a playback. [target] is [Target.Room] or [Target.Group] (`Target.Unknown` throws
      * [IllegalArgumentException] and is never sent). Returns the hub's NEW route: the old id is

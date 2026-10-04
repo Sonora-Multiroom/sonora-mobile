@@ -180,4 +180,20 @@ class MessagesTest {
             assertEquals("Couldn't turn Kitchen on", settingsFailureMessage(settingsFailure(on, "Kitchen", e)!!))
         }
     }
+
+    // ---- Removing a source (FR-018) ----------------------------------------------------------
+
+    @Test
+    fun removingASource() {
+        val a = SettingsAction.Remove
+        assertEquals(
+            "Radio comes from the hub's configuration and can't be removed",
+            settingsFailureMessage(settingsFailure(a, "Radio", HubError.Rejected(400, null))!!),
+        )
+        assertEquals("Couldn't reach the hub", settingsFailureMessage(settingsFailure(a, "Radio", unreachable)!!))
+        assertEquals("Couldn't remove Radio", settingsFailureMessage(settingsFailure(a, "Radio", other)!!))
+        assertEquals("Couldn't remove Radio", settingsFailureMessage(settingsFailure(a, "Radio", unexpected)!!))
+        // Already gone is a success for the caller.
+        assertEquals(null, settingsFailure(a, "Radio", notFound))
+    }
 }

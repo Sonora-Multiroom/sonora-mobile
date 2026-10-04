@@ -99,4 +99,25 @@ class KtorHubRepositorySettingsTest {
         repo.enableCalls("g", false)
         assertTrue(log.none { it.path.endsWith("/volume") })
     }
+
+    // ---- 3: removeSource --------------------------------------------------------------------
+
+    @Test
+    fun removeSourceDeletesTheInput() = runTest {
+        val (repo, log) = repository(status = HttpStatusCode.NoContent, body = "")
+        assertEquals(HubResult.Ok(Unit), repo.removeSource("x"))
+        assertEquals(HttpMethod.Delete, log.single().method)
+        assertEquals("/api/v2/inputs/x", log.single().path)
+    }
+
+    @Test
+    fun removeSourceMapsErrors() = runTest {
+        val bad = """{"type":"urn:multiroom:error:bad-request","title":"Bad","status":400}"""
+        val (repo400, _) = repository(status = HttpStatusCode.BadRequest, body = bad, headers = problem)
+        assertEquals(HubResult.Err(HubError.Rejected(400, "urn:multiroom:error:bad-request", null, null)), repo400.removeSource("x"))
+        val (repo404, _) = repository(status = HttpStatusCode.NotFound, body = Fixtures.PROBLEM_NOT_FOUND, headers = problem)
+        assertEquals(HubResult.Err(HubError.Rejected(404, "urn:multiroom:error:not-found", null, null)), repo404.removeSource("x"))
+        val down = KtorHubRepository(HubAddress("http://hub:8080"), createHubHttpClient(MockEngine { throw kotlinx.io.IOException("down") }))
+        assertEquals(HubResult.Err(HubError.Unreachable), down.removeSource("x"))
+    }
 }

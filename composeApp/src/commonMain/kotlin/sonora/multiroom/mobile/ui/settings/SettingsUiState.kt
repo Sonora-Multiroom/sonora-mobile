@@ -5,6 +5,7 @@ import sonora.multiroom.mobile.domain.Confirmation
 import sonora.multiroom.mobile.domain.GroupRow
 import sonora.multiroom.mobile.domain.ItemKey
 import sonora.multiroom.mobile.domain.RoomRow
+import sonora.multiroom.mobile.domain.RuntimeSourceRow
 import sonora.multiroom.mobile.ui.session.SettingsTab
 
 /** The address sheet's state; null [SettingsUiState.sheet] means it is closed. */
@@ -28,9 +29,11 @@ data class SettingsLists(
     val rooms: List<Item<RoomRow>>,
     val groups: List<Item<GroupRow>>,
     val configuredSources: List<Item<ConfiguredSourceRow>>,
+    /** Without the ids the hub already removed; a row being removed is marked. */
+    val runtimeSources: List<Item<RuntimeSourceRow>>,
 )
 
-/** The open turn-off dialog: the item it is about and the text's source, rebuilt per snapshot. */
+/** The open turn-off or remove dialog: the item it is about and the text's source, rebuilt per snapshot. */
 data class ConfirmState(val key: ItemKey, val name: String, val confirmation: Confirmation)
 
 /** What the lists below the tab bar show, from the session's state. */

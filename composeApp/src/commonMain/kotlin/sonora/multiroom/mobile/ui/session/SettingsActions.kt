@@ -44,6 +44,18 @@ class SettingsActions(
     private val _pending = MutableStateFlow<Map<ItemKey, Pending>>(emptyMap())
     val pending: StateFlow<Map<ItemKey, Pending>> = _pending.asStateFlow()
 
+    private val _removing = MutableStateFlow<Set<String>>(emptySet())
+
+    /** Source ids with a DELETE in flight. */
+    val removing: StateFlow<Set<String>> = _removing.asStateFlow()
+
+    private val _removed = MutableStateFlow<Set<String>>(emptySet())
+
+    /** Ids the hub removed: hidden until a fenced refresh no longer lists them (research R6). */
+    val removed: StateFlow<Set<String>> = _removed.asStateFlow()
+
+    private val removalFences = mutableMapOf<String, Long>()
+
     private val channel = Channel<String>(Channel.CONFLATED)
     val messages: Flow<String> = channel.receiveAsFlow()
 
@@ -63,9 +75,18 @@ class SettingsActions(
             address = now
             generation++
             _pending.value = emptyMap()
+            _removing.value = emptySet()
+            _removed.value = emptySet()
+            removalFences.clear()
             return
         }
         if (state is SessionState.Connected && state.snapshot != null) {
+            val listed = state.snapshot.sources.map { it.id }.toSet()
+            val done = removalFences.filter { (id, fence) -> state.refreshSeq > fence && id !in listed }.keys
+            if (done.isNotEmpty()) {
+                removalFences -= done
+                _removed.update { it - done }
+            }
             _pending.update { map ->
                 map.filterValues { p -> !(p.phase is Phase.AwaitingRefresh && state.refreshSeq > p.phase.fence) }
             }
@@ -112,6 +133,32 @@ class SettingsActions(
                         if (failure.needsRefresh) session.requestRefresh()
                     }
                 }
+            }
+        }
+    }
+
+    /**
+     * Removes a runtime source. Success, or a 404 (already gone), hides the row at once; the id
+     * stays hidden until a refresh that started after the answer no longer lists it, so an older
+     * snapshot cannot bring the row back (FR-018).
+     */
+    fun remove(sourceId: String, name: String) {
+        val repo = session.repository ?: return
+        if (sourceId in _removing.value) return
+        _removing.update { it + sourceId }
+        val mine = generation
+        scope.launch {
+            val result = repo.removeSource(sourceId)
+            if (generation != mine) return@launch
+            val failure = (result as? HubResult.Err)?.let { settingsFailure(SettingsAction.Remove, name, it.error) }
+            if (failure == null) {
+                removalFences[sourceId] = session.startedSeq
+                _removed.update { it + sourceId }
+                _removing.update { it - sourceId }
+                session.requestRefresh()
+            } else {
+                _removing.update { it - sourceId }
+                report(settingsFailureMessage(failure))
             }
         }
     }

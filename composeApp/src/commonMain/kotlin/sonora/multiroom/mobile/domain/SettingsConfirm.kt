@@ -8,6 +8,9 @@ data class ItemKey(val kind: ItemKind, val id: String)
 sealed interface Confirmation {
     data class TurnOffRoom(val room: String, val sources: List<String>) : Confirmation
     data class TurnOffGroup(val group: String, val sources: List<String>, val members: List<String>) : Confirmation
+
+    /** [where] names the rooms or groups whose playback of the source would stop. */
+    data class Remove(val source: String, val where: List<String>) : Confirmation
 }
 
 /**
@@ -40,3 +43,18 @@ fun turnOffConfirmation(key: ItemKey, snapshot: HubSnapshot): Confirmation? {
 /** A live route uses the source, so turning it off leaves that playback running (FR-014). */
 fun keepsPlaying(sourceId: String, snapshot: HubSnapshot): Boolean =
     liveRoutes(snapshot).any { it.inputId == sourceId }
+
+/**
+ * Removing a runtime source stops what plays from it (the hub does that), so it asks when a live
+ * route uses it, naming where (research R4). Null: remove at once.
+ */
+fun removeConfirmation(sourceId: String, snapshot: HubSnapshot): Confirmation.Remove? {
+    val source = snapshot.sources.firstOrNull { it.id == sourceId } ?: return null
+    val rooms = snapshot.rooms.associateBy { it.id }
+    val groups = snapshot.groups.associateBy { it.id }
+    val where = liveRoutes(snapshot)
+        .filter { it.inputId == sourceId }
+        .map { describeTarget(it.target, rooms, groups, masterMuted = false).title }
+        .distinct()
+    return if (where.isEmpty()) null else Confirmation.Remove(source.name, where)
+}

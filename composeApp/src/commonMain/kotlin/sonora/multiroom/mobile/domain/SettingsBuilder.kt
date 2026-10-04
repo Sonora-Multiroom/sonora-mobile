@@ -1,7 +1,10 @@
 package sonora.multiroom.mobile.domain
 
 import kotlin.time.Instant
+import kotlinx.datetime.DateTimeUnit
 import kotlinx.datetime.TimeZone
+import kotlinx.datetime.minus
+import kotlinx.datetime.toLocalDateTime
 
 /**
  * What the Settings tabs list, decided here and nowhere else (research R3): room status,
@@ -63,7 +66,6 @@ sealed interface AddedAt {
 
 object SettingsBuilder {
     /** [now] and [zone] are for the added-when lines of runtime sources. */
-    @Suppress("UNUSED_PARAMETER")
     fun build(snapshot: HubSnapshot, now: Instant, zone: TimeZone): SettingsContent {
         val byRoom = routesByRoom(snapshot)
         val names = sourceNames(snapshot)
@@ -103,8 +105,29 @@ object SettingsBuilder {
             .sortedWith(ByName { it.name to it.id })
             .map { ConfiguredSourceRow(it.id, it.name, it.enabled, it.kind, sourceDetail(it.kind, it.uri)) }
 
-        return SettingsContent(rooms, groups, configured, runtimeSources = emptyList())
+        val runtime = snapshot.sources
+            .filter { it.origin == SourceOrigin.Runtime }
+            .sortedWith(
+                compareByDescending<Source> { it.createdAt }.then(ByName { it.name to it.id }),
+            )
+            .map { RuntimeSourceRow(it.id, it.name, it.enabled, addedLine(it, now, zone)) }
+
+        return SettingsContent(rooms, groups, configured, runtime)
     }
+}
+
+/** The added-when parts of a runtime source, in the phone's time zone (research R10). */
+private fun addedLine(source: Source, now: Instant, zone: TimeZone): AddedLine {
+    val created = source.createdAt ?: return AddedLine(!source.enabled, null, source.autoRemove)
+    val at = created.toLocalDateTime(zone)
+    val today = now.toLocalDateTime(zone).date
+    val time = at.hour.toString().padStart(2, '0') + ":" + at.minute.toString().padStart(2, '0')
+    val added = when (at.date) {
+        today -> AddedAt.Today(time)
+        today.minus(1, DateTimeUnit.DAY) -> AddedAt.Yesterday(time)
+        else -> AddedAt.Earlier(at.day, at.month.ordinal + 1, time)
+    }
+    return AddedLine(!source.enabled, added, source.autoRemove)
 }
 
 /** A→Z, case-insensitive, the id as the tie-break (spec Edge Cases). */

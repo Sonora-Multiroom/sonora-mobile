@@ -6,6 +6,9 @@ import sonora.multiroom.mobile.data.InMemoryHubAddressStore
 import sonora.multiroom.mobile.domain.HubAddress
 import sonora.multiroom.mobile.domain.ItemKey
 import sonora.multiroom.mobile.domain.ItemKind
+import sonora.multiroom.mobile.domain.SourceOrigin
+import sonora.multiroom.mobile.domain.snapshot
+import sonora.multiroom.mobile.domain.source
 import sonora.multiroom.mobile.ui.rooms.FakeFactory
 import sonora.multiroom.mobile.ui.rooms.unreachable
 import kotlinx.coroutines.flow.first
@@ -195,5 +198,71 @@ class SettingsActionsTest {
         assertTrue(s.pending.isEmpty())
         advanceTimeBy(2000)
         assertTrue(s.pending.isEmpty())
+    }
+
+    // ---- Removal (research R6) ----------------------------------------------------------------
+
+    private val withLink = snapshot(sources = listOf(source("x", "A link", SourceOrigin.Runtime, "https://soundcloud.com/x")))
+    private val withoutLink = snapshot()
+
+    @Test
+    fun removeMarksTheRowAndSendsOneRequest() = runTest {
+        val s = setup()
+        s.repo.actionDelayMs = 100
+        s.actions.remove("x", "A link")
+        s.actions.remove("x", "A link")
+        assertEquals(setOf("x"), s.actions.removing.value)
+        runCurrent()
+        assertEquals(1, s.calls("removeSource").size)
+    }
+
+    @Test
+    fun successHidesTheRowUntilAFencedSnapshotNoLongerListsIt() = runTest {
+        val s = setup()
+        s.repo.snapshotDelayMs = 1000
+        s.repo.snapshotResult = { HubResult.Ok(withLink) }
+        s.session.acquire()
+        runCurrent()                       // refresh 1 starts at t=0 and takes 1 s
+        s.repo.actionDelayMs = 100
+        advanceTimeBy(100)
+        s.actions.remove("x", "A link")
+        advanceTimeBy(101)                 // t=201: removed, fence = 1
+        assertEquals(setOf("x"), s.actions.removed.value)
+        assertTrue(s.actions.removing.value.isEmpty())
+
+        advanceTimeBy(1000)                // t=1201: refresh 1 (started before) listed it: still hidden
+        assertEquals(setOf("x"), s.actions.removed.value)
+        s.repo.snapshotResult = { HubResult.Ok(withoutLink) }
+        advanceTimeBy(1000)                // t=2201: refresh 2 started after, no longer lists it
+        assertTrue(s.actions.removed.value.isEmpty())
+        s.session.release()
+    }
+
+    @Test
+    fun aNotFoundCountsAsRemoved() = runTest {
+        val s = setup()
+        s.repo.actionResult = { HubResult.Err(HubError.Rejected(404, null)) }
+        s.actions.remove("x", "A link")
+        runCurrent()
+        assertEquals(setOf("x"), s.actions.removed.value)
+        assertTrue(s.attached.isEmpty())
+    }
+
+    @Test
+    fun otherFailuresShowTheirMessageAndLeaveTheRowAlone() = runTest {
+        val s = setup()
+        for ((error, text) in listOf(
+            HubError.Rejected(400, null) to "A link comes from the hub's configuration and can't be removed",
+            HubError.Unreachable to "Couldn't reach the hub",
+            HubError.Rejected(500, null) to "Couldn't remove A link",
+        )) {
+            s.attached.clear()
+            s.repo.actionResult = { HubResult.Err(error) }
+            s.actions.remove("x", "A link")
+            runCurrent()
+            assertEquals(listOf(text), s.attached)
+            assertTrue(s.actions.removing.value.isEmpty())
+            assertTrue(s.actions.removed.value.isEmpty())
+        }
     }
 }

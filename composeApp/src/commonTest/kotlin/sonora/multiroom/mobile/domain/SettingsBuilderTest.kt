@@ -209,4 +209,36 @@ class SettingsBuilderTest {
         assertEquals(listOf("g1", "g2"), c.groups.map { it.id })
         assertEquals(listOf("s1", "s3", "s2"), c.configuredSources.map { it.id })
     }
+
+    // ---- Runtime sources (FR-015) -------------------------------------------------------------
+
+    @Test
+    fun onlyRuntimeSourcesAreListedAndTheyCarryTheirFlags() {
+        val s = snapshot(
+            sources = listOf(
+                source("c", "Configured"),
+                source("r", "Link", SourceOrigin.Runtime, "https://soundcloud.com/x", enabled = false, autoRemove = true,
+                    createdAt = Instant.parse("2026-10-04T10:30:00Z")),
+            ),
+        )
+        val row = build(s).runtimeSources.single()
+        assertEquals("r", row.id)
+        assertEquals(false, row.enabled)
+        assertEquals(AddedLine(off = true, at = AddedAt.Today("10:30"), autoRemove = true), row.added)
+    }
+
+    @Test
+    fun newestFirstAndUndatedLastAtoZ() {
+        fun rt(id: String, name: String, at: String?) =
+            source(id, name, SourceOrigin.Runtime, "https://x/$id", createdAt = at?.let(Instant::parse))
+        val s = snapshot(
+            sources = listOf(
+                rt("u2", "Zulu", null),
+                rt("old", "Old", "2026-10-01T10:00:00Z"),
+                rt("u1", "alpha", null),
+                rt("new", "New", "2026-10-04T10:00:00Z"),
+            ),
+        )
+        assertEquals(listOf("new", "old", "u1", "u2"), build(s).runtimeSources.map { it.id })
+    }
 }

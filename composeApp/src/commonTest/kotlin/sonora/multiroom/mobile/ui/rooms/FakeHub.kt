@@ -64,6 +64,7 @@ class FakeRepository(private val time: () -> Long) : HubRepository {
     override suspend fun setRoomEnabled(roomId: String, enabled: Boolean) = action("setRoomEnabled", roomId, enabled)
     override suspend fun setGroupEnabled(groupId: String, enabled: Boolean) = action("setGroupEnabled", groupId, enabled)
     override suspend fun setSourceEnabled(sourceId: String, enabled: Boolean) = action("setSourceEnabled", sourceId, enabled)
+    override suspend fun removeSource(sourceId: String) = action("removeSource", sourceId)
 
     /** What a transfer answers; the default hands back a route "moved". */
     var transferResult: () -> HubResult<Route> =

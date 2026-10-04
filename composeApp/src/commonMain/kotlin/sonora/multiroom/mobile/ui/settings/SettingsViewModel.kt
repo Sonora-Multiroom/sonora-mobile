@@ -7,7 +7,9 @@ import sonora.multiroom.mobile.domain.ItemKey
 import sonora.multiroom.mobile.domain.ItemKind
 import sonora.multiroom.mobile.domain.SettingsBuilder
 import sonora.multiroom.mobile.domain.SettingsContent
+import sonora.multiroom.mobile.domain.Confirmation
 import sonora.multiroom.mobile.domain.keepsPlaying
+import sonora.multiroom.mobile.domain.removeConfirmation
 import sonora.multiroom.mobile.domain.turnOffConfirmation
 import sonora.multiroom.mobile.ui.session.Connection
 import sonora.multiroom.mobile.ui.session.HubSession
@@ -60,26 +62,29 @@ class SettingsViewModel(
         return SettingsBuilder.build(snapshot, now(), zone()).also { built = snapshot to it }
     }
 
+    /** What Settings hides or marks because of removals: (being removed, already removed). */
+    private val removals = combine(actions.removing, actions.removed) { removing, removed -> removing to removed }
+
     val state: StateFlow<SettingsUiState> =
-        combine(session.state, navigator.tab, local, actions.pending) { s, tab, local, pending ->
+        combine(session.state, navigator.tab, local, actions.pending, removals) { s, tab, local, pending, removals ->
             SettingsUiState(
                 hub = hubRow(s),
                 tab = tab,
-                body = bodyOf(s, pending),
+                body = bodyOf(s, pending, removals),
                 sheet = local.sheet,
                 confirm = local.confirm,
                 message = local.message,
             )
         }.stateIn(viewModelScope, SharingStarted.Eagerly, SettingsUiState(tab = navigator.tab.value))
 
-    private fun bodyOf(s: SessionState, pending: Map<ItemKey, Pending>): SettingsBody = when (s) {
+    private fun bodyOf(s: SessionState, pending: Map<ItemKey, Pending>, removals: Pair<Set<String>, Set<String>>): SettingsBody = when (s) {
         SessionState.Initial -> SettingsBody.Initial
         SessionState.NoAddress -> SettingsBody.NoAddress
         is SessionState.Connected -> when {
             s.snapshot != null -> {
                 val live = s.connection == Connection.Live
                 SettingsBody.Lists(
-                    lists = listsOf(contentOf(s.snapshot), pending),
+                    lists = listsOf(contentOf(s.snapshot), pending, removals),
                     stale = !live && s.connection is Connection.Unreachable,
                     controlsEnabled = live,
                 )
@@ -90,7 +95,8 @@ class SettingsViewModel(
         }
     }
 
-    private fun listsOf(content: SettingsContent, pending: Map<ItemKey, Pending>): SettingsLists {
+    private fun listsOf(content: SettingsContent, pending: Map<ItemKey, Pending>, removals: Pair<Set<String>, Set<String>>): SettingsLists {
+        val (removing, removed) = removals
         fun <R> item(kind: ItemKind, id: String, enabled: Boolean, row: R): Item<R> {
             val p = pending[ItemKey(kind, id)]
             return Item(row, shownEnabled = p?.value ?: enabled, inFlight = p?.phase == Phase.InFlight)
@@ -99,6 +105,8 @@ class SettingsViewModel(
             rooms = content.rooms.map { item(ItemKind.Room, it.id, it.enabled, it) },
             groups = content.groups.map { item(ItemKind.Group, it.id, it.enabled, it) },
             configuredSources = content.configuredSources.map { item(ItemKind.Source, it.id, it.enabled, it) },
+            runtimeSources = content.runtimeSources.filter { it.id !in removed }
+                .map { Item(it, shownEnabled = it.enabled, inFlight = false, removing = it.id in removing) },
         )
     }
 
@@ -113,7 +121,7 @@ class SettingsViewModel(
                 val snapshot = (s as? SessionState.Connected)?.snapshot ?: return@collect
                 local.update { l ->
                     val open = l.confirm ?: return@update l
-                    val fresh = turnOffConfirmation(open.key, snapshot) ?: return@update l
+                    val fresh = confirmationFor(open.key, snapshot) ?: return@update l
                     l.copy(confirm = open.copy(confirmation = fresh))
                 }
             }
@@ -161,10 +169,24 @@ class SettingsViewModel(
         )
     }
 
+    /** Turning off asks for rooms and groups, removing asks for a runtime source. */
+    private fun confirmationFor(key: ItemKey, snapshot: HubSnapshot): Confirmation? =
+        if (key.kind == ItemKind.Source) removeConfirmation(key.id, snapshot) else turnOffConfirmation(key, snapshot)
+
+    fun onRemove(sourceId: String, name: String) {
+        val snapshot = liveSnapshot() ?: return
+        if (sourceId in actions.removing.value) return
+        val key = ItemKey(ItemKind.Source, sourceId)
+        val confirmation = removeConfirmation(sourceId, snapshot)
+        if (confirmation != null) local.update { it.copy(confirm = ConfirmState(key, name, confirmation)) }
+        else actions.remove(sourceId, name)
+    }
+
     fun onConfirm() {
         val open = local.value.confirm ?: return
         local.update { it.copy(confirm = null) }
-        actions.setEnabled(open.key, open.name, false, keepsPlaying = false)
+        if (open.confirmation is Confirmation.Remove) actions.remove(open.key.id, open.name)
+        else actions.setEnabled(open.key, open.name, false, keepsPlaying = false)
     }
 
     fun onConfirmCancel() = local.update { it.copy(confirm = null) }

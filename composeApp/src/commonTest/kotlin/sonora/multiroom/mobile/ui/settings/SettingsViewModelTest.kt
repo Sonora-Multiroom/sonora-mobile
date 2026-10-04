@@ -377,4 +377,66 @@ class SettingsViewModelTest {
         s.vm.onToggle(office, "Office", false); runCurrent()
         assertEquals("Couldn't reach the hub", s.state.message)
     }
+
+    // ---- Removal (US2) -----------------------------------------------------------------------
+
+    private val link = source("link", "A link", sonora.multiroom.mobile.domain.SourceOrigin.Runtime, "https://soundcloud.com/x")
+
+    private fun withLink(routes: List<sonora.multiroom.mobile.domain.Route> = emptyList()) =
+        hubSnapshot(routes = routes, sources = listOf(radio, link))
+
+    @Test
+    fun runtimeRowsExcludeRemovedIdsAndMarkTheOnesBeingRemoved() = runViewModelTest {
+        val s = live(withLink())
+        assertEquals(listOf("link"), s.lists().runtimeSources.map { it.row.id })
+        s.repo.actionDelayMs = 100
+        s.vm.onRemove("link", "A link"); runCurrent()
+        assertTrue(s.lists().runtimeSources.single().removing)
+        advanceTimeBy(101); runCurrent()
+        assertTrue(s.lists().runtimeSources.isEmpty())
+    }
+
+    @Test
+    fun anUnusedSourceIsRemovedAtOnce() = runViewModelTest {
+        val s = live(withLink())
+        s.vm.onRemove("link", "A link"); runCurrent()
+        assertNull(s.state.confirm)
+        assertEquals(listOf(listOf<Any>("link")), s.repo.calls.filter { it.name == "removeSource" }.map { it.args })
+    }
+
+    @Test
+    fun aSourceInUseAsksFirst() = runViewModelTest {
+        val s = live(withLink(listOf(route("r", "link", Target.Room("office")))))
+        s.vm.onRemove("link", "A link"); runCurrent()
+        assertEquals(Confirmation.Remove("A link", listOf("Office")), s.state.confirm?.confirmation)
+        assertTrue(s.repo.calls.none { it.name == "removeSource" })
+
+        s.vm.onConfirmCancel(); runCurrent()
+        assertNull(s.state.confirm)
+        assertTrue(s.repo.calls.none { it.name == "removeSource" })
+
+        s.vm.onRemove("link", "A link"); runCurrent()
+        s.vm.onConfirm(); runCurrent()
+        assertNull(s.state.confirm)
+        assertEquals(1, s.repo.calls.count { it.name == "removeSource" })
+    }
+
+    @Test
+    fun theCheckUsesTheSnapshotAtTheTimeOfTheTap() = runViewModelTest {
+        val s = live(withLink(listOf(route("r", "link", Target.Room("office")))))
+        s.repo.snapshotResult = { HubResult.Ok(withLink()) }
+        advanceTimeBy(2500); runCurrent()
+        s.vm.onRemove("link", "A link"); runCurrent()
+        assertNull(s.state.confirm)
+        assertEquals(1, s.repo.calls.count { it.name == "removeSource" })
+    }
+
+    @Test
+    fun trashTapsAreIgnoredWhileStale() = runViewModelTest {
+        val s = live(withLink())
+        s.repo.snapshotResult = { sonora.multiroom.mobile.ui.rooms.unreachable }
+        advanceTimeBy(2500); runCurrent()
+        s.vm.onRemove("link", "A link"); runCurrent()
+        assertTrue(s.repo.calls.none { it.name == "removeSource" })
+    }
 }

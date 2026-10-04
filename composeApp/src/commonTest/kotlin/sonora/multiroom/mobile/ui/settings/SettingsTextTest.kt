@@ -99,4 +99,15 @@ class SettingsTextTest {
         assertEquals("Jazz FM is off. What's playing from it keeps playing.", keepsPlayingMessage("Jazz FM"))
         assertEquals("No sources in the hub's configuration.", CONFIGURED_EMPTY)
     }
+
+    @Test
+    fun removeDialogAndRuntimeTexts() {
+        val c = Confirmation.Remove("A link", listOf("Bedroom", "Downstairs"))
+        assertEquals("Remove A link?", confirmTitle(c))
+        assertEquals("A link is playing in Bedroom and Downstairs. Removing it stops playback there.", confirmBody(c))
+        assertEquals("Remove", REMOVE_LABEL)
+        assertEquals("Nothing added. Links you play, and sources apps like DLNA add, show up here.", RUNTIME_EMPTY)
+        assertEquals("Removing…", REMOVING_LINE)
+        assertEquals("Remove A link", removeLabel("A link"))
+    }
 }

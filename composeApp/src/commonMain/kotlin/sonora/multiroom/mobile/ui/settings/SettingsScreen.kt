@@ -67,6 +67,7 @@ fun SettingsScreen(viewModel: SettingsViewModel, modifier: Modifier = Modifier) 
             onHubRowTapped = viewModel::onHubRowTapped,
             onTabSelected = viewModel::onTabSelected,
             onToggle = viewModel::onToggle,
+            onRemove = viewModel::onRemove,
         )
         SnackbarHost(
             hostState = snackbar,
@@ -82,7 +83,7 @@ fun SettingsScreen(viewModel: SettingsViewModel, modifier: Modifier = Modifier) 
             ConfirmDialog(
                 title = confirmTitle(open.confirmation),
                 body = confirmBody(open.confirmation),
-                confirmLabel = "Turn off",
+                confirmLabel = confirmLabel(open.confirmation),
                 onConfirm = viewModel::onConfirm,
                 onDismiss = viewModel::onConfirmCancel,
             )
@@ -104,6 +105,7 @@ fun SettingsContentView(
     onHubRowTapped: () -> Unit,
     onTabSelected: (SettingsTab) -> Unit,
     onToggle: (ItemKey, String, Boolean) -> Unit,
+    onRemove: (String, String) -> Unit,
     modifier: Modifier = Modifier,
     versionLabel: String = appVersionLabel(),
 ) {
@@ -163,6 +165,14 @@ fun SettingsContentView(
                             } else {
                                 SettingsCard(body.lists.configuredSources) { item ->
                                     ConfiguredSourceSettingRow(item, body.controlsEnabled) { onToggle(ItemKey(ItemKind.Source, item.row.id), item.row.name, it) }
+                                }
+                            }
+                            SectionHeading("Added from apps", Modifier.padding(top = 4.dp))
+                            if (body.lists.runtimeSources.isEmpty()) {
+                                Intro(RUNTIME_EMPTY)
+                            } else {
+                                SettingsCard(body.lists.runtimeSources) { item ->
+                                    RuntimeSourceSettingRow(item, body.controlsEnabled) { onRemove(item.row.id, item.row.name) }
                                 }
                             }
                         }
