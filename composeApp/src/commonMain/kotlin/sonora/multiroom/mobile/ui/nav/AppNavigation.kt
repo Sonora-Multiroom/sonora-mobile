@@ -23,7 +23,12 @@ fun AppNavigation(graph: AppGraph, backStack: AppBackStack, onExit: () -> Unit) 
     Column(modifier = Modifier.fillMaxSize().safeDrawingPadding()) {
         NavDisplay(
             backStack = backStack.stack,
-            onBack = { if (!backStack.pop()) onExit() },
+            onBack = {
+                // System Back leaves Start Playback without its Close button: a start in flight must
+                // report to Rooms, not to the closing screen (research R9).
+                if (backStack.top is Destination.StartPlayback) graph.starter.detach()
+                if (!backStack.pop()) onExit()
+            },
             modifier = Modifier.weight(1f),
             // View models live in their entry's store, so each Now Playing entry gets its own and
             // it is cleared when the entry is popped (research R2).
@@ -64,7 +69,7 @@ fun AppNavigation(graph: AppGraph, backStack: AppBackStack, onExit: () -> Unit) 
                         onClose = { backStack.pop() },
                         // Back from Now Playing returns to where Start Playback was opened (FR-015).
                         onStarted = { started ->
-                            backStack.replaceTop(Destination.NowPlaying(started.routeId, started.startedAfterSeq, started.targetName))
+                            if (backStack.top is Destination.StartPlayback) backStack.replaceTop(Destination.NowPlaying(started.routeId, started.startedAfterSeq, started.targetName))
                         },
                         onOpenSettings = { backStack.selectTab(Destination.Settings) },
                     )

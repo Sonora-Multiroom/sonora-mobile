@@ -129,6 +129,15 @@ class PlaybackStarterTest {
         assertEquals(StartAttempt.Failed(StartFailure.Other), s.attempt)
     }
 
+    @Test
+    fun anUnreadableSuccessIsConfirmedByTheHubStateBeforeItIsReported() = runTest {
+        val s = setup()
+        s.repo.startResults += HubResult.Err(HubError.Unexpected)
+        s.repo.snapshotResult = { HubResult.Ok(snapshot(routes = listOf(route("r5")))) }
+        s.startJazz(); runCurrent()
+        assertEquals("r5", assertIs<StartAttempt.Done>(s.attempt).route.id)
+    }
+
     // ---- 404 (research R7) --------------------------------------------------------------------
 
     private val notFound = HubResult.Err(HubError.Rejected(404, "urn:multiroom:error:not-found"))

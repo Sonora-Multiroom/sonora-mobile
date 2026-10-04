@@ -59,7 +59,9 @@ class PlaybackStarter(
             when (result) {
                 is HubResult.Ok -> succeed(result.value)
                 is HubResult.Err -> when {
-                    result.error is HubError.Unreachable -> recover(what, target, names, kind)
+                    result.error is HubError.Unreachable -> recover(what, target, StartFailure.HubUnreachable)
+                    // The hub may have started it although the answer could not be read.
+                    result.error is HubError.Unexpected -> recover(what, target, StartFailure.Other)
                     result.error is HubError.Rejected && result.error.status == 404 -> gone(what, target, names, kind, result.error)
                     else -> fail(startFailure(kind, result.error, names, roomNames()))
                 }
@@ -120,10 +122,10 @@ class PlaybackStarter(
     }
 
     /** The answer was lost: look for the playback on the hub before calling it a failure (R8). */
-    private suspend fun recover(what: StartWhat, target: Target, names: StartNames, kind: StartKind) {
+    private suspend fun recover(what: StartWhat, target: Target, notFound: StartFailure) {
         val fresh = session.awaitFreshSnapshot()
         val found = fresh?.let { findStarted(it, what, target) }
-        if (found != null) succeed(found) else fail(StartFailure.HubUnreachable)
+        if (found != null) succeed(found) else fail(notFound)
     }
 
     private fun findStarted(snapshot: HubSnapshot, what: StartWhat, target: Target): Route? {
