@@ -1,5 +1,7 @@
 package sonora.multiroom.mobile.ui.settings
 
+import sonora.multiroom.mobile.domain.ItemKey
+import sonora.multiroom.mobile.domain.ItemKind
 import sonora.multiroom.mobile.domain.appVersionLabel
 import sonora.multiroom.mobile.ui.rooms.Message
 import sonora.multiroom.mobile.ui.rooms.StaleBanner
@@ -26,6 +28,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.repeatOnLifecycle
@@ -63,6 +66,7 @@ fun SettingsScreen(viewModel: SettingsViewModel, modifier: Modifier = Modifier) 
             state = state,
             onHubRowTapped = viewModel::onHubRowTapped,
             onTabSelected = viewModel::onTabSelected,
+            onToggle = viewModel::onToggle,
         )
         SnackbarHost(
             hostState = snackbar,
@@ -72,6 +76,15 @@ fun SettingsScreen(viewModel: SettingsViewModel, modifier: Modifier = Modifier) 
                 snackbarData = data,
                 containerColor = SonoraTheme.colors.surfaceRaised,
                 contentColor = SonoraTheme.colors.text,
+            )
+        }
+        state.confirm?.let { open ->
+            ConfirmDialog(
+                title = confirmTitle(open.confirmation),
+                body = confirmBody(open.confirmation),
+                confirmLabel = "Turn off",
+                onConfirm = viewModel::onConfirm,
+                onDismiss = viewModel::onConfirmCancel,
             )
         }
         state.sheet?.let { sheet ->
@@ -90,6 +103,7 @@ fun SettingsContentView(
     state: SettingsUiState,
     onHubRowTapped: () -> Unit,
     onTabSelected: (SettingsTab) -> Unit,
+    onToggle: (ItemKey, String, Boolean) -> Unit,
     modifier: Modifier = Modifier,
     versionLabel: String = appVersionLabel(),
 ) {
@@ -127,7 +141,34 @@ fun SettingsContentView(
 
                 is SettingsBody.Lists -> {
                     if (body.stale) StaleBanner()
-                    // The tab bodies are filled by each user story.
+                    when (state.tab) {
+                        SettingsTab.Rooms -> {
+                            Intro("A room that's off can't start new playback.")
+                            SettingsCard(body.lists.rooms) { item ->
+                                RoomSettingRow(item, body.controlsEnabled) { onToggle(ItemKey(ItemKind.Room, item.row.id), item.row.name, it) }
+                            }
+                        }
+
+                        SettingsTab.Groups -> {
+                            Intro("Groups play to several rooms in sync.")
+                            SettingsCard(body.lists.groups) { item ->
+                                GroupSettingRow(item, body.controlsEnabled) { onToggle(ItemKey(ItemKind.Group, item.row.id), item.row.name, it) }
+                            }
+                        }
+
+                        SettingsTab.Sources -> {
+                            SectionHeading("From configuration")
+                            if (body.lists.configuredSources.isEmpty()) {
+                                Intro(CONFIGURED_EMPTY)
+                            } else {
+                                SettingsCard(body.lists.configuredSources) { item ->
+                                    ConfiguredSourceSettingRow(item, body.controlsEnabled) { onToggle(ItemKey(ItemKind.Source, item.row.id), item.row.name, it) }
+                                }
+                            }
+                        }
+
+                        SettingsTab.Extensions -> Unit
+                    }
                 }
             }
 
@@ -141,4 +182,25 @@ fun SettingsContentView(
             )
         }
     }
+}
+
+/** The 13 sp muted line above a list. */
+@Composable
+internal fun Intro(text: String) {
+    Text(
+        text,
+        style = SonoraTheme.type.body13.copy(lineHeight = 18.85.sp),
+        color = SonoraTheme.colors.textMuted,
+        modifier = Modifier.padding(horizontal = 20.dp),
+    )
+}
+
+@Composable
+internal fun SectionHeading(text: String, modifier: Modifier = Modifier) {
+    Text(
+        text.uppercase(),
+        style = SonoraTheme.type.sectionLabel,
+        color = SonoraTheme.colors.textMuted,
+        modifier = modifier.padding(horizontal = 20.dp),
+    )
 }

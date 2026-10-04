@@ -249,7 +249,7 @@ rows 1–8).
 
 ### Tests for User Story 1 (write first, see them fail)
 
-- [ ] T016 [P] [US1] Write `test/domain/SourceDetailTest.kt` for `sourceDetail(kind, uri)`
+- [X] T016 [P] [US1] Write `test/domain/SourceDetailTest.kt` for `sourceDetail(kind, uri)`
   (research R11):
   - Stream `https://stream.radioparadise.com/mp3-192` → "stream.radioparadise.com"
   - File `file:/home/x/morning.flac` → "morning.flac"
@@ -258,7 +258,7 @@ rows 1–8).
   - Line-in `hw:1,0` (no scheme) → "hw:1,0"
   - blank or `null` → `null`
   - `addressDetail` (Now Playing) is unchanged: line-in still → `null`
-- [ ] T017 [P] [US1] Write `test/domain/SettingsBuilderTest.kt` (rooms, groups, configured sources)
+- [X] T017 [P] [US1] Write `test/domain/SettingsBuilderTest.kt` (rooms, groups, configured sources)
   against `SettingsBuilder.build(snapshot, now, zone)` (data-model.md "Settings content").
   - **room status** (FR-009), each a test:
     - `!enabled` → `Off`
@@ -286,7 +286,7 @@ rows 1–8).
     a source that is both configured and unused
   - **ordering**: rooms, groups and configured sources A→Z case-insensitive ("alpha" < "Beta"),
     with the id as tie-break
-- [ ] T018 [P] [US1] Write `test/domain/SettingsConfirmTest.kt` (turn-off part) for
+- [X] T018 [P] [US1] Write `test/domain/SettingsConfirmTest.kt` (turn-off part) for
   `turnOffConfirmation(key, snapshot)` and `keepsPlaying(sourceId, snapshot)` (research R4,
   data-model.md "Confirmations" table):
   - playing room → `TurnOffRoom("Living Room", ["Radio Paradise"])`
@@ -301,7 +301,7 @@ rows 1–8).
   - any `ItemKind.Source` key → `null`
   - `keepsPlaying`: a live route uses the source → true; only a `Stopped` route → false; unused
     → false
-- [ ] T019 [P] [US1] Extend `test/ui/settings/SettingsTextTest.kt` (rows and dialog) with each
+- [X] T019 [P] [US1] Extend `test/ui/settings/SettingsTextTest.kt` (rows and dialog) with each
   string of the UI contract "Copy" table for:
   - `RoomStatus`: "Off", "Not connected", "Speaker", "Playing · A + B", "In Downstairs,
     Everywhere"
@@ -313,7 +313,7 @@ rows 1–8).
   - group dialog body
   - the "keeps playing" message "<name> is off. What's playing from it keeps playing."
   - the configured empty text "No sources in the hub's configuration."
-- [ ] T020 [P] [US1] Extend `test/ui/MessagesTest.kt` with `settingsFailure(SettingsAction.Turn(on),
+- [X] T020 [P] [US1] Extend `test/ui/MessagesTest.kt` with `settingsFailure(SettingsAction.Turn(on),
   name, error)` → `settingsFailureMessage` (FR-013):
   - `Rejected(404)` → "<name> is no longer on the hub" and `needsRefresh = true`
   - `Unreachable` → "Couldn't reach the hub"
@@ -321,7 +321,7 @@ rows 1–8).
     and "Couldn't turn <name> on" (on = true)
 
   No hub `title`/`detail` text can appear.
-- [ ] T021 [P] [US1] Create `test/data/KtorHubRepositorySettingsTest.kt` with contract tests 1, 2,
+- [X] T021 [P] [US1] Create `test/data/KtorHubRepositorySettingsTest.kt` with contract tests 1, 2,
   6 (for the three PUTs) and 7 from [contracts/hub-repository.md](contracts/hub-repository.md):
   - exact method and path for `setRoomEnabled` / `setGroupEnabled` / `setSourceEnabled`
   - the body is exactly `{"enabled":false}` or `{"enabled":true}`
@@ -330,7 +330,7 @@ rows 1–8).
   - 404 RFC 7807 → `Rejected(404, type, null, null)`
   - IO failure → `Unreachable`
   - no request to `/groups/{id}/volume`
-- [ ] T022 [US1] Write `test/ui/session/SettingsActionsTest.kt` (switch part) against
+- [X] T022 [US1] Write `test/ui/session/SettingsActionsTest.kt` (switch part) against
   `SettingsActions(scope, session, messages: AppMessages)` (research R5, data-model.md state
   diagram), with virtual time and `FakeRepository`:
   - `setEnabled(Room "a", off)` → `pending[a] = Pending(false, InFlight)` at once, then one
@@ -346,7 +346,7 @@ rows 1–8).
   - **routing**: attached → messages arrive on `actions.messages`; detached → posted to
     `AppMessages` and not to `messages` (R7)
   - an address change clears every override
-- [ ] T023 [US1] Extend `test/ui/settings/SettingsViewModelTest.kt` (US1), failing first:
+- [X] T023 [US1] Extend `test/ui/settings/SettingsViewModelTest.kt` (US1), failing first:
   - **rows**: `Lists` content carries the T017 rows with `shownEnabled` = override or hub value,
     `inFlight` while `InFlight`, and `controlsEnabled = false` when stale
   - **switch**:
@@ -367,34 +367,34 @@ rows 1–8).
 
 ### Implementation for User Story 1
 
-- [ ] T024 [P] [US1] Add `fun sourceDetail(kind: SourceKind, uri: String?): String?` to
+- [X] T024 [P] [US1] Add `fun sourceDetail(kind: SourceKind, uri: String?): String?` to
   `main/domain/SourceKind.kt`, next to `addressDetail`. Stream and File delegate to
   `addressDetail`. Line-in strips `scheme://`, or keeps the text as typed without one. Blank →
   `null`. KDoc: "the Settings row detail (research R11); Now Playing keeps `addressDetail`". Make
   T016 pass.
-- [ ] T025 [US1] Create `main/domain/SettingsBuilder.kt` with `SettingsContent`, `RoomRow`,
+- [X] T025 [US1] Create `main/domain/SettingsBuilder.kt` with `SettingsContent`, `RoomRow`,
   `RoomStatus`, `GroupRow` and `ConfiguredSourceRow` (data-model.md), and
   `object SettingsBuilder { fun build(snapshot: HubSnapshot, now: Instant, zone: TimeZone):
   SettingsContent }`. Use `routesByRoom()` and `liveRoutes()` from `PlaybackRules.kt`. Leave
   `runtimeSources` empty (US2) and keep `now`/`zone` in the signature. Make T017 pass.
-- [ ] T026 [US1] Create `main/domain/SettingsConfirm.kt` with `ItemKind`, `ItemKey`, `Confirmation`
+- [X] T026 [US1] Create `main/domain/SettingsConfirm.kt` with `ItemKind`, `ItemKey`, `Confirmation`
   (`TurnOffRoom`, `TurnOffGroup`; `Remove` comes in US2), `turnOffConfirmation()` and
   `keepsPlaying()`. Reuse the room and group status rules from `SettingsBuilder` (one rule, not a
   copy). Make T018 pass.
-- [ ] T027 [P] [US1] In `main/ui/settings/SettingsText.kt` add `roomStatusText`,
+- [X] T027 [P] [US1] In `main/ui/settings/SettingsText.kt` add `roomStatusText`,
   `groupMembersText`, `groupPlayingText`, `configuredLine`, `confirmTitle`/`confirmBody` (room and
   group) and `keepsPlayingMessage`. Make T019 pass.
-- [ ] T028 [P] [US1] In `main/ui/Messages.kt` add `sealed interface SettingsAction { data class
+- [X] T028 [P] [US1] In `main/ui/Messages.kt` add `sealed interface SettingsAction { data class
   Turn(val on: Boolean); data object Remove }`, `SettingsFailure` (`NoLongerOnHub(name)`,
   `HubUnreachable`, `CouldNotTurn(name, on)`; removal cases come in US2), `settingsFailure(action,
   name, error)` with a `needsRefresh` flag, and `settingsFailureMessage(failure)`. The copy is
   verbatim from FR-013, with no trailing full stop. Make T020 pass.
-- [ ] T029 [US1] In `main/data/HubRepository.kt` add `setRoomEnabled`, `setGroupEnabled` and
+- [X] T029 [US1] In `main/data/HubRepository.kt` add `setRoomEnabled`, `setGroupEnabled` and
   `setSourceEnabled` (KDoc per contracts/hub-repository.md). In `main/data/KtorHubRepository.kt`
   implement them with `hubCallUnit { outputs.setOutputEnabled(id, EnabledRequest(enabled)) }`, and
   likewise with `GroupsApi`/`InputsApi`. In `test/ui/rooms/FakeHub.kt` (`FakeRepository`) record
   them through `action(...)`. Make T021 pass; every existing suite stays green.
-- [ ] T030 [US1] Create `main/ui/session/SettingsActions.kt` (data-model.md "SettingsActions":
+- [X] T030 [US1] Create `main/ui/session/SettingsActions.kt` (data-model.md "SettingsActions":
   `pending`, `messages`, `setEnabled(key, name, value, keepsPlaying)`, `attach()`/`detach()`).
   - It collects `session.state` to drop `AwaitingRefresh` overrides once `refreshSeq > fence`, and
     to clear everything on an address change.
@@ -404,7 +404,7 @@ rows 1–8).
     and pass it to `settingsViewModel()`.
 
   Make T022 pass.
-- [ ] T031 [US1] Extend `main/ui/settings/SettingsViewModel.kt` and `SettingsUiState.kt`:
+- [X] T031 [US1] Extend `main/ui/settings/SettingsViewModel.kt` and `SettingsUiState.kt`:
   - **rows**: `Lists` content from `SettingsBuilder.build(snapshot, Clock.System.now(),
     TimeZone.currentSystemDefault())`, built once per snapshot as `RoomsViewModel.contentOf` does,
     merged with `SettingsActions.pending` into `shownEnabled`/`inFlight`
@@ -415,10 +415,10 @@ rows 1–8).
   - inject `now: () -> Instant` and `zone: () -> TimeZone` for tests
 
   Make T023 pass.
-- [ ] T032 [P] [US1] Create `main/ui/settings/SonoraSwitch.kt`: a 48×28 track and a 22 dp thumb,
+- [X] T032 [P] [US1] Create `main/ui/settings/SonoraSwitch.kt`: a 48×28 track and a 22 dp thumb,
   coloured `switchTrackOff`/`switchThumbOff` off and `accent`/`onAccent` on, moving 150 ms. It is
   purely visual; the row owns the toggle semantics.
-- [ ] T033 [P] [US1] Create `main/ui/settings/ConfirmDialog.kt` (UI contract "Confirmation dialog"):
+- [X] T033 [P] [US1] Create `main/ui/settings/ConfirmDialog.kt` (UI contract "Confirmation dialog"):
   - a `Dialog` holding the card: `surface`, r24, padding 24 20 20, gap 10
   - a tile 44 r14 `dangerContainer` with `StopOutline` in `danger`
   - the title Sora 20 sp 600, and the body 15 sp `textSoft` with 1.5 line height
@@ -426,7 +426,7 @@ rows 1–8).
     on `danger`)
   - `semantics { paneTitle = title }`, with the title and body read on open
   - Back and a tap outside call `onDismiss`
-- [ ] T034 [US1] Create `main/ui/settings/SettingRows.kt` with `SettingsCard` (`surface`, r22,
+- [X] T034 [US1] Create `main/ui/settings/SettingRows.kt` with `SettingsCard` (`surface`, r22,
   padding 4 14, 1 dp `rowDivider` between rows) and these rows:
   - `RoomSettingRow`: min-h 64, `Room` tile, name 16 sp 600 (`textMuted` when off), status 13 sp
     in `accent` for Playing, else `textMuted`, and a switch
@@ -438,7 +438,7 @@ rows 1–8).
   Each row is `Modifier.toggleable(value = shownEnabled, role = Role.Switch, enabled =
   controlsEnabled && !inFlight)` with merged semantics and `contentDescription = name` (FR-023). It
   is dimmed to 0.5 when disabled.
-- [ ] T035 [US1] Fill the Rooms, Groups and Sources ("FROM CONFIGURATION" heading and card, or the
+- [X] T035 [US1] Fill the Rooms, Groups and Sources ("FROM CONFIGURATION" heading and card, or the
   configured empty text) tabs in `main/ui/settings/SettingsScreen.kt` with the intro texts of
   FR-009/FR-010 (13 sp textMuted). Show `ConfirmDialog` while `state.confirm != null`, with the
   "Turn off" label. Wire `onToggle`/`onConfirm`/`onConfirmCancel`. Build green.

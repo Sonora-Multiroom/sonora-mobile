@@ -45,6 +45,20 @@ fun addressDetail(kind: SourceKind, uri: String?): String? {
     }
 }
 
+/**
+ * The Settings row detail (research R11); Now Playing keeps [addressDetail]. Stream and file as
+ * there, a line-in as its address without `scheme://` (or as typed when it has none), blank
+ * `null`. A link is never asked for: runtime rows show the added line instead.
+ */
+fun sourceDetail(kind: SourceKind, uri: String?): String? {
+    val address = uri?.trim().orEmpty()
+    if (address.isEmpty()) return null
+    return when (kind) {
+        SourceKind.LineIn -> address.substringAfter("://", missingDelimiterValue = address).takeIf { it.isNotEmpty() }
+        else -> addressDetail(kind, address)
+    }
+}
+
 private fun hostOf(address: String): String? {
     val afterScheme = address.substringAfter("://")
     val authority = afterScheme.takeWhile { it != '/' && it != '?' && it != '#' }

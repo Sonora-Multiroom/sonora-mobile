@@ -27,6 +27,13 @@ interface HubRepository {
     /** Mutes or unmutes every member of the group (idempotent on the hub). */
     suspend fun setGroupMute(groupId: String, muted: Boolean): HubResult<Unit>
 
+    /** Turns a room (output) on or off. The body of the answer is ignored; the next refresh confirms. */
+    suspend fun setRoomEnabled(roomId: String, enabled: Boolean): HubResult<Unit>
+
+    suspend fun setGroupEnabled(groupId: String, enabled: Boolean): HubResult<Unit>
+
+    suspend fun setSourceEnabled(sourceId: String, enabled: Boolean): HubResult<Unit>
+
     /**
      * Moves a playback. [target] is [Target.Room] or [Target.Group] (`Target.Unknown` throws
      * [IllegalArgumentException] and is never sent). Returns the hub's NEW route: the old id is

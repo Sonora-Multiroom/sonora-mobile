@@ -11,6 +11,7 @@ import sonora.multiroom.mobile.hub.generated.apis.OutputsApi
 import sonora.multiroom.mobile.hub.generated.apis.PlaybackApi
 import sonora.multiroom.mobile.hub.generated.apis.RoutesApi
 import sonora.multiroom.mobile.hub.generated.models.CreateRouteRequest
+import sonora.multiroom.mobile.hub.generated.models.EnabledRequest
 import sonora.multiroom.mobile.hub.generated.models.MuteRequest
 import sonora.multiroom.mobile.hub.generated.models.PauseRequest
 import sonora.multiroom.mobile.hub.generated.models.PlaybackRequest
@@ -86,6 +87,15 @@ class KtorHubRepository(address: HubAddress, client: HttpClient) : HubRepository
 
     override suspend fun setGroupMute(groupId: String, muted: Boolean): HubResult<Unit> =
         hubCallUnit { groups.setGroupMute(groupId, MuteRequest(muted)) }
+
+    override suspend fun setRoomEnabled(roomId: String, enabled: Boolean): HubResult<Unit> =
+        hubCallUnit { outputs.setOutputEnabled(roomId, EnabledRequest(enabled)) }
+
+    override suspend fun setGroupEnabled(groupId: String, enabled: Boolean): HubResult<Unit> =
+        hubCallUnit { groups.setGroupEnabled(groupId, EnabledRequest(enabled)) }
+
+    override suspend fun setSourceEnabled(sourceId: String, enabled: Boolean): HubResult<Unit> =
+        hubCallUnit { inputs.setInputEnabled(sourceId, EnabledRequest(enabled)) }
 
     override suspend fun startSource(inputId: String, target: Target): HubResult<Route> {
         val request = when (target) {

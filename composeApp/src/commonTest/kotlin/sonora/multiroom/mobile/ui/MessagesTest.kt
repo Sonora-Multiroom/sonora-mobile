@@ -163,4 +163,21 @@ class MessagesTest {
         // A link has no source name yet, so this one is not named.
         assertEquals(StartFailure.Other, link(HubError.Rejected(409, null, "INPUT_ALREADY_ON_OUTPUT", "kitchen")))
     }
+
+    // ---- Settings (004, FR-013) --------------------------------------------------------------
+
+    @Test
+    fun turningSomethingOnOrOff() {
+        val off = SettingsAction.Turn(on = false)
+        val on = SettingsAction.Turn(on = true)
+        val gone = settingsFailure(off, "Kitchen", notFound)
+        assertEquals("Kitchen is no longer on the hub", settingsFailureMessage(gone!!))
+        assertEquals(true, gone.needsRefresh)
+        assertEquals("Couldn't reach the hub", settingsFailureMessage(settingsFailure(off, "Kitchen", unreachable)!!))
+        assertEquals(false, settingsFailure(off, "Kitchen", unreachable)!!.needsRefresh)
+        for (e in listOf(HubError.Rejected(400, null), other, unexpected)) {
+            assertEquals("Couldn't turn Kitchen off", settingsFailureMessage(settingsFailure(off, "Kitchen", e)!!))
+            assertEquals("Couldn't turn Kitchen on", settingsFailureMessage(settingsFailure(on, "Kitchen", e)!!))
+        }
+    }
 }

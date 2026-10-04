@@ -38,6 +38,10 @@ data class Source(
     val kind: SourceKind,
     /** The mode the hub applies to a start that names none; null when the source declares none. */
     val defaultJoinMode: JoinMode? = null,
+    /** A runtime source the hub removes by itself once its playback stops. */
+    val autoRemove: Boolean = false,
+    /** When the hub added a runtime source; null when it did not say or the value was unreadable. */
+    val createdAt: kotlin.time.Instant? = null,
 )
 
 sealed interface Target {
