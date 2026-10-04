@@ -1,7 +1,8 @@
 name: Android APK
 
-# Documentation-only changes cannot change the APK or the tests, so they skip CI. The workflow is
-# skipped only when every changed file matches; keep both lists in sync.
+# Documentation and developer scripts (cloud session setup, APK download) cannot change the APK or
+# the tests, so they skip CI. The workflow is skipped only when every changed file matches; keep
+# both lists in sync, and take a path out if the build ever starts using it.
 on:
   push:
     branches: [main]
@@ -10,6 +11,7 @@ on:
       - 'specs/**'
       - 'docs/**'
       - 'design/**'
+      - 'scripts/**'
   # Feature-branch and Dependabot PRs; the Appetize upload stays manual-only.
   pull_request:
     paths-ignore:
@@ -17,6 +19,7 @@ on:
       - 'specs/**'
       - 'docs/**'
       - 'design/**'
+      - 'scripts/**'
   workflow_dispatch:
     inputs:
       upload_to_appetize:

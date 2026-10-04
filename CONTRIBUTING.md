@@ -43,8 +43,8 @@ to explain why, not just what. Do not add a `Co-Authored-By` trailer or other to
 - Changes reach `main` only through pull requests. A feature is one pull request from its
   `NNN-short-name` branch.
 - The merge gate is a green CI run plus the local checks in [AGENTS.md](AGENTS.md) ("Commands").
-  Documentation-only changes (`**.md`, `specs/**`, `docs/**`, `design/**`) skip CI; their gate is
-  review alone.
+  Documentation-only and script changes (`**.md`, `specs/**`, `docs/**`, `design/**`,
+  `scripts/**`) skip CI; their gate is review alone.
   For a feature, record the on-device results in `specs/NNN-*/verification.md` and link it from
   the pull request.
 - Merge with **squash**. The squash commit title is conventional and ends with the feature number
