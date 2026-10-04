@@ -260,11 +260,12 @@ room, then try an address the hub cannot reach and a malformed one; compare with
   reached ("Couldn't reach that link"), its service is unavailable ("That service isn't available
   right now. Try again later."), the source or target no longer exists ("<name> is no longer on the
   hub", followed by an immediate refresh), the room carries too many playbacks ("<room> can't play
-  more at once"), the source already plays there ("<source> is already playing in <room>"), the hub
+  more at once"), the source already plays there ("<source> is already playing in <room>"; a link
+  has no source name yet, so for a link this refusal reads "Couldn't start playback"), the hub
   cannot be reached ("Couldn't reach the hub"), anything else ("Couldn't start playback").
-- **FR-016a**: When the start request times out (FR-014), the app MUST NOT report failure straight
-  away, because the hub may have started the playback. It refreshes once, with the button still
-  reading "Starting…". If that refresh shows a playback addressed to exactly the chosen target
+- **FR-016a**: When the start request times out (FR-014) or cannot reach the hub, the app MUST NOT
+  report failure straight away, because the hub may have started the playback. It refreshes once,
+  with the button still reading "Starting…". If that refresh shows a playback addressed to exactly the chosen target
   whose source is the chosen source, or for a link a source added at runtime with the normalised
   address, the app proceeds as on success (FR-015) with that playback. Otherwise, or if the
   refresh fails too, it fails as "Couldn't reach the hub" (FR-016).
