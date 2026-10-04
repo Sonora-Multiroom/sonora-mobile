@@ -39,13 +39,14 @@ behaviour (consequence line for row 5, timeout match for row 13).
    drawn inside the Idle section ([RoomsScreen.kt](../../composeApp/src/commonMain/kotlin/sonora/multiroom/mobile/ui/rooms/RoomsScreen.kt)),
    but the design places it below that section. With all rooms playing there is no way into Start
    Playback from Rooms.
-   **Fixed** in `2058a44` (button moved below the sections; build and tests pass, not yet
-   rechecked on the device).
+   **Fixed** in `2058a44`; checked on the device with 3 of 3 rooms in use.
 2. **Minor:** after a successful start, Start Playback refreshes while it fades out and briefly
    shows "<x> is already playing in <room>" or "<x> will stop in <room>" for the playback it just
    started (and, for a link, the new runtime source in the list).
+   **Fixed** in `2590294`; checked on the device (the closing screen keeps "Starting…" and the
+   pre-start lists).
 3. **Minor visual:** typed text in the link field sits at the top of the field instead of
-   vertically centred with the link icon.
+   vertically centred with the link icon. **Fixed** in `8858cb8`; checked on the device.
 
 Observations, not defects:
 
