@@ -47,22 +47,33 @@ risks 001/002 behaviour).
 
 ## R3. Join modes in the domain
 
-**Decision**: `enum class JoinMode { Replace, Mix, Announcement }`.
+**Decision**: `enum class JoinMode { Replace, Mix, Announcement, Unknown }` (Constitution V:
+unknown enum values map to an explicit Unknown).
 - `Route.joinMode: JoinMode`: `REPLACE` → Replace, `MIX` → Mix, `DUCK_OTHERS` → Announcement. A
-  missing or unrecognised value (older or newer hub) → **Replace**. The playback is then a normal one
-  and is named as stopping, so the user is never told less than may stop.
-- `Source.defaultJoinMode: JoinMode?`: `null` = none declared. An unrecognised value is coerced to
-  `null` by `HubJson` (`coerceInputValues`) and therefore also behaves as Replace (FR-010, "unknown
-  mode treated as replace").
-- **Effective mode** of a start, decided in one function `effectiveJoinMode(what)`: a link →
-  Replace; a source → `defaultJoinMode ?: Replace`.
+  missing or unrecognised value (older or newer hub) → **Unknown**. `HubJson` (`coerceInputValues`)
+  decodes an unrecognised value to `null`, so missing and unrecognised arrive the same way, as with
+  `RouteStatus.Unknown` in 001. A route with `Unknown` is not an announcement (`isAnnouncement` is
+  false), so it is named as stopping and the user is never told less than may stop.
+- `Source.defaultJoinMode: JoinMode?`: `null` = none declared. An unrecognised value is also coerced
+  to `null` by `HubJson` and cannot be told apart from "none declared" at the generated-client
+  level, so it is `null` here, not `Unknown`. Both behave as Replace (FR-010, "unknown mode treated
+  as replace"). This one case is a recorded deviation from Constitution V (plan, Complexity
+  Tracking). The domain still accepts `Unknown` as a default, so the rule below covers it if the
+  mapping ever distinguishes it.
+- **Effective mode** of a start, decided in one function `effectiveJoinMode(what, snapshot)`: a
+  link → Replace; a source → its `defaultJoinMode`, where `null` and `Unknown` → Replace. The
+  result is never `Unknown`.
 
-**Rationale**: the spec's rule set (FR-010) needs only these three values. Mapping the unknown
-case to Replace in one place makes FR-010's "unknown → replace" testable at the mapping level
-(fixture with `"joinMode": "SOMETHING_NEW"`) and at the domain level.
+**Rationale**: Constitution V asks for an explicit Unknown, and keeping it in the domain lets a
+later feature (backlog 004) tell "the hub said something new" from "replace". FR-010's "unknown →
+replace" is decided in exactly one place, `effectiveJoinMode`, plus `isAnnouncement` for routes.
+It is testable at the mapping level (fixture with `"joinMode": "SOMETHING_NEW"` → `Unknown`) and
+at the domain level.
 
-**Alternatives considered**: an explicit `JoinMode.Unknown` (rejected: every consumer would map it
-to Replace anyway; one decision point is simpler).
+**Alternatives considered**: collapsing unknown to Replace at mapping time (rejected: violates
+Constitution V and hides newer hub behaviour from later features). A custom serializer that keeps
+an unrecognised `defaultJoinMode` as `Unknown` (rejected: it means hand-editing or wrapping the
+generated model for one field whose effect, Replace, is the same either way).
 
 ## R4. Start Playback content: one builder, one consequence function
 
@@ -121,12 +132,14 @@ short. The consequence line still names every affected playback.
 
 **Decision**: extend `HubError.Rejected` with `reason: String?` and `outputId: String?` from the
 RFC 7807 body (only the app's own copy reaches the screen, Constitution V). Starts map to a sealed
-`StartFailure` in one function `startFailure(kind, error)` (`ui/Messages.kt` keeps the copy):
+`StartFailure` in one function `startFailure(kind, error, names, roomName)` (`ui/Messages.kt`
+keeps the copy). `names` is the `StartNames` captured at Play (data-model.md); `roomName:
+(outputId: String) -> String?` looks a room up in the latest snapshot:
 
 | Hub answer | Source start (`POST /routes`) | Link (`POST /play`) | Copy (FR-016) |
 |---|---|---|---|
 | any status, `reason = ROUTE_LIMIT_REACHED` | RoomFull(outputId) | same | "<room> can't play more at once" |
-| any status, `reason = INPUT_ALREADY_ON_OUTPUT` | AlreadyThere(outputId) | same | "<source> is already playing in <room>" |
+| any status, `reason = INPUT_ALREADY_ON_OUTPUT` | AlreadyThere(outputId) | Other (not expected, see below) | "<source> is already playing in <room>" |
 | 400 | Other | LinkUnusable | "Couldn't start playback" / "The hub couldn't play this link" |
 | 404 | Gone → R7 | Gone (target) → R7 | "<name> is no longer on the hub" |
 | 422 without reason | Other | LinkUnusable | as 400 |
@@ -135,8 +148,10 @@ RFC 7807 body (only the app's own copy reaches the screen, Constitution V). Star
 | Unreachable (connect error, timeout) | Recovery → R8 | Recovery → R8 | else "Couldn't reach the hub" |
 | anything else | Other | Other | "Couldn't start playback" |
 
-`<room>` is the name of `outputId` in the latest snapshot, falling back to the chosen target's
-name when `outputId` is missing or unknown.
+`<room>` is `roomName(outputId)`, falling back to `names.target` when `outputId` is missing or
+unknown. `<source>` is `names.source`. A link has no source name; the hub creates a new runtime
+source for each link, so `INPUT_ALREADY_ON_OUTPUT` is not expected for one, and if it comes it maps
+to `Other` ("Couldn't start playback") rather than inventing a name.
 
 **Rationale**: the contract documents `reason`/`outputId` but not the status code of admission
 refusals, so the app keys on `reason` regardless of status. The 400/422/502/503 split for `/play`
@@ -149,7 +164,9 @@ unreachable", "Upstream service unavailable").
 ## R7. "No longer on the hub" (404)
 
 **Decision**: on 404, capture `session.startedSeq`, request a refresh and wait for the first state
-with `refreshSeq` greater than it (the 001/002 fence rule), at most 5 s. In that snapshot the
+with `refreshSeq` greater than it (the 001/002 fence rule), at most 5 s. This wait is one new
+`HubSession` method, `awaitFreshSnapshot(timeoutMillis = 5000): HubSnapshot?` (`null` on timeout),
+shared with R8. In that snapshot the
 missing one is named: the source if it is gone or turned off, else the target if it is gone, else
 the general "Couldn't start playback". Then the screen's normal pruning deselects the vanished item
 (spec edge case "Selected source or target disappears").
@@ -164,8 +181,9 @@ which. The spec asks for the name and an immediate refresh, which this provides 
   `POST /play` only, derived with `client.config { install(HttpTimeout) { request/socket = 30 s,
   connect = 3 s } }`. It shares the engine, and only the play call waits longer. The generated API
   offers no per-request hook, so the second client is the cleanest seam.
-- **Recovery.** When a start ends in `HubError.Unreachable`, the view model (still showing
-  "Starting…") waits for a fresh snapshot with the fence rule of R7, at most 5 s. It looks for a
+- **Recovery.** When a start ends in `HubError.Unreachable` (timeout or connect error), the
+  `PlaybackStarter` (R9; the screen still showing "Starting…") waits for a fresh snapshot with
+  the fence rule of R7, at most 5 s. It looks for a
   live route addressed to exactly the chosen target whose input is the chosen source, or, for a
   link, an input with origin Runtime whose `uri` equals the normalised link (compared trimmed,
   case-insensitive scheme and host). If several match, it takes the last in hub order. Found →

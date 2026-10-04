@@ -71,7 +71,7 @@ repository methods, 1 contract reconciliation.
 | II. Truthful UI | ✅ | Status lines and warnings come from hub state, decided in `StartPlaybackBuilder`/`StartConsequence` ([R4](research.md#r4-start-playback-content-one-builder-one-consequence-function)). Unknown join modes are treated as replace, so a warning never understates. A timed-out start is confirmed by hub state, not assumed ([R8](research.md#r8-timeout-recovery-fr-016a-and-the-long-link-timeout-fr-014)). Input kind uses the existing single function. No progress or metadata |
 | III. Shared-First | ✅ | All code in `commonMain`. The link parser is hand-written, not `java.net.URI` ([R11](research.md#r11-link-normalisation-and-the-inline-message-fr-006)). No platform source set changes |
 | IV. Test-First | ✅ | `checkLink`, `routesByRoom`, the builder, the consequence, text, error mapping, repository additions (MockEngine), `PlaybackStarter`, the view model and the Now Playing fence each get tests first ([quickstart](quickstart.md) §1, covering FR-017) |
-| V. Resilient LAN | ✅ | Stale state keeps lists and selections and disables Play. Timeouts lead to recovery, then plain copy. Problem details are mapped to the app's own words (`reason`/`outputId` never shown). An unknown `joinMode` value never fails a snapshot (`coerceInputValues`, contract test 7) |
+| V. Resilient LAN | ✅ (one recorded deviation) | Stale state keeps lists and selections and disables Play. Timeouts lead to recovery, then plain copy. Problem details are mapped to the app's own words (`reason`/`outputId` never shown). An unknown route `joinMode` maps to an explicit `JoinMode.Unknown` and never fails a snapshot (`coerceInputValues`, contract test 7). An unknown source `defaultJoinMode` cannot be told apart from `null` and is a recorded deviation (Complexity Tracking). **Timeouts**: every call keeps the short 3 s timeout except `POST /play`, which allows 30 s because the hub fetches and resolves the link before answering (FR-014, [R8](research.md#r8-timeout-recovery-fr-016a-and-the-long-link-timeout-fr-014)). Connect stays at 3 s, so an unreachable hub still fails fast; the screen shows "Starting…" throughout, Close is never blocked (R9), and polling keeps its 3 s timeout |
 | VI. Design Fidelity & A11y | ✅ | Layout per `StartPlayback.dc.html` ([UI contract](contracts/start-playback-ui.md)). Departures are listed in spec Assumptions (no preselection, named group in the warning, undrawn states). The scrolling body and fixed footer are a layout consequence of real data, also listed in the UI contract. Radio-group semantics, labels, and ≥ 44 dp targets; dimmed tiles are exempt |
 | VII. Minimal Dependencies | ✅ | None added |
 
@@ -109,11 +109,12 @@ AGENTS.md                                  # API 0.1.21; "one route per output" 
 composeApp/src/commonMain/kotlin/sonora/multiroom/mobile/
 ├── AppGraph.kt                            # + PlaybackStarter (app scope); startPlaybackViewModel()
 ├── domain/
-│   ├── Models.kt                          # + JoinMode; Route.joinMode; Source.defaultJoinMode
+│   ├── Models.kt                          # + JoinMode (incl. Unknown); Route.joinMode; Source.defaultJoinMode
 │   ├── PlaybackRules.kt                   # + routesByRoom(), Route.isAnnouncement
 │   ├── LinkAddress.kt                     # LinkCheck, checkLink()
+│   ├── StartRequest.kt                    # StartWhat, StartNames (plain types, US1)
 │   ├── StartPlaybackBuilder.kt            # StartPlaybackContent, SourceOption, TargetOption, TargetStatus
-│   └── StartConsequence.kt                # StartWhat, effectiveJoinMode, Consequence & friends
+│   └── StartConsequence.kt                # effectiveJoinMode, Consequence & friends (US2)
 ├── data/
 │   ├── HubRepository.kt                   # + startSource, playLink; Rejected(+reason, +outputId)
 │   ├── KtorHubRepository.kt               # + the two calls; link client (30 s)
@@ -122,6 +123,7 @@ composeApp/src/commonMain/kotlin/sonora/multiroom/mobile/
 └── ui/
     ├── Messages.kt                        # + StartFailure, startFailure(), startFailureMessage()
     ├── session/
+    │   ├── HubSession.kt                  # + awaitFreshSnapshot(timeoutMillis) (fence on startedSeq, R7/R8)
     │   └── PlaybackStarter.kt             # app-scoped start + recovery (R7–R9)
     ├── nav/
     │   ├── Destinations.kt                # NowPlaying(+startedAfterSeq, +targetName); replaceTop()
@@ -142,10 +144,11 @@ composeApp/src/commonTest/kotlin/sonora/multiroom/mobile/
 ├── domain/       LinkAddressTest, RoutesByRoomTest, StartPlaybackBuilderTest, StartConsequenceTest
 ├── data/         KtorHubRepositoryActionsTest, KtorHubRepositorySnapshotTest (extended), Fixtures
 ├── ui/           MessagesTest (extended)
-├── ui/session/   PlaybackStarterTest
+├── ui/session/   PlaybackStarterTest, HubSessionTest (extended: awaitFreshSnapshot)
 ├── ui/nav/       AppBackStackTest (extended)
 ├── ui/nowplaying/NowPlayingViewModelTest (extended)
-└── ui/startplayback/ StartPlaybackViewModelTest, StartPlaybackTextTest; FakeHub additions
+├── ui/rooms/     FakeHub.kt (FakeRepository: + startSource, playLink, startResults queue)
+└── ui/startplayback/ StartPlaybackViewModelTest, StartPlaybackTextTest
 ```
 
 **Structure Decision**: the existing KMP wizard layout. New code goes in the `domain/`, `data/` and
@@ -172,8 +175,17 @@ composeApp/src/commonTest/kotlin/sonora/multiroom/mobile/
 - Rows 5 and 13 of quickstart §2 confirm two hub behaviours on the device. If either turns out
   differently, the consequence line (row 5) or the timeout match (row 13) is adjusted in a
   follow-up, not guessed now.
+- When a source already plays as an announcement on or overlapping the chosen target, the spec
+  leaves open whether the hub returns that playback or refuses (spec Edge Cases). The app handles
+  both answers. It cannot be checked on the device until a configured source declares
+  `DUCK_OTHERS` as its default; record it in `verification.md` when one does.
 
 ## Complexity Tracking
 
-None. No new dependencies. The app-scoped starter (R9) and the second HTTP client for `/play`
-(R8) are each the smallest way to meet a spec requirement.
+No new dependencies. The app-scoped starter (R9) and the second HTTP client for `/play` (R8) are
+each the smallest way to meet a spec requirement.
+
+| Deviation | Why needed | Simpler alternative rejected because |
+|---|---|---|
+| Constitution V, "unknown enum values map to an explicit Unknown": an unrecognised `InputResponse.defaultJoinMode` becomes `null` ("none declared"), not `JoinMode.Unknown` ([R3](research.md#r3-join-modes-in-the-domain)) | `HubJson` uses `coerceInputValues`, so the generated client decodes an unrecognised value of this nullable field to `null` before the mapping sees it. Route `joinMode` is not affected (its `null` maps to `Unknown`) | A custom serializer or a wrapper around the generated model for this one field. Its only effect would be identical behaviour: both `null` and `Unknown` resolve to Replace in `effectiveJoinMode`, so the user is never told less than may stop |
+| Constitution V, "short timeouts": `POST /api/v2/play` uses a 30 s request/socket timeout | The hub fetches and resolves the link (SoundCloud, YouTube) before it answers; 3 s would turn most successful link starts into false failures (FR-014) | Keeping 3 s and relying on timeout recovery (FR-016a) for every link: recovery waits at most 5 s more and depends on the runtime input's `uri` matching (R8 risk), so most links would be reported as "Couldn't reach the hub" while they play. Connect stays at 3 s, so an unreachable hub still fails fast |

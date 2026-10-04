@@ -85,15 +85,15 @@ hand-off to Now Playing, which every story uses.
 - [ ] T003 [P] Extend `test/data/KtorHubRepositorySnapshotTest.kt` (and payloads in
   `test/data/Fixtures.kt`), failing first, with contract test 7:
   - routes with `"joinMode"` `REPLACE`, `MIX`, `DUCK_OTHERS`, missing and `"SOMETHING_NEW"` map to
-    `JoinMode.Replace`, `Mix`, `Announcement`, `Replace` and `Replace`
+    `JoinMode.Replace`, `Mix`, `Announcement`, `Unknown` and `Unknown` (Constitution V)
   - inputs with `"defaultJoinMode"` the same values map to `Replace`, `Mix`, `Announcement`, `null`
-    and `null`
+    and `null` (unknown is coerced to `null`, the recorded deviation in plan Complexity Tracking)
   - the snapshot never fails because of the unknown value
-- [ ] T004 In `main/domain/Models.kt` add `enum class JoinMode { Replace, Mix, Announcement }`,
+- [ ] T004 In `main/domain/Models.kt` add `enum class JoinMode { Replace, Mix, Announcement, Unknown }`,
   `Route.joinMode: JoinMode = JoinMode.Replace` and `Source.defaultJoinMode: JoinMode? = null`.
-  The defaults keep existing constructors compiling. Map both fields in `main/data/ApiMapping.kt`:
-  "missing/unknown → `Replace`" for routes and "missing/unknown → `null`" for sources
-  (data-model.md). Make T003 pass.
+  The defaults keep existing constructors compiling. Map both fields in `main/data/ApiMapping.kt`
+  in the style of `RouteStatus` (`null -> Unknown`): "missing/unknown → `Unknown`" for routes and
+  "missing/unknown → `null`" for sources (data-model.md, research R3). Make T003 pass.
 
 ### Admission refusals (research R6)
 
@@ -116,7 +116,7 @@ hand-off to Now Playing, which every story uses.
   - two routes on one room are kept in hub order
   - a `Stopped` route is ignored, while `Failed`/`Unknown` are kept
   - a `Target.Unknown` route covers nothing
-  - `Route.isAnnouncement` is true only for `JoinMode.Announcement`
+  - `Route.isAnnouncement` is true only for `JoinMode.Announcement` (false for `Unknown`)
 - [ ] T008 In `main/domain/PlaybackRules.kt` add `internal fun routesByRoom(snapshot: HubSnapshot):
   Map<String, List<Route>>` (built on `liveRoutes` and `describeTarget(...).occupies`) and
   `internal val Route.isAnnouncement`. Leave `occupancy()` unchanged. Make T007 pass.
@@ -186,13 +186,16 @@ shows it (quickstart §2 rows 1–3).
     - covered only by a group route → `InGroup(group)`
     - own route and group route → `Playing`
     - disabled → `TurnedOff`; unavailable → `NotConnected`; disabled and unavailable → `TurnedOff`
+    - disabled room with its own playing route → `TurnedOff`, not selectable (spec edge case
+      "turned-off room or group that is still playing")
     - group with its own route → `GroupPlaying`
     - idle group → `GroupMembers(playable members)`
     - group with a turned-off and a not-connected member → `GroupMembers` of the rest, selectable
     - group with no known members → `NoRooms`
     - all members disabled → `TurnedOff`
     - members disabled or unavailable with none playable → `NotConnected`
-    - disabled group → `TurnedOff`
+    - disabled group → `TurnedOff`; disabled group with its own playing route → `TurnedOff`, not
+      selectable
     - an announcement route on a room is ignored (room reads `Idle`)
   - `selectable` is false exactly for `TurnedOff`, `NotConnected` and `NoRooms` (FR-009)
 - [ ] T015 [P] [US1] Write `test/ui/startplayback/StartPlaybackTextTest.kt` (status part):
@@ -214,9 +217,10 @@ shows it (quickstart §2 rows 1–3).
   - `Target.Unknown` throws and sends nothing
 - [ ] T017 [P] [US1] Extend `test/ui/MessagesTest.kt` with the `StartFailure` copy (data-model.md)
   and the source column of the research R6 table, via
-  `startFailure(StartKind.Source, error, names)`:
-  - a `reason` on any status → `RoomFull` / `AlreadyThere`, with `outputId` resolved to the room name
-    and falling back to the chosen target's name
+  `startFailure(StartKind.Source, error, StartNames("Jazz24", "Bedroom"), roomName)` where
+  `roomName: (outputId: String) -> String?` is a lookup stub:
+  - a `reason` on any status → `RoomFull` / `AlreadyThere("Jazz24", room)`, with `outputId`
+    resolved through `roomName` and falling back to `names.target` when missing or unknown
   - 400/422 without reason → `Other`
   - 404 → `NoLongerOnHub` (name decided by the caller, see T019)
   - `Unreachable` → `HubUnreachable`
@@ -235,7 +239,9 @@ shows it (quickstart §2 rows 1–3).
     - the source is gone or turned off → `NoLongerOnHub(source name)`
     - else the target is gone → `NoLongerOnHub(target name)`
     - else → `Other`
-  - **Unreachable** → still `Starting`; then a fresh snapshot with a live route on exactly that
+  - **Unreachable** (any: timeout or connect error, research R6/R8; FR-016a names the timeout, and
+    a connect error ends the same way because its recovery refresh fails too) → still `Starting`;
+    then a fresh snapshot with a live route on exactly that
     target with that input (several → the last in hub order) → `Done(thatRoute)`
   - no match → `HubUnreachable`; no fresh snapshot within 5 s → `HubUnreachable`
   - a second `start` while one runs is ignored
@@ -260,7 +266,10 @@ shows it (quickstart §2 rows 1–3).
 
 ### Implementation for User Story 1
 
-- [ ] T021 [US1] Implement `main/domain/StartPlaybackBuilder.kt`: `StartPlaybackContent`,
+- [ ] T021 [US1] Create `main/domain/StartRequest.kt` with the plain types `sealed interface StartWhat
+  { Source(id), Link(uri) }` and `data class StartNames(source: String?, target: String)`
+  (data-model.md; no logic, so no test of their own). The starter, the view model and, later,
+  `StartConsequence` (T035) use them. Then implement `main/domain/StartPlaybackBuilder.kt`: `StartPlaybackContent`,
   `SourceOption`, `TargetOption`, `TargetStatus`, `object StartPlaybackBuilder { fun build(snapshot):
   StartPlaybackContent }`, using `routesByRoom`, `cardStatus`, `inferSourceKind` and the data-model
   rules verbatim. Make T014 pass.
@@ -273,8 +282,9 @@ shows it (quickstart §2 rows 1–3).
   the response mapped via `toRoute()`, else `Unexpected`. Add a scriptable `startSource` (and a
   `startResults` queue) to `FakeRepository` in `test/ui/rooms/FakeHub.kt`. Make T016 pass.
 - [ ] T024 [P] [US1] In `main/ui/Messages.kt` add `sealed interface StartFailure` (data-model.md),
-  `enum class StartKind { Source, Link }`, `fun startFailure(kind, error, roomName: (String?) ->
-  String): StartFailure` and `fun startFailureMessage(StartFailure): String`. This is the only
+  `enum class StartKind { Source, Link }`, `fun startFailure(kind: StartKind, error: HubError,
+  names: StartNames, roomName: (outputId: String) -> String?): StartFailure` and
+  `fun startFailureMessage(StartFailure): String`. This is the only
   place these strings exist. Make T017 pass.
 - [ ] T025 [US1] Add `suspend fun awaitFreshSnapshot(timeoutMillis: Long = 5000): HubSnapshot?` to
   `main/ui/session/HubSession.kt` (fence on `startedSeq`, `requestRefresh()`, first `Connected`
@@ -282,8 +292,11 @@ shows it (quickstart §2 rows 1–3).
 - [ ] T026 [US1] Implement `main/ui/session/PlaybackStarter.kt`:
   - `class PlaybackStarter(scope, session, messages)` with `val attempt: StateFlow<StartAttempt?>`
   - `StartAttempt` = `Starting | Done(route, startedAfterSeq) | Failed(StartFailure)`
-  - `fun start(what: StartWhat, target: Target, names: StartNames)`, `fun detach()`,
-    `fun consume()`
+  - `fun start(what: StartWhat, target: Target, names: StartNames)` (types from T021), `fun
+    detach()`, `fun consume()`
+  - failures via `startFailure(kind, error, names, roomName)`, with `roomName` looking `outputId`
+    up in the session's latest snapshot; 404 names come from the fresh snapshot, falling back to
+    `names` (research R7)
   - source requests only for now; the link path follows in US3
   - runs in the app scope (research R9); recovery per research R7/R8 using `awaitFreshSnapshot`
 
@@ -360,7 +373,9 @@ does after Play (quickstart §2 rows 4–6, 10).
   - **Announcement default**: busy → `WillBeLowered` including announcements; idle → `null`;
     `AlreadyPlaying` still wins
   - **Link** → always Replace, never `AlreadyPlaying`
-  - `defaultJoinMode == null` → Replace
+  - `defaultJoinMode == null` → Replace; `defaultJoinMode == Unknown` → Replace (`WillStop` on a
+    busy target); `effectiveJoinMode` never returns `Unknown`
+  - a busy route with `joinMode = Unknown` is named in `WillStop` (not treated as an announcement)
   - **Notes**:
     - group with turned-off and not-connected members → `WontPlay(turnedOff, notConnected)`
     - room muted → `TargetMuted("Bedroom")`
@@ -383,8 +398,8 @@ does after Play (quickstart §2 rows 4–6, 10).
 
 ### Implementation for User Story 2
 
-- [ ] T035 [US2] Implement `main/domain/StartConsequence.kt`: `StartWhat`,
-  `effectiveJoinMode(what, snapshot)`, `AffectedPlayback`, `ConsequenceLine`, `WontPlay`,
+- [ ] T035 [US2] Implement `main/domain/StartConsequence.kt` (using `StartWhat` from T021):
+  `effectiveJoinMode(what, snapshot)` (`null`/`Unknown` → Replace), `AffectedPlayback`, `ConsequenceLine`, `WontPlay`,
   `MuteNote`, `Consequence` and `object StartConsequence { fun of(...) }`, per research R4 and
   data-model.md, using `routesByRoom`, `describeTarget` and `isAnnouncement`. Make T032 pass.
 - [ ] T036 [P] [US2] Add `consequenceLineText`, `wontPlayText` and `muteNoteText` to
@@ -432,7 +447,8 @@ unreachable address and a malformed one (quickstart §2 rows 7–9, 12, 13).
   - 502 → `LinkUnreachable`
   - 503 → `ServiceDown`
   - 404 → `NoLongerOnHub` (target)
-  - a `reason` → `RoomFull` / `AlreadyThere`
+  - `ROUTE_LIMIT_REACHED` → `RoomFull`; `INPUT_ALREADY_ON_OUTPUT` → `Other` (a link has no source
+    name, research R6), with `StartNames(null, "Bedroom")`
   - `Unreachable` → `HubUnreachable`
   - each copy exactly as in FR-016
 - [ ] T042 [P] [US3] Extend `test/ui/session/PlaybackStarterTest.kt` (link path):
@@ -518,7 +534,7 @@ unreachable address and a malformed one (quickstart §2 rows 7–9, 12, 13).
 - **US1 (Phase 3)**: needs Phase 2.
   - Tests T014–T020 are all parallel.
   - Then T021, T022, T023, T024 and T025 (T022 ∥ T024 ∥ T028 ∥ T029).
-  - T026 needs T023–T025; T027 needs T021, T022 and T026.
+  - T026 needs T021 (`StartWhat`/`StartNames`) and T023–T025; T027 needs T021, T022 and T026.
   - T030 needs T027–T029; T031 needs T030.
 - **US2 (Phase 4)**: needs US1 (the view model and screen it extends). T032 ∥ T033 ∥ T034 → T035
   → T036 ∥ T037 → T038.

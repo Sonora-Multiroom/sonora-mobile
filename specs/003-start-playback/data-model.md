@@ -9,11 +9,12 @@ types stay in `data/` (Constitution I).
 
 | Type | Change | Mapping from the hub (`data/ApiMapping.kt`) |
 |---|---|---|
-| `JoinMode` (new) | `enum { Replace, Mix, Announcement }` | `REPLACE`, `MIX`, `DUCK_OTHERS` |
-| `Route` | `+ joinMode: JoinMode` | `RouteResponse.joinMode`; missing/unknown → `Replace` ([R3](research.md#r3-join-modes-in-the-domain)) |
-| `Source` | `+ defaultJoinMode: JoinMode?` | `InputResponse.defaultJoinMode`; missing/unknown → `null` (behaves as Replace) |
+| `JoinMode` (new) | `enum { Replace, Mix, Announcement, Unknown }` | `REPLACE`, `MIX`, `DUCK_OTHERS`; anything else → `Unknown` |
+| `Route` | `+ joinMode: JoinMode` | `RouteResponse.joinMode`; missing/unknown → `Unknown` ([R3](research.md#r3-join-modes-in-the-domain)) |
+| `Source` | `+ defaultJoinMode: JoinMode?` | `InputResponse.defaultJoinMode`; missing → `null`. An unknown value is coerced to `null` by `HubJson` and cannot be told apart (recorded deviation, R3); both behave as Replace |
 
-`Route.isAnnouncement` = `joinMode == Announcement` (extension in `PlaybackRules.kt`).
+`Route.isAnnouncement` = `joinMode == Announcement` (extension in `PlaybackRules.kt`), so an
+`Unknown` route is treated like a Replace route and named as stopping.
 
 ## Changed data types (`data/HubRepository.kt`)
 
@@ -40,16 +41,27 @@ sealed LinkCheck
 
 `checkLink(text)`. Rules in [R11](research.md#r11-link-normalisation-and-the-inline-message-fr-006).
 
-### `StartWhat`
+### `StartWhat`, `StartNames` (`domain/StartRequest.kt`)
+
+Plain types with no logic, shared by the starter (US1) and the consequence (US2).
 
 ```text
 sealed StartWhat
   Source(id: String)
   Link(uri: String)        always a LinkCheck.Valid uri
+
+StartNames                 captured by the view model when Play is tapped
+  source: String?          the chosen source's name; null for a link (a link has no name yet)
+  target: String           the chosen room's or group's name
 ```
 
-`effectiveJoinMode(what, snapshot): JoinMode`. Link → Replace. Source → its `defaultJoinMode`
-or Replace. A source missing from the snapshot also → Replace.
+`StartNames` lets the starter name things in failure copy and in the hand-off to Now Playing even
+after they vanish from the snapshot (404, R7) or the screen has closed (R9). Room names for
+`outputId` are looked up in the latest snapshot at failure time, not stored here.
+
+`effectiveJoinMode(what, snapshot): JoinMode` lives in `domain/StartConsequence.kt` (US2). Link →
+Replace. Source → its `defaultJoinMode`; `null` or `Unknown` → Replace. A source missing from the
+snapshot also → Replace. Never returns `Unknown`.
 
 ### `StartPlaybackContent` (`domain/StartPlaybackBuilder.kt`)
 
@@ -137,6 +149,11 @@ sealed StartFailure
 ```
 
 Mapping table in [R6](research.md#r6-hub-errors-for-a-start).
+
+`StartFailure.AlreadyThere` (a refusal, shown as a short message after Play) and
+`ConsequenceLine.AlreadyPlaying` (a muted preview line before Play) deliberately share the wording
+"<source> is already playing in <…>". They are separate types built in separate places
+(`ui/Messages.kt` and `StartPlaybackText.kt`); do not merge them.
 
 ## UI state (`ui/startplayback/StartPlaybackUiState.kt`)
 

@@ -59,13 +59,15 @@ status code is not documented, so mapping keys on `reason` ([research R6](../res
 | shared (001) | everything else, including `startSource` | 3 s | 3 s |
 | link | `playLink` only, `client.config { HttpTimeout }` on the same engine | 3 s | 30 s |
 
-A timeout on either maps to `Unreachable`, as in 001. Recovery is the view model's job (FR-016a).
+A timeout on either maps to `Unreachable`, as in 001. Recovery is `PlaybackStarter`'s job (FR-016a, research R8/R9).
 
 ## Domain mapping additions (`ApiMapping.kt`)
 
 - `RouteResponse.joinMode` → `Route.joinMode`: `REPLACE`→Replace, `MIX`→Mix,
-  `DUCK_OTHERS`→Announcement, missing/unknown→Replace.
-- `InputResponse.defaultJoinMode` → `Source.defaultJoinMode`: same values, missing/unknown→`null`.
+  `DUCK_OTHERS`→Announcement, missing/unknown→Unknown.
+- `InputResponse.defaultJoinMode` → `Source.defaultJoinMode`: same values, missing/unknown→`null`
+  (`coerceInputValues` makes an unknown value indistinguishable from "none declared", see
+  [research R3](../research.md#r3-join-modes-in-the-domain)).
 
 ## Contract tests (`MockEngine`)
 
@@ -85,5 +87,5 @@ A timeout on either maps to `Unreachable`, as in 001. Recovery is the view model
 
 `KtorHubRepositorySnapshotTest` (extended):
 7. `joinMode` `REPLACE`/`MIX`/`DUCK_OTHERS`/missing/`"SOMETHING_NEW"` → Replace/Mix/Announcement/
-   Replace/Replace; `defaultJoinMode` the same with `null` for missing/unknown. The snapshot never fails because of an
+   Unknown/Unknown; `defaultJoinMode` the same with `null` for missing/unknown. The snapshot never fails because of an
    unknown value.

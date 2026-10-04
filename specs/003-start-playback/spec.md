@@ -156,6 +156,10 @@ room, then try an address the hub cannot reach and a malformed one; compare with
 - **The hub refuses the start** because the room already carries too many playbacks at once, or
   because the source already plays there as an announcement: the screen stays open and the message
   names the room ("Office can't play more at once", "Jazz24 is already playing in Office").
+  The app does not predict which of "returns the existing playback" (FR-010 "already playing") or
+  "refuses" the hub chooses when the source already plays as an announcement on or overlapping the
+  chosen target; it shows the preview line per FR-010 and then whatever the hub answers (FR-015 or
+  FR-016).
 - **Close while a start is in flight**: the screen closes and the request continues; its outcome
   shows on Rooms at the next refresh, and a failure is reported there as a short message.
 - **Newer hub with unknown values**: unknown states read "Unknown"; a target of unknown type is not
