@@ -2,8 +2,8 @@ package sonora.multiroom.mobile.ui.nav
 
 import sonora.multiroom.mobile.AppGraph
 import sonora.multiroom.mobile.ui.nowplaying.NowPlayingScreen
-import sonora.multiroom.mobile.ui.placeholder.PlaceholderScreen
 import sonora.multiroom.mobile.ui.rooms.RoomsScreen
+import sonora.multiroom.mobile.ui.session.SettingsTab
 import sonora.multiroom.mobile.ui.settings.SettingsScreen
 import sonora.multiroom.mobile.ui.startplayback.StartPlaybackScreen
 import androidx.compose.foundation.layout.Column
@@ -40,7 +40,10 @@ fun AppNavigation(graph: AppGraph, backStack: AppBackStack, onExit: () -> Unit) 
                 entry<Destination.Rooms> {
                     RoomsScreen(
                         viewModel = viewModel { graph.roomsViewModel() },
-                        onOpenSettings = { backStack.selectTab(Destination.Settings) },
+                        onOpenSettings = {
+                            graph.settingsNavigator.openSheet()
+                            backStack.selectTab(Destination.Settings)
+                        },
                         onOpenCard = { routeId -> backStack.push(Destination.NowPlaying(routeId)) },
                         onPlayInRoom = { roomId -> backStack.push(Destination.StartPlayback(roomId)) },
                         onPlaySomething = { backStack.push(Destination.StartPlayback(null)) },
@@ -48,12 +51,6 @@ fun AppNavigation(graph: AppGraph, backStack: AppBackStack, onExit: () -> Unit) 
                 }
                 entry<Destination.Settings> {
                     SettingsScreen(viewModel { graph.settingsViewModel() })
-                }
-                entry<Destination.Sources> {
-                    PlaceholderScreen(
-                        title = "Sources",
-                        description = "Your saved stations, line-ins and files will be listed here.",
-                    )
                 }
                 entry<Destination.NowPlaying> { key ->
                     NowPlayingScreen(
@@ -71,13 +68,24 @@ fun AppNavigation(graph: AppGraph, backStack: AppBackStack, onExit: () -> Unit) 
                         onStarted = { started ->
                             if (backStack.top is Destination.StartPlayback) backStack.replaceTop(Destination.NowPlaying(started.routeId, started.startedAfterSeq, started.targetName))
                         },
-                        onOpenSettings = { backStack.selectTab(Destination.Settings) },
+                        onOpenSettings = {
+                            graph.settingsNavigator.openSheet()
+                            backStack.selectTab(Destination.Settings)
+                        },
                     )
                 }
             },
         )
         if (backStack.showsBottomBar) {
-            BottomBar(selected = backStack.currentTab, onSelect = backStack::selectTab)
+            BottomBar(
+                selected = backStack.currentTab,
+                onSelectRooms = { backStack.selectTab(Destination.Rooms) },
+                onOpenSources = {
+                    graph.settingsNavigator.select(SettingsTab.Sources)
+                    backStack.selectTab(Destination.Settings)
+                },
+                onSelectSettings = { backStack.selectTab(Destination.Settings) },
+            )
         }
     }
 }

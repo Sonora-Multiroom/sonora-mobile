@@ -13,4 +13,4 @@ this list.
 
 | Priority | Item | Kind | Effort | Why this priority |
 |---|---|---|---|---|
-| P2 | [Rooms with several playbacks](rooms-with-several-playbacks.md) | Feature / fix | Medium | Since hub 0.1.21 a room can play several routes. Rooms then shows it on several cards, and the move sheet misnames what will stop. Planned as feature 004 |
+| P2 | [Rooms with several playbacks](rooms-with-several-playbacks.md) | Feature / fix | Medium | Since hub 0.1.21 a room can play several routes. Rooms then shows it on several cards, and the move sheet misnames what will stop. Planned for a feature after 004 (Settings took that number) |

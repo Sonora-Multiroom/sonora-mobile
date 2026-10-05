@@ -1,5 +1,6 @@
 package sonora.multiroom.mobile.data
 
+import sonora.multiroom.mobile.domain.ExtensionInventory
 import sonora.multiroom.mobile.domain.HubAddress
 import sonora.multiroom.mobile.domain.HubSnapshot
 import sonora.multiroom.mobile.domain.Route
@@ -26,6 +27,25 @@ interface HubRepository {
 
     /** Mutes or unmutes every member of the group (idempotent on the hub). */
     suspend fun setGroupMute(groupId: String, muted: Boolean): HubResult<Unit>
+
+    /** Turns a room (output) on or off. The body of the answer is ignored; the next refresh confirms. */
+    suspend fun setRoomEnabled(roomId: String, enabled: Boolean): HubResult<Unit>
+
+    suspend fun setGroupEnabled(groupId: String, enabled: Boolean): HubResult<Unit>
+
+    suspend fun setSourceEnabled(sourceId: String, enabled: Boolean): HubResult<Unit>
+
+    /** Removes a runtime source. 404 stays Rejected(404) here; the caller treats it as removed. */
+    suspend fun removeSource(sourceId: String): HubResult<Unit>
+
+    /** The hub's extension inventory (captured at hub start-up; connection states change later). */
+    suspend fun extensions(): HubResult<ExtensionInventory>
+
+    /**
+     * The connection test: how many rooms the hub at this repository's address lists, on or off.
+     * A reply that is not a list of outputs is Unexpected.
+     */
+    suspend fun countRooms(): HubResult<Int>
 
     /**
      * Moves a playback. [target] is [Target.Room] or [Target.Group] (`Target.Unknown` throws

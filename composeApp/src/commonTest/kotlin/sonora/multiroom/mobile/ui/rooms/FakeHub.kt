@@ -61,6 +61,32 @@ class FakeRepository(private val time: () -> Long) : HubRepository {
     override suspend fun setMasterMute(muted: Boolean) = action("setMasterMute", muted)
     override suspend fun setRoomMute(roomId: String, muted: Boolean) = action("setRoomMute", roomId, muted)
     override suspend fun setGroupMute(groupId: String, muted: Boolean) = action("setGroupMute", groupId, muted)
+    override suspend fun setRoomEnabled(roomId: String, enabled: Boolean) = action("setRoomEnabled", roomId, enabled)
+    override suspend fun setGroupEnabled(groupId: String, enabled: Boolean) = action("setGroupEnabled", groupId, enabled)
+    override suspend fun setSourceEnabled(sourceId: String, enabled: Boolean) = action("setSourceEnabled", sourceId, enabled)
+    override suspend fun removeSource(sourceId: String) = action("removeSource", sourceId)
+
+    /** What the extensions call answers, after [extensionsDelayMs]. */
+    var extensionsResult: () -> HubResult<sonora.multiroom.mobile.domain.ExtensionInventory> =
+        { HubResult.Ok(sonora.multiroom.mobile.domain.ExtensionInventory(true, emptyList())) }
+    var extensionsDelayMs = 0L
+    val extensionsCalls get() = calls.count { it.name == "extensions" }
+
+    override suspend fun extensions(): HubResult<sonora.multiroom.mobile.domain.ExtensionInventory> {
+        calls += Call("extensions", emptyList(), time())
+        if (extensionsDelayMs > 0) delay(extensionsDelayMs)
+        return extensionsResult()
+    }
+
+    /** What the connection test answers, after [countDelayMs]. */
+    var countRoomsResult: () -> HubResult<Int> = { HubResult.Ok(5) }
+    var countDelayMs = 0L
+
+    override suspend fun countRooms(): HubResult<Int> {
+        calls += Call("countRooms", emptyList(), time())
+        if (countDelayMs > 0) delay(countDelayMs)
+        return countRoomsResult()
+    }
 
     /** What a transfer answers; the default hands back a route "moved". */
     var transferResult: () -> HubResult<Route> =
@@ -98,9 +124,12 @@ class FakeFactory(private val time: () -> Long) : HubRepositoryFactory {
     val repositories = linkedMapOf<HubAddress, FakeRepository>()
     val created = mutableListOf<HubAddress>()
 
+    /** Runs on every repository right after it is created, e.g. to set what it answers. */
+    var onCreate: (FakeRepository) -> Unit = {}
+
     override fun create(address: HubAddress): HubRepository {
         created += address
-        return FakeRepository(time).also { repositories[address] = it }
+        return FakeRepository(time).also { onCreate(it); repositories[address] = it }
     }
 
     val last: FakeRepository get() = repositories.values.last()

@@ -29,7 +29,9 @@ composeApp/
   src/commonMain/kotlin/               # theme, API client wrapper, repository, screens
     .../ui/session/                    # state shared by screens: HubSession (the one poll loop,
                                        #   acquire/release per visible screen), VolumeDragController,
-                                       #   AppMessages. Screens never run their own loop.
+                                       #   AppMessages, SettingsActions (switch and removal requests
+                                       #   that outlive the screen), SettingsNavigator (selected
+                                       #   Settings tab). Screens never run their own loop.
   src/commonMain/composeResources/font # sora.ttf, dm_sans.ttf (already committed, variable fonts)
   src/commonTest/kotlin/
   src/androidMain/                     # platform drivers only (HTTP engine, storage path)
@@ -50,6 +52,8 @@ not rely on memory. The cloud environment provides JDK 17+ and the Android SDK v
 ./gradlew :androidApp:assembleDebug         # build the Android APK
 ./gradlew :composeApp:testAndroidHostTest   # Android host tests
 ./gradlew :composeApp:allTests              # all KMP tests (iOS targets skipped on Linux)
+./gradlew refreshOpenApi                    # local only: re-fetch api/openapi.json from the hub's
+                                            #   /api-docs (-PhubUrl=http://host:port to override)
 ```
 
 There is no emulator and no hub in the cloud. Verification here = the build passes and unit tests
@@ -112,7 +116,8 @@ Record the build (CI build number and commit), the device and each row's evidenc
 ## API
 
 - [api/openapi.json](api/openapi.json) was fetched from the production hub on 2026-10-01
-  (API version **0.1.21**). It also contains v1 paths (`/api/*` without `v2`) and TTS extension
+  (API version **0.1.21**, unchanged when re-fetched on 2026-10-04); refresh it with
+  `./gradlew refreshOpenApi` from a local session. It also contains v1 paths (`/api/*` without `v2`) and TTS extension
   paths (`/api/tts/*`): **use only `/api/v2/**`**.
 - 0.1.21 added join modes (`RouteResponse.joinMode`, `InputResponse.defaultJoinMode`) and admission
   refusals on errors (`ErrorResponse.reason`, `outputId`). The app never sends a `joinMode`.
@@ -133,7 +138,7 @@ Record the build (CI build number and commit), the device and each row's evidenc
 | Start playback (link) | `POST /api/v2/play` `{uri, targetId, targetType, displayName?, volume?}` |
 | Start playback (configured source) | `POST /api/v2/routes` `{inputId, targetId, targetType}` |
 | Move to room | `POST /api/v2/routes/{routeId}/transfer` `{targetId, targetType}`, only when `transferable` and the route is Playing (never while Paused: the hub's behaviour is unchecked). The response is the NEW route; follow its id |
-| Settings | `PUT /api/v2/{outputs,groups,inputs}/{id}/enabled` `{enabled}`, `DELETE /api/v2/inputs/{id}`, `GET /api/v2/extensions` |
+| Settings | `PUT /api/v2/{outputs,groups,inputs}/{id}/enabled` `{enabled}`, `DELETE /api/v2/inputs/{id}`, `GET /api/v2/extensions` (only while the Extensions tab is open, on the session's refreshes), `GET /api/v2/outputs?includeDisabled=true` (the "Test connection" check of a drafted hub address) |
 
 `targetType` is `SINGLE_OUTPUT` or `OUTPUT_GROUP`.
 
@@ -166,6 +171,10 @@ Record the build (CI build number and commit), the device and each row's evidenc
   group pill shows the loudest member; dragging scales each member by new/old loudest (rounded,
   clamped 0–100) via `PUT /api/v2/outputs/{id}/volume`, throttled; if all members are 0, each is
   set to the new value.
+- No rooms in a playback's answer: `RouteResponse` names only the group it was addressed to. Since
+  turning a room off drops it from group playback (and turning it on does not add it back), a group
+  route may play on fewer rooms than its group has; the app cannot tell and still counts the room
+  as part of it (feature 004).
 
 ## Design
 

@@ -168,4 +168,18 @@ class ContrastTest {
         assertText("Play label on accent", c.onAccent, c.accent)
         // Dimmed unselectable tiles are exempt (Constitution VI).
     }
+
+    // ---- Settings (004, research R12) --------------------------------------------------------
+
+    @Test
+    fun settingsPairs() {
+        assertText("danger on dangerContainer", c.danger, c.dangerContainer)
+        assertText("onDanger on danger", c.onDanger, c.danger)
+        assertText("positive on positiveContainer", c.positive, c.positiveContainer)
+        assertText("positive on surface", c.positive, c.surface)
+        assertText("danger on surface", c.danger, c.surface)
+        assertText("textSoft on surfaceRaised", c.textSoft, c.surfaceRaised)
+        assertText("accent on surface (Playing line)", c.accent, c.surface)
+        assertText("text on outline (selected tab)", c.text, c.outline)
+    }
 }

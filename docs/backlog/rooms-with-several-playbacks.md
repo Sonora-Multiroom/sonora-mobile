@@ -1,7 +1,7 @@
 # Rooms with several playbacks: main playback as the card, the others nested under it
 
 **Status:** Proposed, not started. Written 2026-10-04 while specifying `003-start-playback`.
-Intended as the next feature after 003 (`004-…`).
+Intended as the next feature after 004 (Settings and Sources took `004-…`).
 **Origin:** The hub's `023-multi-route-output-mixing` (API 0.1.21, deployed 2026-10-02) lets one
 output play several routes at once: `MIX` routes play alongside, and `DUCK_OTHERS` routes
 (announcements, e.g. the TTS extension) lower everything else while they play. The app was built

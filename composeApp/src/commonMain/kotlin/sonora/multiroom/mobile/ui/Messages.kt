@@ -125,3 +125,52 @@ fun startFailureMessage(failure: StartFailure): String = when (failure) {
     StartFailure.HubUnreachable -> "Couldn't reach the hub"
     StartFailure.Other -> "Couldn't start playback"
 }
+
+/** What the user was doing in Settings when a request failed. */
+sealed interface SettingsAction {
+    /** Turn a room, group or source on or off; [on] is the state asked for. */
+    data class Turn(val on: Boolean) : SettingsAction
+
+    /** Remove a runtime source. */
+    data object Remove : SettingsAction
+}
+
+/** Why a Settings request failed (FR-013); the copy is in [settingsFailureMessage]. */
+sealed interface SettingsFailure {
+    /** The caller asks the hub for a fresh snapshot, because the list is out of date. */
+    val needsRefresh: Boolean get() = false
+
+    data class NoLongerOnHub(val name: String) : SettingsFailure {
+        override val needsRefresh: Boolean get() = true
+    }
+
+    data object HubUnreachable : SettingsFailure
+    data class CouldNotTurn(val name: String, val on: Boolean) : SettingsFailure
+    data class CannotRemoveConfigured(val name: String) : SettingsFailure
+    data class CouldNotRemove(val name: String) : SettingsFailure
+}
+
+/** Maps a hub answer to a [SettingsFailure]; null when the answer is not a failure for [action]. */
+fun settingsFailure(action: SettingsAction, name: String, error: HubError): SettingsFailure? = when (action) {
+    is SettingsAction.Turn -> when {
+        error is HubError.Unreachable -> SettingsFailure.HubUnreachable
+        error is HubError.Rejected && error.status == 404 -> SettingsFailure.NoLongerOnHub(name)
+        else -> SettingsFailure.CouldNotTurn(name, action.on)
+    }
+
+    // Already gone is what the user wanted (FR-018).
+    SettingsAction.Remove -> when {
+        error is HubError.Rejected && error.status == 404 -> null
+        error is HubError.Unreachable -> SettingsFailure.HubUnreachable
+        error is HubError.Rejected && error.status == 400 -> SettingsFailure.CannotRemoveConfigured(name)
+        else -> SettingsFailure.CouldNotRemove(name)
+    }
+}
+
+fun settingsFailureMessage(failure: SettingsFailure): String = when (failure) {
+    is SettingsFailure.NoLongerOnHub -> "${failure.name} is no longer on the hub"
+    SettingsFailure.HubUnreachable -> "Couldn't reach the hub"
+    is SettingsFailure.CouldNotTurn -> "Couldn't turn ${failure.name} ${if (failure.on) "on" else "off"}"
+    is SettingsFailure.CannotRemoveConfigured -> "${failure.name} comes from the hub's configuration and can't be removed"
+    is SettingsFailure.CouldNotRemove -> "Couldn't remove ${failure.name}"
+}

@@ -21,13 +21,26 @@ a:focus-visible,button:focus-visible,input:focus-visible{outline:2px solid #F2A5
 .sw:checked::after{left:23px;background:#1A1206}
 </style>
 </helmet>
-<div style="width: 390px; height: 844px; box-sizing: border-box; background: #0E0F12; color: #F2F1EE; font-family: 'DM Sans', sans-serif; display: flex; flex-direction: column; overflow: hidden">
+<div style="width: 390px; height: 844px; box-sizing: border-box; background: #0E0F12; color: #F2F1EE; font-family: 'DM Sans', sans-serif; display: flex; flex-direction: column; overflow: hidden; position: relative">
 
 <header style="padding: 28px 20px 0">
 <h1 style="margin: 0; font-family: Sora, sans-serif; font-size: 30px; font-weight: 600; letter-spacing: -0.02em">Settings</h1>
 </header>
 
-<div style="margin: 18px 20px 0; padding: 4px; border-radius: 16px; background: #17191E; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 4px">
+<button onClick="{{openHub}}" aria-label="Hub connection: {{hubStatus}}, {{hubUrl}}. Change address" style="margin: 18px 20px 0; min-height: 68px; padding: 12px 10px 12px 14px; border-radius: 20px; background: #17191E; color: #F2F1EE; display: flex; align-items: center; gap: 12px; text-align: left">
+<div style="width: 40px; height: 40px; border-radius: 12px; background: #22252B; color: #C9CBD1; display: flex; align-items: center; justify-content: center">
+<svg class="i" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="7" rx="2"></rect><rect x="3" y="13" width="18" height="7" rx="2"></rect><path d="M7 7.5h.01M7 16.5h.01"></path></svg>
+</div>
+<div style="flex-grow: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px">
+<span style="display: flex; align-items: center; gap: 8px; font-size: 15px; font-weight: 600">Hub
+<span style="display: flex; align-items: center; gap: 5px; font-size: 12px; font-weight: 600; color: {{hubStatusFg}}"><span style="width: 6px; height: 6px; border-radius: 50%; background: {{hubStatusFg}}"></span>{{hubStatus}}</span>
+</span>
+<span style="font-size: 13px; color: #9A9DA6; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">{{hubUrl}}</span>
+</div>
+<svg class="i" viewBox="0 0 24 24" aria-hidden="true" style="color: #6E717A"><path d="M9 6l6 6-6 6"></path></svg>
+</button>
+
+<div style="margin: 12px 20px 0; padding: 4px; border-radius: 16px; background: #17191E; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 4px">
 <sc-for list="{{tabs}}" as="t" hint-placeholder-count="4">
 <button aria-pressed="{{t.pressed}}" onClick="{{t.pick}}" style="height: 40px; border-radius: 12px; font-size: 13px; font-weight: 600; background: {{t.bg}}; color: {{t.fg}}">{{t.label}}</button>
 </sc-for>
@@ -45,7 +58,7 @@ a:focus-visible,button:focus-visible,input:focus-visible{outline:2px solid #F2A5
 </div>
 <div style="flex-grow: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px">
 <span style="font-size: 16px; font-weight: 600; color: {{o.nameColor}}">{{o.name}}</span>
-<span style="font-size: 13px; color: #9A9DA6">{{o.sub}}</span>
+<span style="font-size: 13px; color: {{o.subColor}}">{{o.sub}}</span>
 </div>
 <input type="checkbox" role="switch" class="sw" aria-label="{{o.name}}" checked="{{o.on}}" onChange="{{o.toggle}}">
 </label>
@@ -64,6 +77,9 @@ a:focus-visible,button:focus-visible,input:focus-visible{outline:2px solid #F2A5
 <div style="flex-grow: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px">
 <span style="font-size: 16px; font-weight: 600; color: {{g.nameColor}}">{{g.name}}</span>
 <span style="font-size: 13px; color: #9A9DA6; line-height: 1.35">{{g.members}}</span>
+<sc-if value="{{g.isPlaying}}" hint-placeholder-val="{{ false }}">
+<span style="font-size: 13px; color: #F2A541">{{g.playingText}}</span>
+</sc-if>
 </div>
 <input type="checkbox" role="switch" class="sw" aria-label="{{g.name}}" checked="{{g.on}}" onChange="{{g.toggle}}">
 </label>
@@ -132,8 +148,9 @@ a:focus-visible,button:focus-visible,input:focus-visible{outline:2px solid #F2A5
 </sc-for>
 </section>
 </sc-if>
-<p style="margin: auto 0 0; padding: 12px 0 16px; text-align: center; font-size: 12px; font-weight: 500; color: #9A9DA6">Sonora 0.1.0 · Alpha</p>
 </main>
+
+<footer style="padding: 12px 20px 14px; text-align: center; font-size: 12px; line-height: 1.4; color: #8A8D96; user-select: text">Sonora 0.3.0 Alpha - Build 23 (abcdef)</footer>
 
 <nav aria-label="Main" style="height: 76px; box-sizing: border-box; border-top: 1px solid #1F2228; display: flex; justify-content: space-around; align-items: flex-start; padding-top: 6px">
 <a href="Main.dc.html" style="min-width: 72px; height: 52px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; font-size: 12px; font-weight: 500; color: #9A9DA6">
@@ -149,6 +166,51 @@ Sources
 Settings
 </a>
 </nav>
+
+<sc-if value="{{hubOpen}}" hint-placeholder-val="{{ false }}">
+<div style="position: absolute; inset: 0; background: rgba(5, 6, 8, 0.72); display: flex; flex-direction: column; justify-content: flex-end">
+<section role="dialog" aria-modal="true" aria-labelledby="hub-title" style="background: #17191E; border-radius: 28px 28px 0 0; padding: 10px 20px 28px; display: flex; flex-direction: column; gap: 16px">
+<div style="align-self: center; width: 40px; height: 4px; border-radius: 2px; background: #2C3038"></div>
+<div style="display: flex; align-items: center; justify-content: space-between">
+<h2 id="hub-title" style="margin: 0; font-family: Sora, sans-serif; font-size: 20px; font-weight: 600">Hub address</h2>
+<button aria-label="Close" onClick="{{closeHub}}" style="width: 44px; height: 44px; border-radius: 22px; background: transparent; color: #C9CBD1; display: flex; align-items: center; justify-content: center">
+<svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"></path></svg>
+</button>
+</div>
+<div style="display: flex; flex-direction: column; gap: 8px">
+<label for="hub-url" style="font-size: 13px; font-weight: 600; color: #C9CBD1">URL</label>
+<input id="hub-url" type="url" inputmode="url" autocomplete="off" spellcheck="false" value="{{hubDraft}}" onInput="{{editDraft}}" placeholder="http://192.168.1.10:8080" style="height: 52px; box-sizing: border-box; padding: 0 14px; border-radius: 14px; border: 1px solid #2C3038; background: #0E0F12; color: #F2F1EE; font: inherit; font-size: 16px">
+<span style="font-size: 13px; line-height: 1.45; color: #9A9DA6">Your phone and the hub need to be on the same network.</span>
+</div>
+<sc-if value="{{testShown}}" hint-placeholder-val="{{ false }}">
+<div role="status" style="display: flex; align-items: center; gap: 10px; padding: 12px 14px; border-radius: 14px; background: {{testBg}}; color: {{testFg}}; font-size: 14px; font-weight: 500">
+<span style="width: 8px; height: 8px; border-radius: 50%; background: {{testFg}}; flex-shrink: 0"></span>
+{{testText}}
+</div>
+</sc-if>
+<div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px">
+<button onClick="{{testHub}}" style="height: 52px; border-radius: 16px; background: #22252B; color: #F2F1EE; font-size: 15px; font-weight: 600">Test connection</button>
+<button onClick="{{saveHub}}" style="height: 52px; border-radius: 16px; background: #F2A541; color: #1A1206; font-size: 15px; font-weight: 600">Save</button>
+</div>
+</section>
+</div>
+</sc-if>
+
+<sc-if value="{{confirmOpen}}" hint-placeholder-val="{{ false }}">
+<div style="position: absolute; inset: 0; background: rgba(5, 6, 8, 0.72); display: flex; align-items: center; justify-content: center; padding: 24px">
+<section role="alertdialog" aria-modal="true" aria-labelledby="off-title" aria-describedby="off-body" style="width: 100%; background: #17191E; border-radius: 24px; padding: 24px 20px 20px; display: flex; flex-direction: column; gap: 10px">
+<div style="width: 44px; height: 44px; border-radius: 14px; background: #3A1A16; color: #FF8A7A; display: flex; align-items: center; justify-content: center">
+<svg class="i" viewBox="0 0 24 24" aria-hidden="true"><rect x="6" y="6" width="12" height="12" rx="2"></rect></svg>
+</div>
+<h2 id="off-title" style="margin: 6px 0 0; font-family: Sora, sans-serif; font-size: 20px; font-weight: 600">{{confirmTitle}}</h2>
+<p id="off-body" style="margin: 0; font-size: 15px; line-height: 1.5; color: #C9CBD1">{{confirmBody}}</p>
+<div style="margin-top: 10px; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px">
+<button onClick="{{cancelOff}}" style="height: 52px; border-radius: 16px; background: #22252B; color: #F2F1EE; font-size: 15px; font-weight: 600">Keep playing</button>
+<button onClick="{{confirmOff}}" style="height: 52px; border-radius: 16px; background: #FF8A7A; color: #2A0D08; font-size: 15px; font-weight: 600">Turn off</button>
+</div>
+</section>
+</div>
+</sc-if>
 </div>
 </x-dc>
 <script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
@@ -159,9 +221,17 @@ class Component extends DCLogic {
       tab: 'rooms',
       on: { living: true, kitchen: true, bedroom: true, office: true, patio: false,
             downstairs: true, everywhere: true, rp: true, jazz: true, turntable: true, morning: false },
-      runtime: true
+      runtime: true,
+      playing: { living: 'Radio Paradise', kitchen: 'Radio Paradise', bedroom: 'Jazz24', downstairs: 'Radio Paradise' },
+      confirm: null,
+      hubUrl: 'http://192.168.1.40:8080',
+      hubConnected: true,
+      hubOpen: false,
+      hubDraft: '',
+      test: 'idle'
     };
   }
+  componentWillUnmount() { clearTimeout(this.t); }
   renderVals() {
     const s = this.state;
     const DIV = '1px solid #22252B';
@@ -179,17 +249,32 @@ class Component extends DCLogic {
       fg: s.tab === id ? '#F2F1EE' : '#9A9DA6',
       pick: () => this.setState({ tab: id })
     }));
+    const P = s.playing;
+    // Switching OFF something that is playing asks first; idle ones and switching ON go straight through.
+    const guard = (x, kind) => () => {
+      if (s.on[x.id] && P[x.id]) this.setState({ confirm: { id: x.id, kind, name: x.name, source: P[x.id], memberIds: x.memberIds, members: x.members } });
+      else flip(x.id)();
+    };
     const outputs = [
       { id: 'living', name: 'Living Room', sub: 'In Downstairs' },
       { id: 'kitchen', name: 'Kitchen', sub: 'In Downstairs' },
       { id: 'bedroom', name: 'Bedroom', sub: 'Speaker' },
       { id: 'office', name: 'Office', sub: 'Speaker' },
       { id: 'patio', name: 'Patio', sub: 'Speaker' }
-    ].map((x, i, arr) => Object.assign(row(x, i, arr), { sub: s.on[x.id] ? x.sub : 'Off' }));
+    ].map((x, i, arr) => Object.assign(row(x, i, arr), {
+      toggle: guard(x, 'room'),
+      sub: !s.on[x.id] ? 'Off' : P[x.id] ? 'Playing · ' + P[x.id] : x.sub,
+      subColor: s.on[x.id] && P[x.id] ? '#F2A541' : '#9A9DA6'
+    }));
     const groups = [
-      { id: 'downstairs', name: 'Downstairs', members: 'Living Room, Kitchen' },
-      { id: 'everywhere', name: 'Everywhere', members: 'Living Room, Kitchen, Bedroom, Office, Patio' }
-    ].map(row);
+      { id: 'downstairs', name: 'Downstairs', members: 'Living Room, Kitchen', memberIds: ['living', 'kitchen'] },
+      { id: 'everywhere', name: 'Everywhere', members: 'Living Room, Kitchen, Bedroom, Office, Patio', memberIds: ['living', 'kitchen', 'bedroom', 'office', 'patio'] }
+    ].map((x, i, arr) => Object.assign(row(x, i, arr), {
+      toggle: guard(x, 'group'),
+      isPlaying: !!(s.on[x.id] && P[x.id]),
+      playingText: 'Playing · ' + (P[x.id] || '')
+    }));
+    const c = s.confirm;
     const kinds = {
       stream: { bg: '#3A2A12', fg: '#F2A541' },
       line: { bg: '#12302E', fg: '#5FD3C4' },
@@ -219,7 +304,42 @@ class Component extends DCLogic {
       badgeBg: badge[x.status][0], badgeFg: badge[x.status][1],
       divider: i < arr.length - 1 ? DIV : 'none'
     }));
+    const looksValid = (u) => /^https?:\/\/[^\s\/]+/.test(u.trim());
+    const tests = {
+      checking: ['#22252B', '#C9CBD1', 'Checking…'],
+      ok: ['#12302E', '#5FD3C4', 'Hub found · 5 rooms'],
+      fail: ['#3A1A16', '#FF8A7A', "Can't reach the hub at this address"]
+    };
+    const tv = tests[s.test] || tests.checking;
     return {
+      confirmOpen: !!c,
+      confirmTitle: c ? 'Turn off ' + c.name + '?' : '',
+      confirmBody: !c ? '' : c.kind === 'group'
+        ? c.source + ' is playing on ' + c.members + '. Turning the group off stops playback in all of these rooms.'
+        : c.source + ' is playing in ' + c.name + '. Turning the room off stops playback there.',
+      cancelOff: () => this.setState({ confirm: null }),
+      confirmOff: () => {
+        const stopped = Object.assign({}, P);
+        delete stopped[c.id];
+        (c.memberIds || []).forEach((m) => { delete stopped[m]; });
+        this.setState({ confirm: null, playing: stopped, on: Object.assign({}, s.on, { [c.id]: false }) });
+      },
+      hubUrl: s.hubUrl,
+      hubStatus: s.hubConnected ? 'Connected' : 'Not connected',
+      hubStatusFg: s.hubConnected ? '#5FD3C4' : '#FF8A7A',
+      hubOpen: s.hubOpen,
+      hubDraft: s.hubDraft,
+      openHub: () => this.setState({ hubOpen: true, hubDraft: s.hubUrl, test: 'idle' }),
+      closeHub: () => this.setState({ hubOpen: false }),
+      editDraft: (e) => this.setState({ hubDraft: e.target.value, test: 'idle' }),
+      testHub: () => {
+        clearTimeout(this.t);
+        this.setState({ test: 'checking' });
+        this.t = setTimeout(() => this.setState({ test: looksValid(this.state.hubDraft) ? 'ok' : 'fail' }), 700);
+      },
+      saveHub: () => this.setState({ hubOpen: false, hubUrl: s.hubDraft.trim() || s.hubUrl, hubConnected: looksValid(s.hubDraft) }),
+      testShown: s.test !== 'idle',
+      testBg: tv[0], testFg: tv[1], testText: tv[2],
       tabs, outputs, groups, inputs, extensions,
       showRooms: s.tab === 'rooms',
       showGroups: s.tab === 'groups',

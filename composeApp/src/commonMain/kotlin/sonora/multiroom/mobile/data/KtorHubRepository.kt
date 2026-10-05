@@ -1,9 +1,11 @@
 package sonora.multiroom.mobile.data
 
+import sonora.multiroom.mobile.domain.ExtensionInventory
 import sonora.multiroom.mobile.domain.HubAddress
 import sonora.multiroom.mobile.domain.HubSnapshot
 import sonora.multiroom.mobile.domain.Route
 import sonora.multiroom.mobile.domain.Target
+import sonora.multiroom.mobile.hub.generated.apis.ExtensionsApi
 import sonora.multiroom.mobile.hub.generated.apis.GroupsApi
 import sonora.multiroom.mobile.hub.generated.apis.InputsApi
 import sonora.multiroom.mobile.hub.generated.apis.MasterMuteApi
@@ -11,6 +13,7 @@ import sonora.multiroom.mobile.hub.generated.apis.OutputsApi
 import sonora.multiroom.mobile.hub.generated.apis.PlaybackApi
 import sonora.multiroom.mobile.hub.generated.apis.RoutesApi
 import sonora.multiroom.mobile.hub.generated.models.CreateRouteRequest
+import sonora.multiroom.mobile.hub.generated.models.EnabledRequest
 import sonora.multiroom.mobile.hub.generated.models.MuteRequest
 import sonora.multiroom.mobile.hub.generated.models.PauseRequest
 import sonora.multiroom.mobile.hub.generated.models.PlaybackRequest
@@ -28,6 +31,7 @@ class KtorHubRepository(address: HubAddress, client: HttpClient) : HubRepository
     private val routes = RoutesApi(address.baseUrl, client)
     private val inputs = InputsApi(address.baseUrl, client)
     private val masterMute = MasterMuteApi(address.baseUrl, client)
+    private val extensions = ExtensionsApi(address.baseUrl, client)
 
     // Same engine, longer request/socket timeouts; connecting still fails fast.
     private val playback = PlaybackApi(
@@ -86,6 +90,30 @@ class KtorHubRepository(address: HubAddress, client: HttpClient) : HubRepository
 
     override suspend fun setGroupMute(groupId: String, muted: Boolean): HubResult<Unit> =
         hubCallUnit { groups.setGroupMute(groupId, MuteRequest(muted)) }
+
+    override suspend fun setRoomEnabled(roomId: String, enabled: Boolean): HubResult<Unit> =
+        hubCallUnit { outputs.setOutputEnabled(roomId, EnabledRequest(enabled)) }
+
+    override suspend fun setGroupEnabled(groupId: String, enabled: Boolean): HubResult<Unit> =
+        hubCallUnit { groups.setGroupEnabled(groupId, EnabledRequest(enabled)) }
+
+    override suspend fun setSourceEnabled(sourceId: String, enabled: Boolean): HubResult<Unit> =
+        hubCallUnit { inputs.setInputEnabled(sourceId, EnabledRequest(enabled)) }
+
+    override suspend fun removeSource(sourceId: String): HubResult<Unit> =
+        hubCallUnit { inputs.deleteInput(sourceId) }
+
+    override suspend fun extensions(): HubResult<ExtensionInventory> =
+        when (val result = hubCall { extensions.listExtensions() }) {
+            is HubResult.Err -> result
+            is HubResult.Ok -> HubResult.Ok(result.value.toInventory())
+        }
+
+    override suspend fun countRooms(): HubResult<Int> =
+        when (val result = hubCall { outputs.listOutputs(includeDisabled = true) }) {
+            is HubResult.Err -> result
+            is HubResult.Ok -> HubResult.Ok(result.value.count { it.toRoom() != null })
+        }
 
     override suspend fun startSource(inputId: String, target: Target): HubResult<Route> {
         val request = when (target) {

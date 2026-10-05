@@ -218,4 +218,26 @@ class KtorHubRepositorySnapshotTest {
             s.sources.map { it.defaultJoinMode },
         )
     }
+
+    // ---- 004: autoRemove and createdAt (contract test 8) -------------------------------------
+
+    private suspend fun sourceFrom(extra: String): Source {
+        val hub = Hub(inputs = """[{"inputId":"x","displayName":"X","uri":"http://x","source":"EPHEMERAL"$extra}]""")
+        return snapshotOf(hub).sources.single()
+    }
+
+    @Test
+    fun autoRemoveIsReadAndMissingMeansFalse() = kotlinx.coroutines.test.runTest {
+        assertEquals(true, sourceFrom(""","autoRemove":true""").autoRemove)
+        assertEquals(false, sourceFrom(""","autoRemove":false""").autoRemove)
+        assertEquals(false, sourceFrom("").autoRemove)
+    }
+
+    @Test
+    fun createdAtIsParsedAndAnythingUnreadableIsNull() = kotlinx.coroutines.test.runTest {
+        assertEquals(kotlin.time.Instant.parse("2026-10-04T12:30:00Z"), sourceFrom(""","createdAt":"2026-10-04T12:30:00Z"""").createdAt)
+        for (extra in listOf("", ""","createdAt":null""", ",\"createdAt\":\"\"", ",\"createdAt\":\"yesterday\"")) {
+            assertEquals(null, sourceFrom(extra).createdAt, extra)
+        }
+    }
 }
