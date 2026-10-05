@@ -67,11 +67,11 @@ fun <T> SettingsCard(
 
 /**
  * The shared body of a switch row. The whole row toggles and is the switch for accessibility
- * (FR-023): "<name>, switch, on/off", announced as disabled when stale or in flight.
+ * (FR-023): its texts, name first, are read once as the switch's label with its on/off state,
+ * announced as disabled when stale or in flight.
  */
 @Composable
 private fun SwitchRow(
-    name: String,
     item: Item<*>,
     controlsEnabled: Boolean,
     onToggle: (Boolean) -> Unit,
@@ -85,8 +85,7 @@ private fun SwitchRow(
             .fillMaxWidth()
             .heightIn(min = minHeight)
             .alpha(if (enabled) 1f else 0.5f)
-            .toggleable(value = item.shownEnabled, enabled = enabled, role = Role.Switch, onValueChange = onToggle)
-            .semantics(mergeDescendants = true) { contentDescription = name },
+            .toggleable(value = item.shownEnabled, enabled = enabled, role = Role.Switch, onValueChange = onToggle),
         horizontalArrangement = Arrangement.spacedBy(12.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
@@ -112,7 +111,7 @@ fun RoomSettingRow(item: Item<RoomRow>, controlsEnabled: Boolean, onToggle: (Boo
     val colors = SonoraTheme.colors
     val type = SonoraTheme.type
     val row = item.row
-    SwitchRow(row.name, item, controlsEnabled, onToggle, 64.dp, tile = { IconTile(SonoraIcons.Room) }) {
+    SwitchRow(item, controlsEnabled, onToggle, 64.dp, tile = { IconTile(SonoraIcons.Room) }) {
         Text(
             row.name,
             style = type.body16Semi,
@@ -135,7 +134,7 @@ fun GroupSettingRow(item: Item<GroupRow>, controlsEnabled: Boolean, onToggle: (B
     val colors = SonoraTheme.colors
     val type = SonoraTheme.type
     val row = item.row
-    SwitchRow(row.name, item, controlsEnabled, onToggle, 72.dp, tile = { IconTile(SonoraIcons.GroupStack) }) {
+    SwitchRow(item, controlsEnabled, onToggle, 72.dp, tile = { IconTile(SonoraIcons.GroupStack) }) {
         Text(
             row.name,
             style = type.body16Semi,
@@ -157,7 +156,7 @@ fun ConfiguredSourceSettingRow(item: Item<ConfiguredSourceRow>, controlsEnabled:
     val row = item.row
     val kind = colors.forKind(row.kind)
     SwitchRow(
-        row.name, item, controlsEnabled, onToggle, 60.dp,
+        item, controlsEnabled, onToggle, 60.dp,
         tile = {
             Box(
                 Modifier.size(38.dp).background(kind.tile, RoundedCornerShape(10.dp)),
