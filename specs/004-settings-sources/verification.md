@@ -37,7 +37,7 @@ Status: ✅ passed · ❌ failed · ⏳ not checked yet · n/a not checkable on 
 | 15 | Save a new valid address, then back to the real one: sheet closes; status goes "Connecting…" then follows; Rooms uses it | ✅ | 2026-10-05 | Saved `http://192.168.1.111:8080`: sheet closed, "Connecting…" with the extensions list cleared at 0.2 s, "Connected" by 1.2 s; Rooms loaded. Saved the original address back: Connected |
 | 16 | Cut the phone's Wi-Fi with Settings open (user): "Not connected", stale banner, lists kept, switches and trash disabled, "Test connection" still answers; restore → re-enabled | ✅ | 2026-10-05 | Run by the user on the Rooms tab: every point as described. No runtime source was listed, so the trash state was not seen |
 | 17 | Flip a switch and switch to Rooms at once: the change lands; a failure (e.g. hub stopped) shows as a message on Rooms | ✅ | 2026-10-05 | Bedroom switch + Rooms tap in one adb call: hub `enabled:false`, Rooms "Turned off"; turned back on. The failure path was not checked (the hub was not stopped) |
-| 18 | TalkBack over a switch row, the tabs, the hub row, a trash button and the dialog: announcements as in FR-023 | ✅ | 2026-10-05 | User heard: "On, Bedroom Speakers, Bedroom Speakers, Playing KissFM, Switch"; "Groups, tab, 2 of 4"; "Hub connection: Connected. http://multiroom.lan:8080, Change address, Button"; "Remove Sonora test source, Button"; the dialog worked. Name read twice on switch rows, see Issues found |
+| 18 | TalkBack over a switch row, the tabs, the hub row, a trash button and the dialog: announcements as in FR-023 | ✅ | 2026-10-05 | User heard: "On, Bedroom Speakers, Bedroom Speakers, Playing KissFM, Switch"; "Groups, tab, 2 of 4"; "Hub connection: Connected. http://multiroom.lan:8080, Change address, Button"; "Remove Sonora test source, Button"; the dialog worked. Name read twice on switch rows, see Issues found. Fixed in `e895010`; rechecked with a local debug build of it: rooms, groups and sources rows read the name once |
 
 ## Open points
 
@@ -53,6 +53,8 @@ Status: ✅ passed · ❌ failed · ⏳ not checked yet · n/a not checkable on 
   `contentDescription = name`
   ([SettingRows.kt:89](../../composeApp/src/commonMain/kotlin/sonora/multiroom/mobile/ui/settings/SettingRows.kt#L89)),
   so both the description and the name text are read. Minor; FR-023 is otherwise met.
+  **Fixed** in `e895010` (description dropped; `toggleable` already merges the texts), rechecked
+  with TalkBack on the Pixel 5.
 - **Hub (observation)**: turning a group off does not stop its playback (row 7); turning a room off
   does (rows 5, 6). The hub still reports API 0.1.21.
 - **Test device (observation)**: the POCO (HyperOS 2) refuses `input tap` and `settings put` over adb
