@@ -2,9 +2,7 @@ package sonora.multiroom.mobile.domain
 
 import kotlin.test.Test
 import kotlin.test.assertEquals
-import kotlin.test.assertFalse
 import kotlin.test.assertNull
-import kotlin.test.assertTrue
 
 class SettingsConfirmTest {
     private val radio = source("radio", "Radio Paradise")
@@ -80,10 +78,53 @@ class SettingsConfirmTest {
         assertNull(turnOffConfirmation(downstairs, off))
     }
 
+    private val radioKey = ItemKey(ItemKind.Source, "radio")
+
     @Test
-    fun aSourceNeverAsks() {
+    fun aSourcePlayingInARoomAsksWhereItStops() {
         val s = base(listOf(route("r", "radio", Target.Room("living"))))
-        assertNull(turnOffConfirmation(ItemKey(ItemKind.Source, "radio"), s))
+        assertEquals(Confirmation.TurnOffSource("Radio Paradise", listOf("Living Room")), turnOffConfirmation(radioKey, s))
+    }
+
+    @Test
+    fun aSourcePlayingOnAGroupNamesTheGroup() {
+        val s = base(listOf(route("r", "radio", Target.Group("g"))))
+        assertEquals(Confirmation.TurnOffSource("Radio Paradise", listOf("Downstairs")), turnOffConfirmation(radioKey, s))
+    }
+
+    @Test
+    fun aSourceInSeveralPlacesNamesEachOnce() {
+        val s = base(
+            listOf(
+                route("r1", "radio", Target.Group("g")),
+                route("r2", "radio", Target.Room("bedroom")),
+                route("r3", "radio", Target.Room("bedroom")),
+            ),
+        )
+        assertEquals(
+            Confirmation.TurnOffSource("Radio Paradise", listOf("Downstairs", "Bedroom")),
+            turnOffConfirmation(radioKey, s),
+        )
+    }
+
+    @Test
+    fun aSourceOnlyPausedStillAsks() {
+        val s = base(listOf(route("r", "radio", Target.Room("bedroom")).copy(paused = true)))
+        assertEquals(Confirmation.TurnOffSource("Radio Paradise", listOf("Bedroom")), turnOffConfirmation(radioKey, s))
+    }
+
+    @Test
+    fun anIdleSourceSendsAtOnce() {
+        assertNull(turnOffConfirmation(radioKey, base()))
+        assertNull(turnOffConfirmation(radioKey, base(listOf(route("r", "radio", Target.Room("living"), RouteStatus.Stopped)))))
+    }
+
+    @Test
+    fun aSourceThatIsOffOrUnknownSendsAtOnce() {
+        val playing = base(listOf(route("r", "radio", Target.Room("living"))))
+        val off = playing.copy(sources = listOf(source("radio", "Radio Paradise", enabled = false), jazz))
+        assertNull(turnOffConfirmation(radioKey, off))
+        assertNull(turnOffConfirmation(ItemKey(ItemKind.Source, "ghost"), playing))
     }
 
     @Test
@@ -92,17 +133,47 @@ class SettingsConfirmTest {
         assertNull(turnOffConfirmation(ItemKey(ItemKind.Group, "ghost"), base()))
     }
 
-    // ---- keepsPlaying -----------------------------------------------------------------------
+    // ---- Where a source plays -----------------------------------------------------------------
 
     @Test
-    fun keepsPlayingWhenALiveRouteUsesTheSource() {
-        assertTrue(keepsPlaying("radio", base(listOf(route("r", "radio", Target.Room("living"))))))
+    fun aRouteToARoomIsNamedByTheRoom() =
+        assertEquals(listOf("Bedroom"), sourcePlaces("radio", base(listOf(route("r", "radio", Target.Room("bedroom"))))))
+
+    @Test
+    fun aRouteToAGroupIsNamedByTheGroupNotItsMembers() =
+        assertEquals(listOf("Downstairs"), sourcePlaces("radio", base(listOf(route("r", "radio", Target.Group("g"))))))
+
+    @Test
+    fun severalPlacesInHubOrderEachOnce() {
+        val s = base(
+            listOf(
+                route("r1", "radio", Target.Room("bedroom")),
+                route("r2", "radio", Target.Group("g")),
+                route("r3", "radio", Target.Room("bedroom")),
+            ),
+        )
+        assertEquals(listOf("Bedroom", "Downstairs"), sourcePlaces("radio", s))
     }
 
     @Test
-    fun doesNotKeepPlayingWhenOnlyAStoppedRouteOrNoneUsesIt() {
-        assertFalse(keepsPlaying("radio", base(listOf(route("r", "radio", Target.Room("living"), RouteStatus.Stopped)))))
-        assertFalse(keepsPlaying("radio", base()))
+    fun pausedStartingFailedAndUnknownRoutesCount() {
+        val paused = route("r", "radio", Target.Room("bedroom")).copy(paused = true)
+        assertEquals(listOf("Bedroom"), sourcePlaces("radio", base(listOf(paused))))
+        for (status in listOf(RouteStatus.Starting, RouteStatus.Failed, RouteStatus.Unknown)) {
+            assertEquals(listOf("Bedroom"), sourcePlaces("radio", base(listOf(route("r", "radio", Target.Room("bedroom"), status)))), "$status")
+        }
+    }
+
+    @Test
+    fun stoppedRoutesAndOtherSourcesDoNotCount() {
+        val s = base(
+            listOf(
+                route("r1", "radio", Target.Room("bedroom"), RouteStatus.Stopped),
+                route("r2", "jazz", Target.Room("kitchen")),
+            ),
+        )
+        assertEquals(emptyList<String>(), sourcePlaces("radio", s))
+        assertEquals(emptyList<String>(), sourcePlaces("radio", base()))
     }
 
     // ---- Remove (US2) -------------------------------------------------------------------------

@@ -173,7 +173,14 @@ fun ConfiguredSourceSettingRow(item: Item<ConfiguredSourceRow>, controlsEnabled:
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
         )
-        Text(configuredLine(row), style = type.label12, color = colors.textMuted, maxLines = 1, overflow = TextOverflow.Ellipsis)
+        val playing = configuredLinePlaying(row)
+        Text(
+            configuredLine(row),
+            style = if (playing) type.body13 else type.label12,
+            color = if (playing) colors.accent else colors.textMuted,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+        )
     }
 }
 

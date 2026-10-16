@@ -68,14 +68,21 @@ fun groupMembersText(members: List<String>): String =
 fun groupPlayingText(sources: List<String>): String? =
     if (sources.isEmpty()) null else "Playing · " + sources.joinToString(" + ")
 
-fun configuredLine(row: ConfiguredSourceRow): String =
-    row.detail?.let { "${kindLabel(row.kind)} · $it" } ?: kindLabel(row.kind)
+/** "Playing in <where>" while a playback uses the source, otherwise its kind and detail. */
+fun configuredLine(row: ConfiguredSourceRow): String = when {
+    configuredLinePlaying(row) -> "Playing in ${joinNames(row.playingIn)}"
+    else -> row.detail?.let { "${kindLabel(row.kind)} · $it" } ?: kindLabel(row.kind)
+}
+
+/** The line is the amber "Playing in" one, drawn as the rooms' status. */
+fun configuredLinePlaying(row: ConfiguredSourceRow): Boolean = row.playingIn.isNotEmpty()
 
 const val CONFIGURED_EMPTY = "No sources in the hub's configuration."
 
 fun confirmTitle(c: Confirmation): String = when (c) {
     is Confirmation.TurnOffRoom -> "Turn off ${c.room}?"
     is Confirmation.TurnOffGroup -> "Turn off ${c.group}?"
+    is Confirmation.TurnOffSource -> "Turn off ${c.source}?"
     is Confirmation.Remove -> "Remove ${c.source}?"
 }
 
@@ -87,6 +94,9 @@ fun confirmBody(c: Confirmation): String = when (c) {
     is Confirmation.TurnOffGroup ->
         "${joinNames(c.sources)} is playing on ${c.members.joinToString(", ")}. " +
             "Turning the group off stops playback in all of these rooms."
+
+    is Confirmation.TurnOffSource ->
+        "${c.source} is playing in ${joinNames(c.where)}. Turning it off stops playback there."
 
     is Confirmation.Remove ->
         "${c.source} is playing in ${joinNames(c.where)}. Removing it stops playback there."
@@ -116,8 +126,6 @@ fun addedLineText(line: AddedLine): String? {
     }
     return parts.takeIf { it.isNotEmpty() }?.joinToString(" · ")
 }
-
-fun keepsPlayingMessage(name: String): String = "$name is off. What's playing from it keeps playing."
 
 /** The status box of the connection test; null before one ran. */
 fun testText(test: TestState): String? = when (test) {

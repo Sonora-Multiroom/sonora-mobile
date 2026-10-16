@@ -10,13 +10,17 @@ sealed interface Confirmation {
     data class TurnOffGroup(val group: String, val sources: List<String>, val members: List<String>) : Confirmation
 
     /** [where] names the rooms or groups whose playback of the source would stop. */
+    data class TurnOffSource(val source: String, val where: List<String>) : Confirmation
+
+    /** [where] names the rooms or groups whose playback of the source would stop. */
     data class Remove(val source: String, val where: List<String>) : Confirmation
 }
 
 /**
  * Null means "send at once". A room that is on and covered by any live route, its own or a group's,
- * or a group that is on and has its own live route, asks first (research R4); turning on, a source
- * (FR-014) and anything the hub no longer lists never do. The rules are those of [SettingsBuilder].
+ * a group that is on and has its own live route, or a source that is on and plays anywhere, asks
+ * first, because the hub stops that playback; turning on and anything the hub no longer lists never
+ * do. The room and group rules are those of [SettingsBuilder].
  */
 fun turnOffConfirmation(key: ItemKey, snapshot: HubSnapshot): Confirmation? {
     val names = sourceNames(snapshot)
@@ -36,13 +40,13 @@ fun turnOffConfirmation(key: ItemKey, snapshot: HubSnapshot): Confirmation? {
             Confirmation.TurnOffGroup(group.name, sources, group.memberIds.mapNotNull { byId[it]?.name })
         }
 
-        ItemKind.Source -> null
+        ItemKind.Source -> {
+            val source = snapshot.sources.firstOrNull { it.id == key.id }?.takeIf { it.enabled } ?: return null
+            val where = sourcePlaces(source.id, snapshot)
+            if (where.isEmpty()) null else Confirmation.TurnOffSource(source.name, where)
+        }
     }
 }
-
-/** A live route uses the source, so turning it off leaves that playback running (FR-014). */
-fun keepsPlaying(sourceId: String, snapshot: HubSnapshot): Boolean =
-    liveRoutes(snapshot).any { it.inputId == sourceId }
 
 /**
  * Removing a runtime source stops what plays from it (the hub does that), so it asks when a live
@@ -50,11 +54,19 @@ fun keepsPlaying(sourceId: String, snapshot: HubSnapshot): Boolean =
  */
 fun removeConfirmation(sourceId: String, snapshot: HubSnapshot): Confirmation.Remove? {
     val source = snapshot.sources.firstOrNull { it.id == sourceId } ?: return null
+    val where = sourcePlaces(sourceId, snapshot)
+    return if (where.isEmpty()) null else Confirmation.Remove(source.name, where)
+}
+
+/**
+ * Where a live route (any state but stopped) plays [sourceId]: each room or group it was addressed
+ * to, named once, in the hub's order. A group is named by its own name, not its members.
+ */
+internal fun sourcePlaces(sourceId: String, snapshot: HubSnapshot): List<String> {
     val rooms = snapshot.rooms.associateBy { it.id }
     val groups = snapshot.groups.associateBy { it.id }
-    val where = liveRoutes(snapshot)
+    return liveRoutes(snapshot)
         .filter { it.inputId == sourceId }
         .map { describeTarget(it.target, rooms, groups, masterMuted = false).title }
         .distinct()
-    return if (where.isEmpty()) null else Confirmation.Remove(source.name, where)
 }

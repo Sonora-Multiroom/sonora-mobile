@@ -62,7 +62,7 @@ class SettingsActionsTest {
     fun aTapShowsTheValueAtOnceAndSendsOneRequest() = runTest {
         val s = setup()
         s.repo.actionDelayMs = 100
-        s.actions.setEnabled(room, "Kitchen", false, keepsPlaying = false)
+        s.actions.setEnabled(room, "Kitchen", false)
         assertEquals(Pending(false, Phase.InFlight), s.pending[room])
         runCurrent()
         assertEquals(listOf(listOf<Any>("a", false)), s.calls("setRoomEnabled").map { it.args })
@@ -71,8 +71,8 @@ class SettingsActionsTest {
     @Test
     fun theKindSelectsTheRequest() = runTest {
         val s = setup()
-        s.actions.setEnabled(ItemKey(ItemKind.Group, "g"), "G", true, false)
-        s.actions.setEnabled(ItemKey(ItemKind.Source, "i"), "I", true, false)
+        s.actions.setEnabled(ItemKey(ItemKind.Group, "g"), "G", true)
+        s.actions.setEnabled(ItemKey(ItemKind.Source, "i"), "I", true)
         runCurrent()
         assertEquals(listOf("setGroupEnabled", "setSourceEnabled"), s.repo.calls.map { it.name })
     }
@@ -81,8 +81,8 @@ class SettingsActionsTest {
     fun aSecondTapWhilePendingIsIgnored() = runTest {
         val s = setup()
         s.repo.actionDelayMs = 100
-        s.actions.setEnabled(room, "Kitchen", false, false)
-        s.actions.setEnabled(room, "Kitchen", true, false)
+        s.actions.setEnabled(room, "Kitchen", false)
+        s.actions.setEnabled(room, "Kitchen", true)
         runCurrent(); advanceTimeBy(200)
         assertEquals(1, s.calls("setRoomEnabled").size)
         assertEquals(false, s.pending[room]?.value)
@@ -96,7 +96,7 @@ class SettingsActionsTest {
         runCurrent()                       // refresh 1 starts at t=0 and takes 1 s
         s.repo.actionDelayMs = 200
         advanceTimeBy(100)
-        s.actions.setEnabled(room, "Kitchen", false, false)
+        s.actions.setEnabled(room, "Kitchen", false)
         advanceTimeBy(201)                 // t=301: the request is done, fence = 1
         assertEquals(Pending(false, Phase.AwaitingRefresh(fence = 1)), s.pending[room])
 
@@ -114,7 +114,7 @@ class SettingsActionsTest {
         s.session.acquire()
         runCurrent()
         val before = s.repo.snapshotCalls
-        s.actions.setEnabled(room, "Kitchen", false, false)
+        s.actions.setEnabled(room, "Kitchen", false)
         runCurrent()
         assertEquals(before + 1, s.repo.snapshotCalls)
         s.session.release()
@@ -124,7 +124,7 @@ class SettingsActionsTest {
     fun failureDropsTheOverrideAndReportsWhy() = runTest {
         val s = setup()
         s.repo.actionResult = { HubResult.Err(HubError.Rejected(500, null)) }
-        s.actions.setEnabled(room, "Kitchen", false, false)
+        s.actions.setEnabled(room, "Kitchen", false)
         runCurrent()
         assertNull(s.pending[room])
         assertEquals(listOf("Couldn't turn Kitchen off"), s.attached)
@@ -136,7 +136,7 @@ class SettingsActionsTest {
         s.session.acquire(); runCurrent()
         val before = s.repo.snapshotCalls
         s.repo.actionResult = { HubResult.Err(HubError.Rejected(404, null)) }
-        s.actions.setEnabled(room, "Kitchen", false, false)
+        s.actions.setEnabled(room, "Kitchen", false)
         runCurrent()
         assertEquals(listOf("Kitchen is no longer on the hub"), s.attached)
         assertEquals(before + 1, s.repo.snapshotCalls)
@@ -147,23 +147,22 @@ class SettingsActionsTest {
     fun anUnreachableHubIsReported() = runTest {
         val s = setup()
         s.repo.actionResult = { unreachable }
-        s.actions.setEnabled(room, "Kitchen", true, false)
+        s.actions.setEnabled(room, "Kitchen", true)
         runCurrent()
         assertEquals(listOf("Couldn't reach the hub"), s.attached)
     }
 
     @Test
-    fun aSourceStillInUseSaysItKeepsPlayingOnSuccessOnly() = runTest {
+    fun turningASourceOffReportsNothingOnSuccessAndTheFailureOtherwise() = runTest {
         val s = setup()
         val key = ItemKey(ItemKind.Source, "radio")
-        s.actions.setEnabled(key, "Radio", false, keepsPlaying = true)
+        s.actions.setEnabled(key, "Radio", false)
         runCurrent()
-        assertEquals(listOf("Radio is off. What's playing from it keeps playing."), s.attached)
+        assertEquals(emptyList<String>(), s.attached)
 
-        s.attached.clear()
         advanceTimeBy(5000)
         s.repo.actionResult = { HubResult.Err(HubError.Rejected(500, null)) }
-        s.actions.setEnabled(ItemKey(ItemKind.Source, "radio2"), "Radio 2", false, keepsPlaying = true)
+        s.actions.setEnabled(ItemKey(ItemKind.Source, "radio2"), "Radio 2", false)
         runCurrent()
         assertEquals(listOf("Couldn't turn Radio 2 off"), s.attached)
     }
@@ -172,14 +171,14 @@ class SettingsActionsTest {
     fun messagesGoToAppMessagesWhileDetached() = runTest {
         val s = setup(attach = false)
         s.repo.actionResult = { unreachable }
-        s.actions.setEnabled(room, "Kitchen", true, false)
+        s.actions.setEnabled(room, "Kitchen", true)
         runCurrent()
         assertEquals(listOf("Couldn't reach the hub"), s.posted)
         assertTrue(s.attached.isEmpty())
 
         s.actions.attach()
         s.posted.clear()
-        s.actions.setEnabled(room, "Kitchen", true, false)
+        s.actions.setEnabled(room, "Kitchen", true)
         runCurrent()
         assertEquals(listOf("Couldn't reach the hub"), s.attached)
         assertTrue(s.posted.isEmpty())
@@ -190,7 +189,7 @@ class SettingsActionsTest {
     fun anAddressChangeClearsEveryOverride() = runTest {
         val s = setup()
         s.repo.actionDelayMs = 1000
-        s.actions.setEnabled(room, "Kitchen", false, false)
+        s.actions.setEnabled(room, "Kitchen", false)
         runCurrent()
         assertEquals(1, s.pending.size)
         s.store.save(HubAddress("http://other:8080"))

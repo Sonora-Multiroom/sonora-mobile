@@ -179,10 +179,54 @@ class SettingsBuilderTest {
             ),
         )
         val rows = build(s).configuredSources.associateBy { it.id }
-        assertEquals(ConfiguredSourceRow("s", "Radio", true, SourceKind.Stream, "stream.radioparadise.com"), rows["s"])
-        assertEquals(ConfiguredSourceRow("f", "File", true, SourceKind.File, "morning.flac"), rows["f"])
-        assertEquals(ConfiguredSourceRow("l", "Line", true, SourceKind.LineIn, "plughw:CARD=X,DEV=0"), rows["l"])
-        assertEquals(ConfiguredSourceRow("n", "NoUri", true, SourceKind.LineIn, null), rows["n"])
+        assertEquals(ConfiguredSourceRow("s", "Radio", true, SourceKind.Stream, "stream.radioparadise.com", playingIn = emptyList()), rows["s"])
+        assertEquals(ConfiguredSourceRow("f", "File", true, SourceKind.File, "morning.flac", playingIn = emptyList()), rows["f"])
+        assertEquals(ConfiguredSourceRow("l", "Line", true, SourceKind.LineIn, "plughw:CARD=X,DEV=0", playingIn = emptyList()), rows["l"])
+        assertEquals(ConfiguredSourceRow("n", "NoUri", true, SourceKind.LineIn, null, playingIn = emptyList()), rows["n"])
+    }
+
+    // ---- Where a configured source plays -------------------------------------------------------
+
+    private fun playing(vararg routes: Route, radioOn: Boolean = true) = snapshot(
+        rooms = listOf(room("living", "Living Room"), room("kitchen", "Kitchen"), room("bedroom", "Bedroom")),
+        groups = listOf(group("g", "Downstairs", listOf("living", "kitchen"))),
+        routes = routes.toList(),
+        sources = listOf(source("radio", "Radio Paradise", enabled = radioOn), jazz),
+    )
+
+    private fun playingIn(s: HubSnapshot) = build(s).configuredSources.first { it.id == "radio" }.playingIn
+
+    @Test
+    fun aSourcePlayingInARoomOrOnAGroupNamesWhere() {
+        assertEquals(listOf("Living Room"), playingIn(playing(route("r", "radio", Target.Room("living")))))
+        assertEquals(listOf("Downstairs"), playingIn(playing(route("r", "radio", Target.Group("g")))))
+    }
+
+    @Test
+    fun severalPlacesAreNamedOnceEach() {
+        val s = playing(
+            route("r1", "radio", Target.Group("g")),
+            route("r2", "radio", Target.Room("bedroom")),
+            route("r3", "radio", Target.Room("bedroom")),
+        )
+        assertEquals(listOf("Downstairs", "Bedroom"), playingIn(s))
+    }
+
+    @Test
+    fun aPausedPlaybackCounts() =
+        assertEquals(listOf("Bedroom"), playingIn(playing(route("r", "radio", Target.Room("bedroom")).copy(paused = true))))
+
+    @Test
+    fun idleStoppedOnlyOrTurnedOffReadsNothing() {
+        assertEquals(emptyList<String>(), playingIn(playing()))
+        assertEquals(emptyList<String>(), playingIn(playing(route("r", "radio", Target.Room("bedroom"), RouteStatus.Stopped))))
+        assertEquals(emptyList<String>(), playingIn(playing(route("r", "radio", Target.Room("bedroom")), radioOn = false)))
+    }
+
+    @Test
+    fun theLineFollowsEachSnapshot() {
+        assertEquals(listOf("Bedroom"), playingIn(playing(route("r", "radio", Target.Room("bedroom")))))
+        assertEquals(emptyList<String>(), playingIn(playing(route("r", "radio", Target.Room("bedroom"), RouteStatus.Stopped))))
     }
 
     @Test

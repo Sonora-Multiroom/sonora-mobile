@@ -105,7 +105,7 @@ a:focus-visible,button:focus-visible,input:focus-visible{outline:2px solid #F2A5
 </div>
 <div style="flex-grow: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px">
 <span style="font-size: 15px; font-weight: 600; color: {{s.nameColor}}">{{s.name}}</span>
-<span style="font-size: 12px; color: #9A9DA6; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">{{s.sub}}</span>
+<span style="font-size: {{s.subSize}}; color: {{s.subColor}}; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">{{s.sub}}</span>
 </div>
 <input type="checkbox" role="switch" class="sw" aria-label="{{s.name}}" checked="{{s.on}}" onChange="{{s.toggle}}">
 </label>
@@ -280,15 +280,32 @@ class Component extends DCLogic {
       line: { bg: '#12302E', fg: '#5FD3C4' },
       file: { bg: '#261F3A', fg: '#B49CFF' }
     };
+    // Where a source plays: each group playing it, then each room playing it outside such a group.
+    const joinNames = (n) => n.length < 2 ? n.join('') : n.slice(0, -1).join(', ') + ' and ' + n[n.length - 1];
+    const placesOf = (src) => {
+      const gs = groups.filter((g) => P[g.id] === src);
+      const covered = [].concat.apply([], gs.map((g) => g.memberIds));
+      const rs = outputs.filter((o) => P[o.id] === src && covered.indexOf(o.id) < 0);
+      return gs.map((g) => g.name).concat(rs.map((o) => o.name));
+    };
     const inputs = [
       { id: 'rp', name: 'Radio Paradise', kind: 'stream', sub: 'Stream · stream.radioparadise.com' },
       { id: 'jazz', name: 'Jazz24', kind: 'stream', sub: 'Stream · jazz24.org' },
       { id: 'turntable', name: 'Turntable', kind: 'line', sub: 'Line-in · USB audio' },
       { id: 'morning', name: 'Morning playlist', kind: 'file', sub: 'File · morning.flac' }
-    ].map((x, i, arr) => Object.assign(row(x, i, arr), {
-      tileBg: kinds[x.kind].bg, tileFg: kinds[x.kind].fg,
-      isStream: x.kind === 'stream', isLine: x.kind === 'line', isFile: x.kind === 'file'
-    }));
+    ].map((x, i, arr) => {
+      const where = s.on[x.id] ? placesOf(x.name) : [];
+      return Object.assign(row(x, i, arr), {
+        tileBg: kinds[x.kind].bg, tileFg: kinds[x.kind].fg,
+        isStream: x.kind === 'stream', isLine: x.kind === 'line', isFile: x.kind === 'file',
+        sub: where.length ? 'Playing in ' + joinNames(where) : x.sub,
+        subColor: where.length ? '#F2A541' : '#9A9DA6',
+        subSize: where.length ? '13px' : '12px',
+        toggle: where.length
+          ? () => this.setState({ confirm: { id: x.id, kind: 'source', name: x.name, where: joinNames(where) } })
+          : flip(x.id)
+      });
+    });
     const badge = {
       Active: ['#12302E', '#5FD3C4'],
       Disabled: ['#22252B', '#9A9DA6'],
@@ -314,12 +331,15 @@ class Component extends DCLogic {
     return {
       confirmOpen: !!c,
       confirmTitle: c ? 'Turn off ' + c.name + '?' : '',
-      confirmBody: !c ? '' : c.kind === 'group'
+      confirmBody: !c ? '' : c.kind === 'source'
+        ? c.name + ' is playing in ' + c.where + '. Turning it off stops playback there.'
+        : c.kind === 'group'
         ? c.source + ' is playing on ' + c.members + '. Turning the group off stops playback in all of these rooms.'
         : c.source + ' is playing in ' + c.name + '. Turning the room off stops playback there.',
       cancelOff: () => this.setState({ confirm: null }),
       confirmOff: () => {
         const stopped = Object.assign({}, P);
+        if (c.kind === 'source') Object.keys(stopped).forEach((k) => { if (stopped[k] === c.name) delete stopped[k]; });
         delete stopped[c.id];
         (c.memberIds || []).forEach((m) => { delete stopped[m]; });
         this.setState({ confirm: null, playing: stopped, on: Object.assign({}, s.on, { [c.id]: false }) });
