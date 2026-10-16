@@ -2,9 +2,7 @@ package sonora.multiroom.mobile.domain
 
 import kotlin.test.Test
 import kotlin.test.assertEquals
-import kotlin.test.assertFalse
 import kotlin.test.assertNull
-import kotlin.test.assertTrue
 
 class SettingsConfirmTest {
     private val radio = source("radio", "Radio Paradise")
@@ -133,19 +131,6 @@ class SettingsConfirmTest {
     fun anUnknownItemSendsAtOnce() {
         assertNull(turnOffConfirmation(ItemKey(ItemKind.Room, "ghost"), base()))
         assertNull(turnOffConfirmation(ItemKey(ItemKind.Group, "ghost"), base()))
-    }
-
-    // ---- keepsPlaying -----------------------------------------------------------------------
-
-    @Test
-    fun keepsPlayingWhenALiveRouteUsesTheSource() {
-        assertTrue(keepsPlaying("radio", base(listOf(route("r", "radio", Target.Room("living"))))))
-    }
-
-    @Test
-    fun doesNotKeepPlayingWhenOnlyAStoppedRouteOrNoneUsesIt() {
-        assertFalse(keepsPlaying("radio", base(listOf(route("r", "radio", Target.Room("living"), RouteStatus.Stopped)))))
-        assertFalse(keepsPlaying("radio", base()))
     }
 
     // ---- Where a source plays -----------------------------------------------------------------

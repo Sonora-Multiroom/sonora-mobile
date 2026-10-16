@@ -344,6 +344,25 @@ class SettingsViewModelTest {
     }
 
     @Test
+    fun turningOffAnIdleSourceSendsAtOnceWithoutAMessage() = runViewModelTest {
+        val s = live(hubSnapshot(routes = emptyList()))
+        s.vm.onToggle(radioKey, "Radio Paradise", false); runCurrent()
+        assertNull(s.state.confirm)
+        assertEquals(listOf(listOf<Any>("radio", false)), s.repo.calls.filter { it.name == "setSourceEnabled" }.map { it.args })
+        advanceTimeBy(2500); runCurrent()
+        assertNull(s.state.message)
+    }
+
+    @Test
+    fun turningASourceOnNeverAsks() = runViewModelTest {
+        val s = live(hubSnapshot(sources = listOf(source("radio", "Radio Paradise", enabled = false), jazz)))
+        s.vm.onToggle(radioKey, "Radio Paradise", true); runCurrent()
+        assertNull(s.state.confirm)
+        assertEquals(listOf(listOf<Any>("radio", true)), s.repo.calls.filter { it.name == "setSourceEnabled" }.map { it.args })
+        assertNull(s.state.message)
+    }
+
+    @Test
     fun anOpenSourceDialogStaysATurnOffDialogAcrossRefreshes() = runViewModelTest {
         val s = live()
         s.vm.onToggle(radioKey, "Radio Paradise", false); runCurrent()

@@ -5,7 +5,6 @@ import sonora.multiroom.mobile.domain.HubAddress
 import sonora.multiroom.mobile.domain.ItemKey
 import sonora.multiroom.mobile.domain.ItemKind
 import sonora.multiroom.mobile.ui.SettingsAction
-import sonora.multiroom.mobile.ui.settings.keepsPlayingMessage
 import sonora.multiroom.mobile.ui.settingsFailure
 import sonora.multiroom.mobile.ui.settingsFailureMessage
 import kotlinx.coroutines.CoroutineScope
@@ -101,8 +100,8 @@ class SettingsActions(
         attached = false
     }
 
-    /** Turns [key] on or off. [keepsPlaying] only matters for a source turned off (FR-014). */
-    fun setEnabled(key: ItemKey, name: String, value: Boolean, keepsPlaying: Boolean) {
+    /** Turns [key] on or off. Success reports nothing: the next refresh shows the hub's state. */
+    fun setEnabled(key: ItemKey, name: String, value: Boolean) {
         val repo = session.repository ?: return
         var started = false
         _pending.update { map ->
@@ -122,7 +121,6 @@ class SettingsActions(
                 is HubResult.Ok -> {
                     _pending.update { it + (key to Pending(value, Phase.AwaitingRefresh(session.startedSeq))) }
                     session.requestRefresh()
-                    if (keepsPlaying && !value) report(keepsPlayingMessage(name))
                 }
 
                 is HubResult.Err -> {

@@ -12,7 +12,6 @@ import sonora.multiroom.mobile.domain.SettingsContent
 import sonora.multiroom.mobile.domain.Confirmation
 import sonora.multiroom.mobile.domain.ExtensionsContent
 import sonora.multiroom.mobile.domain.extensionRows
-import sonora.multiroom.mobile.domain.keepsPlaying
 import sonora.multiroom.mobile.domain.removeConfirmation
 import sonora.multiroom.mobile.domain.turnOffConfirmation
 import sonora.multiroom.mobile.ui.session.Connection
@@ -218,10 +217,7 @@ class SettingsViewModel(
                 return
             }
         }
-        actions.setEnabled(
-            key, name, value,
-            keepsPlaying = key.kind == ItemKind.Source && !value && keepsPlaying(key.id, snapshot),
-        )
+        actions.setEnabled(key, name, value)
     }
 
     /** The open dialog's rule: a source key can be a removal or a turn-off, so the type decides. */
@@ -242,7 +238,7 @@ class SettingsViewModel(
         val open = local.value.confirm ?: return
         local.update { it.copy(confirm = null) }
         if (open.confirmation is Confirmation.Remove) actions.remove(open.key.id, open.name)
-        else actions.setEnabled(open.key, open.name, false, keepsPlaying = false)
+        else actions.setEnabled(open.key, open.name, false)
     }
 
     fun onConfirmCancel() = local.update { it.copy(confirm = null) }

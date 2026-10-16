@@ -110,8 +110,7 @@ class SettingsTextTest {
     }
 
     @Test
-    fun theKeepsPlayingMessageAndTheEmptyText() {
-        assertEquals("Jazz FM is off. What's playing from it keeps playing.", keepsPlayingMessage("Jazz FM"))
+    fun theConfiguredEmptyText() {
         assertEquals("No sources in the hub's configuration.", CONFIGURED_EMPTY)
     }
 

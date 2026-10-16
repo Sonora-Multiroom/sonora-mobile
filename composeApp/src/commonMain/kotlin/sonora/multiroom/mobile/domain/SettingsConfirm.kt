@@ -48,10 +48,6 @@ fun turnOffConfirmation(key: ItemKey, snapshot: HubSnapshot): Confirmation? {
     }
 }
 
-/** A live route uses the source, so turning it off leaves that playback running (FR-014). */
-fun keepsPlaying(sourceId: String, snapshot: HubSnapshot): Boolean =
-    liveRoutes(snapshot).any { it.inputId == sourceId }
-
 /**
  * Removing a runtime source stops what plays from it (the hub does that), so it asks when a live
  * route uses it, naming where (research R4). Null: remove at once.

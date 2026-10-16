@@ -121,8 +121,6 @@ fun addedLineText(line: AddedLine): String? {
     return parts.takeIf { it.isNotEmpty() }?.joinToString(" · ")
 }
 
-fun keepsPlayingMessage(name: String): String = "$name is off. What's playing from it keeps playing."
-
 /** The status box of the connection test; null before one ran. */
 fun testText(test: TestState): String? = when (test) {
     TestState.Idle -> null

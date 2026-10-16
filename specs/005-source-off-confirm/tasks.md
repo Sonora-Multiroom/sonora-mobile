@@ -156,17 +156,17 @@ deletes. The failing test for T016 is T015: it calls `setEnabled` without the `k
 argument, so the test source set does not compile until T016. Write T015 last, after T012–T014
 have been run, so the compile break hides no other result.
 
-- [ ] T012 [P] [US2] Regression tests in test/ui/settings/SettingsViewModelTest.kt (pass before and
+- [X] T012 [P] [US2] Regression tests in test/ui/settings/SettingsViewModelTest.kt (pass before and
   after T016): `turningOffAnIdleSourceSendsAtOnceWithoutAMessage`: no live route →
   `onToggle(..., false)` opens no dialog, makes one `setSourceEnabled` call, and after success
   `state.message` is null and `AppMessages` received nothing; and `turningASourceOnNeverAsks`.
-- [ ] T013 [P] [US2] In test/ui/settings/SettingsTextTest.kt split
+- [X] T013 [P] [US2] In test/ui/settings/SettingsTextTest.kt split
   `theKeepsPlayingMessageAndTheEmptyText`: drop the `keepsPlayingMessage` assertion, keep the
   `CONFIGURED_EMPTY` one (rename the test `theConfiguredEmptyText`).
-- [ ] T014 [P] [US2] In test/domain/SettingsConfirmTest.kt delete the `keepsPlaying` section
+- [X] T014 [P] [US2] In test/domain/SettingsConfirmTest.kt delete the `keepsPlaying` section
   (`keepsPlayingWhenALiveRouteUsesTheSource` and its idle/stopped counterpart); `sourcePlaces`
   (T004) covers the same cases.
-- [ ] T015 [US2] Last, after T012–T014 were run: in test/ui/session/SettingsActionsTest.kt replace
+- [X] T015 [US2] Last, after T012–T014 were run: in test/ui/session/SettingsActionsTest.kt replace
   `aSourceStillInUseSaysItKeepsPlayingOnSuccessOnly` with
   `turningASourceOffReportsNothingOnSuccessAndTheFailureOtherwise`: success → no message; a 500 →
   "Couldn't turn Radio 2 off". Change every `setEnabled(key, name, value, keepsPlaying = …)` and
@@ -175,7 +175,7 @@ have been run, so the compile break hides no other result.
 
 ### Implementation for User Story 2
 
-- [ ] T016 [US2] Remove the "keeps playing" plumbing: delete `keepsPlaying()` from
+- [X] T016 [US2] Remove the "keeps playing" plumbing: delete `keepsPlaying()` from
   main/domain/SettingsConfirm.kt, `keepsPlayingMessage` from main/ui/settings/SettingsText.kt, the
   `keepsPlaying` parameter and its `report(...)` line from `SettingsActions.setEnabled` in
   main/ui/session/SettingsActions.kt (update its KDoc), and the `keepsPlaying = …` arguments and
