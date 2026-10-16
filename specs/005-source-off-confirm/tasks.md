@@ -195,24 +195,24 @@ Kitchen" in amber, the second its kind line (quickstart §2 row 1).
 
 ### Tests for User Story 3 (write first, see them fail)
 
-- [ ] T017 [P] [US3] In test/domain/SettingsBuilderTest.kt: `ConfiguredSourceRow` gains
+- [X] T017 [P] [US3] In test/domain/SettingsBuilderTest.kt: `ConfiguredSourceRow` gains
   `playingIn` (update the four existing `ConfiguredSourceRow(...)` expectations with
   `playingIn = emptyList()`); add cases: playing in a room → `["Living Room"]`; on a group →
   `["Downstairs"]`; two places → both once; only paused → non-empty; idle or Stopped-only → empty;
   the source off with a live route → empty ("Empty when nothing plays it or the source is off",
   data-model.md). Two snapshots in turn (playing, then the route stopped) give a non-empty then
   an empty `playingIn`. Runtime rows unchanged.
-- [ ] T018 [P] [US3] In test/ui/settings/SettingsTextTest.kt extend `configuredLines`:
+- [X] T018 [P] [US3] In test/ui/settings/SettingsTextTest.kt extend `configuredLines`:
   `playingIn = ["Kitchen"]` → "Playing in Kitchen"; `["Kitchen", "Downstairs"]` → "Playing in
   Kitchen and Downstairs"; empty → the existing kind lines unchanged. Add a test for the colour
   predicate (`configuredLinePlaying(row)` true only when `playingIn` is not empty).
 
 ### Implementation for User Story 3
 
-- [ ] T019 [US3] In main/domain/SettingsBuilder.kt add `val playingIn: List<String>` to
+- [X] T019 [US3] In main/domain/SettingsBuilder.kt add `val playingIn: List<String>` to
   `ConfiguredSourceRow` and fill it with `if (it.enabled) sourcePlaces(it.id, snapshot) else
   emptyList()`. Makes T017 pass.
-- [ ] T020 [US3] In main/ui/settings/SettingsText.kt make `configuredLine(row)` return
+- [X] T020 [US3] In main/ui/settings/SettingsText.kt make `configuredLine(row)` return
   "Playing in ${joinNames(row.playingIn)}" when `playingIn` is not empty, else the current kind
   line, and add `fun configuredLinePlaying(row): Boolean`. In main/ui/settings/SettingRows.kt
   (`ConfiguredSourceSettingRow`) colour the line `colors.accent` when `configuredLinePlaying(row)`,

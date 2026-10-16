@@ -49,6 +49,8 @@ data class ConfiguredSourceRow(
     val enabled: Boolean,
     val kind: SourceKind,
     val detail: String?,
+    /** Where a live playback uses it; empty when idle or off, so non-empty exactly when its switch asks. */
+    val playingIn: List<String>,
 )
 
 /** A source added at run time; [added] is the line under its name. */
@@ -103,7 +105,12 @@ object SettingsBuilder {
         val configured = snapshot.sources
             .filter { it.origin != SourceOrigin.Runtime }
             .sortedWith(ByName { it.name to it.id })
-            .map { ConfiguredSourceRow(it.id, it.name, it.enabled, it.kind, sourceDetail(it.kind, it.uri)) }
+            .map {
+                ConfiguredSourceRow(
+                    it.id, it.name, it.enabled, it.kind, sourceDetail(it.kind, it.uri),
+                    playingIn = if (it.enabled) sourcePlaces(it.id, snapshot) else emptyList(),
+                )
+            }
 
         val runtime = snapshot.sources
             .filter { it.origin == SourceOrigin.Runtime }

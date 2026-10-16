@@ -12,6 +12,8 @@ import sonora.multiroom.mobile.ui.session.Connection
 import sonora.multiroom.mobile.ui.session.SessionState
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
+import kotlin.test.assertTrue
 
 class SettingsTextTest {
     private val address = HubAddress("http://multiroom.lan:8080")
@@ -67,11 +69,18 @@ class SettingsTextTest {
 
     @Test
     fun configuredLines() {
-        fun row(kind: SourceKind, detail: String?) = ConfiguredSourceRow("id", "n", true, kind, detail)
+        fun row(kind: SourceKind, detail: String?, playingIn: List<String> = emptyList()) =
+            ConfiguredSourceRow("id", "n", true, kind, detail, playingIn)
         assertEquals("Stream · stream.radioparadise.com", configuredLine(row(SourceKind.Stream, "stream.radioparadise.com")))
         assertEquals("File · morning.flac", configuredLine(row(SourceKind.File, "morning.flac")))
         assertEquals("Line-in · plughw:…", configuredLine(row(SourceKind.LineIn, "plughw:…")))
         assertEquals("Line-in", configuredLine(row(SourceKind.LineIn, null)))
+        assertFalse(configuredLinePlaying(row(SourceKind.Stream, "x")))
+
+        val one = row(SourceKind.Stream, "x", listOf("Kitchen"))
+        assertEquals("Playing in Kitchen", configuredLine(one))
+        assertTrue(configuredLinePlaying(one))
+        assertEquals("Playing in Kitchen and Downstairs", configuredLine(row(SourceKind.Stream, "x", listOf("Kitchen", "Downstairs"))))
     }
 
     @Test

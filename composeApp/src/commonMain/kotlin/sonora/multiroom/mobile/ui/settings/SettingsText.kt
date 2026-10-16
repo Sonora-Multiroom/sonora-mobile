@@ -68,8 +68,14 @@ fun groupMembersText(members: List<String>): String =
 fun groupPlayingText(sources: List<String>): String? =
     if (sources.isEmpty()) null else "Playing · " + sources.joinToString(" + ")
 
-fun configuredLine(row: ConfiguredSourceRow): String =
-    row.detail?.let { "${kindLabel(row.kind)} · $it" } ?: kindLabel(row.kind)
+/** "Playing in <where>" while a playback uses the source, otherwise its kind and detail. */
+fun configuredLine(row: ConfiguredSourceRow): String = when {
+    configuredLinePlaying(row) -> "Playing in ${joinNames(row.playingIn)}"
+    else -> row.detail?.let { "${kindLabel(row.kind)} · $it" } ?: kindLabel(row.kind)
+}
+
+/** The line is the amber "Playing in" one, drawn as the rooms' status. */
+fun configuredLinePlaying(row: ConfiguredSourceRow): Boolean = row.playingIn.isNotEmpty()
 
 const val CONFIGURED_EMPTY = "No sources in the hub's configuration."
 
