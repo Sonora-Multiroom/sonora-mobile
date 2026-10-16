@@ -75,16 +75,17 @@ different requests, and `onConfirm` dispatches on the type).
 - `SettingsText.configuredLine(row)` returns "Playing in <where>" (`joinNames`) when `playingIn` is
   not empty, else the kind line as today. One new predicate decides the colour: accent while
   playing, `textMuted` otherwise.
-- `ConfiguredSourceSettingRow` keeps the line's style (`label12`, one line, ellipsis) and only
-  switches the colour, as `RoomSettingRow` does for its status.
+- `ConfiguredSourceSettingRow` keeps one line with an ellipsis. While playing, the line uses the
+  rooms' status style (`body13`, accent), as `RoomSettingRow` does; idle, it keeps the kind line's
+  `label12` in `textMuted`. Decided in the design review of 2026-10-16 (canvas version 19).
 
 **Rationale**: FR-009. The kind stays visible through the tile's icon and colours, so replacing the
 line while playing loses nothing a user needs at that moment.
 
 **Alternatives considered**: a second line under the kind line, as group rows have (rejected: it
 makes the row taller only while playing, so the list jumps on every refresh that starts or ends a
-playback); `body13` as the rooms' status (left to the design update, R6; the plan keeps the row's
-current text style unless the canvas says otherwise).
+playback); the kind line's `label12` for the playing line too (the first canvas draft; the user
+chose the rooms' 13 sp so playing rows read alike across tabs).
 
 ## R5. The dialog follows the hub while open
 

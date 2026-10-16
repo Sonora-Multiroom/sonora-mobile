@@ -49,13 +49,13 @@ Every test task comes before its implementation task and MUST be seen failing fi
 
 - [X] T001 Set `sonora.versionName=0.5.0-alpha` and `sonora.versionCode=5` in gradle.properties as
   the first implementation commit (AGENTS.md "Bump the app version first").
-- [ ] T002 **Local, needs the user**: update the Claude Design canvas
+- [X] T002 **Local, needs the user**: update the Claude Design canvas
   (https://claude.ai/artifact/R7e4yABDYUuytc64XxNNKK, Settings screen, Sources tab) per research R7:
   one configured source shown playing, its second line reading "Playing in Living Room" in accent
   `#F2A541` in place of its kind line; and the source's turn-off dialog ("Turn off <source>?",
   body "<source> is playing in <where>. Turning it off stops playback there.", "Keep playing" /
   "Turn off") in the existing room/group dialog's style. Get the user's approval of the change.
-- [ ] T003 Copy the updated canvas screen to design/screens/Settings.dc.html (depends on T002).
+- [X] T003 Copy the updated canvas screen to design/screens/Settings.dc.html (depends on T002).
   Note in research R4 whether the canvas keeps the kind line's text style (`label12`) or uses the
   rooms' `body13` for the playing line; T020 follows it.
 
@@ -216,8 +216,8 @@ Kitchen" in amber, the second its kind line (quickstart §2 row 1).
   "Playing in ${joinNames(row.playingIn)}" when `playingIn` is not empty, else the current kind
   line, and add `fun configuredLinePlaying(row): Boolean`. In main/ui/settings/SettingRows.kt
   (`ConfiguredSourceSettingRow`) colour the line `colors.accent` when `configuredLinePlaying(row)`,
-  else `colors.textMuted`; keep one line with an ellipsis, and the text style the updated design
-  shows (T003). Makes T018 pass (depends on T003, T019).
+  else `colors.textMuted`; keep one line with an ellipsis; the playing line uses `type.body13`, the idle
+  kind line keeps `type.label12` (design canvas v19, research R4). Makes T018 pass (depends on T003, T019).
 
 **Checkpoint**: all three stories work; build and all tests green.
 

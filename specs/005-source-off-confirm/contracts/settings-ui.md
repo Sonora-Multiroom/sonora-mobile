@@ -5,16 +5,16 @@ not listed here is unchanged. No hub contract changes (see [research R1](../rese
 
 ## Configured source row
 
-| State | Second line | Colour |
-|---|---|---|
-| On, used by a live playback | `Playing in <where>` | accent `#F2A541` |
-| On, idle | `<Kind> · <detail>` or `<Kind>` (as 004) | textMuted `#9A9DA6` |
-| Off | `<Kind> · <detail>` or `<Kind>` (as 004) | textMuted |
+| State | Second line | Style | Colour |
+|---|---|---|---|
+| On, used by a live playback | `Playing in <where>` | 13 sp (`body13`, as the rooms' status) | accent `#F2A541` |
+| On, idle | `<Kind> · <detail>` or `<Kind>` (as 004) | 12 sp (`label12`, as 004) | textMuted `#9A9DA6` |
+| Off | `<Kind> · <detail>` or `<Kind>` (as 004) | 12 sp (`label12`) | textMuted |
 
 - `<where>`: the rooms and groups, each once, joined as `joinNames` joins them ("A", "A and B",
   "A, B and C").
-- One line, ellipsis at the end. Text style as the kind line it replaces, unless the updated design
-  canvas says otherwise ([research R7](../research.md#r7-design-update-first)).
+- One line, ellipsis at the end. Styles as approved on the design canvas, version 19
+  ([research R4](../research.md#r4-the-playing-in-line-on-configured-source-rows)).
 - Tile, name, switch and row height are unchanged.
 
 ## Turn-off dialog for a source
