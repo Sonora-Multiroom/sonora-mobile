@@ -268,11 +268,23 @@ run `/speckit-implement`, keep commits on the same branch. If a task turns out t
 the spec does not cover, stop and ask rather than inventing behaviour. Commit messages, pull
 requests and merges follow [CONTRIBUTING.md](CONTRIBUTING.md).
 
+**Small changes** (a copy fix, a one-file bug fix) may take the **tinyspec** path instead:
+`/speckit-tinyspec-classify` → `/speckit-tinyspec-tinyspec` → `/speckit-tinyspec-implement`, one
+committed file `specs/tiny/<name>.md` on a branch `tiny/<short-name>`. The constitution
+("Development Workflow & Quality Gates", since 1.5.0) says when it is allowed (no new screen, hub
+call or dependency, about five files or fewer, one user story) and what the file must still carry:
+a Constitution Check, test-first tasks for logic, the build-and-tests gate, and, for a
+user-visible change, a full app test update and an on-device check recorded in the tinyspec. When
+unsure, use the full workflow.
+
 **Bump the app version first.** The first commit when starting to implement feature `NNN` sets, in
 [gradle.properties](gradle.properties), `sonora.versionName=0.N.0-alpha` (N = the feature number
 without leading zeros, e.g. `002-…` → `0.2.0-alpha`) and `sonora.versionCode=N`, so each feature's
 APK installs over the previous one and the Settings footer shows which feature a tester is on. Keep
-the `-alpha` suffix until the user says otherwise.
+the `-alpha` suffix until the user says otherwise. A tinyspec has no feature number: its first
+commit raises the patch version of the current feature (`0.N.P-alpha` → `0.N.(P+1)-alpha`, e.g.
+`0.5.0-alpha` → `0.5.1-alpha`) and keeps `sonora.versionCode=N`. Android installs an APK over one
+with the same `versionCode`, and the next feature's `versionCode` still rises.
 
 Spec Kit tooling (`.specify/` except `memory/`, and `.claude/skills/speckit-*`) is **not committed**
 and is generated per machine: PowerShell scripts locally, sh scripts in the cloud. In cloud sessions

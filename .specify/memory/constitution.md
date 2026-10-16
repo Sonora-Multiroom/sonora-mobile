@@ -139,6 +139,26 @@ Rationale: each dependency is a multiplatform compatibility risk and a future iO
   invent behaviour.
 - Every plan MUST pass the Constitution Check against these principles; any deviation is recorded
   in the plan's complexity tracking with its justification.
+- Small changes MAY instead take the tinyspec path (`/speckit-tinyspec-classify` →
+  `/speckit-tinyspec-tinyspec` → `/speckit-tinyspec-implement`): one file,
+  `specs/tiny/<name>.md`, committed. It is allowed only when the change adds no screen, no hub call
+  and no new dependency, touches about five files or fewer, and fits one user story. Anything
+  else, or anything `/speckit-tinyspec-classify` rates Medium or Large, MUST use the full workflow
+  above; when unsure, use the full workflow.
+- A tinyspec MUST still carry: a short Constitution Check against every principle, as plans have;
+  test-first tasks for any logic that turns hub data into UI state (Principle IV), seen failing
+  before the implementation; and the Principle IV build-and-tests gate as its last task. If the
+  change alters user-visible behaviour, the full app test rule below applies to it as to a
+  feature (a task updating `docs/testing/full-app-test.md`), and an on-device check is run and its
+  result recorded in the tinyspec itself, in place of a `quickstart.md` and `verification.md`.
+- A tinyspec has no feature number. It is built on a branch `tiny/<short-name>`, and its first
+  commit raises the patch version of the current feature (`sonora.versionName` `0.N.P-alpha` →
+  `0.N.(P+1)-alpha`) and keeps `sonora.versionCode` at N, so its APK installs over the feature's
+  and the next feature's `versionCode` still rises. `CHANGELOG.md` lists it under its own
+  version. One pull request per tinyspec, squash-merged as for features.
+- Rationale for the tinyspec path: the full workflow costs more than a copy fix or a one-file bug
+  fix is worth, but the guarantees that matter (test-first logic, the build gate, a current full
+  app test, on-device evidence) must not depend on which path a change took.
 - GitHub Actions CI (`.github/workflows/android-apk.yml`) builds the debug APK and runs the
   Android host tests on every pull request and every push to `main`, except documentation-only
   changes: when every changed file matches its `paths-ignore` list (`**.md`, `specs/**`,
@@ -180,4 +200,4 @@ Rationale: each dependency is a multiplatform compatibility risk and a future iO
 - Reviews of specs, plans and implementations MUST check compliance with every principle;
   unjustified complexity or deviation is a blocking finding.
 
-**Version**: 1.4.0 | **Ratified**: 2026-10-01 | **Last Amended**: 2026-10-16
+**Version**: 1.5.0 | **Ratified**: 2026-10-01 | **Last Amended**: 2026-10-17
