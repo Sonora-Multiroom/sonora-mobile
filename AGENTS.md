@@ -96,7 +96,17 @@ the `quickstart.md` §2 checks itself instead of handing them all to the user.
   test routes **first**, then restore the volumes, so nothing plays loud.
 - Starting on a busy room replaces what the user was listening to; say so before starting.
 - Turning an output or input off for a check: turn it back on afterwards.
-- Python on Windows prints `\r\n`; strip `\r` before putting printed IDs into URLs.
+- Before driving the phone with `input`, turn on Do Not Disturb (save `settings get global
+  zen_mode`, then `cmd notification set_dnd none`; restore at the end) and check before every tap,
+  swipe, key or text that Sonora is the foreground app (`dumpsys activity activities | grep
+  topResumedActivity`). On 2026-10-16 a notification dropped over the app, a tap opened a
+  messaging app, and the next keystrokes were typed into the user's chat.
+- The Pixel 5 accepts `input tap`; the POCO refuses it unless "USB debugging (Security
+  settings)" is on, so on the POCO the user taps.
+- Python on Windows prints `\r\n`; strip `\r` before putting printed IDs into URLs. Its console
+  encoding is cp1251, so printing hub names or screen dumps with emoji fails: call
+  `sys.stdout.reconfigure(encoding="utf-8")` in the script (`PYTHONIOENCODING` is ignored under
+  `python -I`).
 - Use `curl` against `/api/v2` to set up states (a group playing, every room busy) and to confirm
   what the app shows.
 
