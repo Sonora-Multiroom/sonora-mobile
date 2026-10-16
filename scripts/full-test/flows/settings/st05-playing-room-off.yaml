@@ -1,0 +1,28 @@
+appId: sonora.multiroom.mobile
+name: "ST05 Turning a playing room off asks first"
+tags: [settings]
+onFlowStart:
+  - runFlow: ../common/cleanup.yaml
+onFlowComplete:
+  - runFlow: ../common/cleanup.yaml
+---
+- runScript: { file: ../../hub.js, env: { ACTION: "start", INPUT: "${STREAM_ID}", TARGET: "${SOLO_ID}", TYPE: "SINGLE_OUTPUT" } }
+- launchApp
+- tapOn: Settings
+- tapOn: { text: Rooms, index: 0 }
+- assertVisible: "Playing · ${STREAM_NAME}"
+- tapOn: ${SOLO_NAME}
+- assertVisible: "Turn off ${SOLO_NAME}\\?"
+- assertVisible: "${STREAM_NAME} is playing in ${SOLO_NAME}\\. Turning the room off stops playback there\\."
+- tapOn: Keep playing
+- runScript: { file: ../../hub.js, env: { ACTION: "expectEnabled", KIND: "outputs", ID: "${SOLO_ID}", ENABLED: "true" } }
+- runScript: { file: ../../hub.js, env: { ACTION: "expectRoutes", COUNT: "1", INPUT: "${STREAM_ID}" } }
+- tapOn: ${SOLO_NAME}
+- tapOn: Turn off
+- retry:
+    maxRetries: 3
+    commands:
+      - runScript: { file: ../../hub.js, env: { ACTION: "expectEnabled", KIND: "outputs", ID: "${SOLO_ID}", ENABLED: "false" } }
+      - runScript: { file: ../../hub.js, env: { ACTION: "expectRoutes", COUNT: "0", INPUT: "${STREAM_ID}" } }
+- tapOn: { text: Rooms, index: 1 }
+- assertVisible: { text: Turned off, below: "${SOLO_NAME}" }

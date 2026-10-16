@@ -1,0 +1,17 @@
+appId: sonora.multiroom.mobile
+name: "ST16 A switch flipped just before leaving Settings still reaches the hub"
+tags: [settings]
+onFlowStart:
+  - runFlow: ../common/cleanup.yaml
+onFlowComplete:
+  - runFlow: ../common/cleanup.yaml
+---
+- launchApp
+- tapOn: Settings
+- tapOn: { text: Rooms, index: 0 }
+- tapOn: ${SOLO_NAME}
+- tapOn: { text: Rooms, index: 1 }
+- retry:
+    maxRetries: 3
+    commands:
+      - runScript: { file: ../../hub.js, env: { ACTION: "expectEnabled", KIND: "outputs", ID: "${SOLO_ID}", ENABLED: "false" } }

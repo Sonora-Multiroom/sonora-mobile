@@ -1,0 +1,20 @@
+appId: sonora.multiroom.mobile
+name: "ST13 A stopped runtime source is removed at once, without a dialog"
+tags: [settings]
+onFlowStart:
+  - runFlow: ../common/cleanup.yaml
+onFlowComplete:
+  - runFlow: ../common/cleanup.yaml
+---
+- runScript: { file: ../../hub.js, env: { ACTION: "addInput", ID: "fulltest-tmp", NAME: "Full test temp", URI: "https://online.kissfm.ua/KissFM" } }
+- launchApp
+- tapOn: Settings
+- tapOn: { text: Sources, index: 0 }
+- scrollUntilVisible: { element: Full test temp }
+- tapOn: Remove Full test temp
+- assertNotVisible: "Remove Full test temp\\?"
+- retry:
+    maxRetries: 3
+    commands:
+      - runScript: { file: ../../hub.js, env: { ACTION: "expectNoInput", ID: "fulltest-tmp" } }
+- assertNotVisible: Full test temp

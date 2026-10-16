@@ -1,0 +1,16 @@
+appId: sonora.multiroom.mobile
+name: "ST12 A playing link is listed under Added from apps with its time"
+tags: [settings]
+onFlowStart:
+  - runFlow: ../common/cleanup.yaml
+onFlowComplete:
+  - runFlow: ../common/cleanup.yaml
+---
+- runScript: { file: ../../hub.js, env: { ACTION: "play", URI: "${LINK}", TARGET: "${SOLO_ID}", TYPE: "SINGLE_OUTPUT" } }
+- runScript: { file: ../../hub.js, env: { ACTION: "stop", ROUTE: "${output.routeId}" } }
+- runScript: { file: ../../hub.js, env: { ACTION: "play", URI: "${LINK}", TARGET: "${G2_ID}", TYPE: "SINGLE_OUTPUT" } }
+- launchApp
+- tapOn: Settings
+- tapOn: { text: Sources, index: 0 }
+- scrollUntilVisible: { element: ADDED FROM APPS }
+- scrollUntilVisible: { element: "Added today \\d\\d:\\d\\d · removed when it stops", centerElement: true }

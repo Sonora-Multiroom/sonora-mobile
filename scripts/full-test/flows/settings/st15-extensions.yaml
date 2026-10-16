@@ -1,0 +1,15 @@
+appId: sonora.multiroom.mobile
+name: "ST15 The Extensions tab lists the hub's extensions"
+tags: [settings]
+onFlowStart:
+  - runFlow: ../common/cleanup.yaml
+onFlowComplete:
+  - runFlow: ../common/cleanup.yaml
+---
+- runScript: { file: ../../hub.js, env: { ACTION: "extensions" } }
+- launchApp
+- tapOn: Settings
+- tapOn: Extensions
+- assertVisible: "Extensions are set in the server.s configuration\\. This list is read-only\\."
+- assertVisible: "${output.extFirst}"
+- scrollUntilVisible: { element: "${output.extLast}" }

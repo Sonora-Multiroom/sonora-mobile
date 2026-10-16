@@ -1,0 +1,12 @@
+appId: sonora.multiroom.mobile
+name: Cleanup after a flow
+---
+# Runs after every flow, passed or failed, so one failure does not leave state for the next flow.
+# Stop playback first, then put back what the flows switch.
+- runScript: { file: ../../hub.js, env: { ACTION: stopAll } }
+- runScript: { file: ../../hub.js, env: { ACTION: enable, KIND: outputs, ID: "${SOLO_ID}", ENABLED: "true" } }
+- runScript: { file: ../../hub.js, env: { ACTION: enable, KIND: outputs, ID: "${G1_ID}", ENABLED: "true" } }
+- runScript: { file: ../../hub.js, env: { ACTION: enable, KIND: groups, ID: "${GROUP_ID}", ENABLED: "true" } }
+- runScript: { file: ../../hub.js, env: { ACTION: enable, KIND: inputs, ID: "${STREAM_ID}", ENABLED: "true" } }
+- runScript: { file: ../../hub.js, env: { ACTION: enable, KIND: inputs, ID: "${PAUSEABLE_ID}", ENABLED: "false" } }
+- runScript: { file: ../../hub.js, env: { ACTION: removeInput, ID: fulltest-tmp } }

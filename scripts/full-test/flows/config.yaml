@@ -1,0 +1,3 @@
+# Which flows a run takes: every section directory, not the shared subflows in common/.
+flows:
+  - "settings/*"

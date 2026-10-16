@@ -1,0 +1,25 @@
+appId: sonora.multiroom.mobile
+name: "ST06 A room turned off leaves group playback and rejoins when turned on"
+tags: [settings]
+onFlowStart:
+  - runFlow: ../common/cleanup.yaml
+onFlowComplete:
+  - runFlow: ../common/cleanup.yaml
+---
+- runScript: { file: ../../hub.js, env: { ACTION: "start", INPUT: "${STREAM_ID}", TARGET: "${GROUP_ID}", TYPE: "OUTPUT_GROUP" } }
+- launchApp
+- tapOn: Settings
+- tapOn: { text: Rooms, index: 0 }
+- tapOn: ${G1_NAME}
+- assertVisible: "Turn off ${G1_NAME}\\?"
+- tapOn: Turn off
+- retry:
+    maxRetries: 3
+    commands:
+      - runScript: { file: ../../hub.js, env: { ACTION: "expectOutputs", ROUTE: "${output.routeId}", OUTPUTS: "${G2_ID}" } }
+- tapOn: ${G1_NAME}
+- assertNotVisible: "Turn off ${G1_NAME}\\?"
+- retry:
+    maxRetries: 3
+    commands:
+      - runScript: { file: ../../hub.js, env: { ACTION: "expectOutputs", ROUTE: "${output.routeId}", OUTPUTS: "${G1_ID},${G2_ID}" } }

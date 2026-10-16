@@ -1,0 +1,14 @@
+appId: sonora.multiroom.mobile
+name: "ST03 Settings reopens on the last tab"
+tags: [settings]
+onFlowStart:
+  - runFlow: ../common/cleanup.yaml
+onFlowComplete:
+  - runFlow: ../common/cleanup.yaml
+---
+- launchApp
+- tapOn: Settings
+- tapOn: Groups
+- tapOn: { text: Rooms, index: 1 }
+- tapOn: Settings
+- assertVisible: "Groups play to several rooms in sync\\."
