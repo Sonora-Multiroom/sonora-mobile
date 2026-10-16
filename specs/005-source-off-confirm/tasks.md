@@ -233,7 +233,7 @@ Kitchen" in amber, the second its kind line (quickstart §2 row 1).
 - [X] T022 [P] Add a `## [0.5.0-alpha]` entry to CHANGELOG.md (spec folder and PR link): Changed —
   turning off a configured source that plays now asks first and names where it stops; playing
   sources read "Playing in …"; Removed — the "keeps playing" message.
-- [ ] T023 **Local**: run quickstart §2 rows 1–8 on the POCO against the real hub, following
+- [X] T023 **Local**: run quickstart §2 rows 1–8 on the POCO against the real hub, following
   AGENTS.md "On-device verification" (volumes noted and set to 1 first; test routes stopped before
   volumes are restored; the source turned back on at the end). Record evidence in
   specs/005-source-off-confirm/verification.md.
