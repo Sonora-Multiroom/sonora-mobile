@@ -1,7 +1,7 @@
 # Turning a source off stops its playback: confirm first, and drop "keeps playing"
 
-- **Status:** Proposed, not started. Written 2026-10-16 after checking the hub's changes since API
-  0.1.21.
+- **Status:** Specified as [005-source-off-confirm](../../specs/005-source-off-confirm/spec.md)
+  (2026-10-16). Written 2026-10-16 after checking the hub's changes since API 0.1.21.
 - **Origin:** The hub's `027-device-disable-stops-routes` (API 0.1.25) makes `PUT
   /api/v2/inputs/{id}/enabled` `{enabled: false}` stop every route playing that input, paused ones
   and routes sharing a hardware input included, and then removes an input registered with
