@@ -30,8 +30,8 @@
    Since hub 0.1.25 a room turned back on rejoins the playback under the same route id, so the
    wrong count lasts only while the room is off.
 2. **New refusals get the generic message.** Starting or moving onto something turned off answers
-   409 with `OUTPUT_DISABLED`, `GROUP_DISABLED`, `INPUT_DISABLED` or `ALL_MEMBERS_DISABLED`; a move
-   can answer `ROUTE_CHANGING_OUTPUTS` for a moment after a room is turned back on.
+   409 with `OUTPUT_DISABLED`, `GROUP_DISABLED`, `INPUT_DISABLED` or `ALL_MEMBERS_DISABLED`; since
+   0.1.25 a move can answer `ROUTE_CHANGING_OUTPUTS` for a moment after a room is turned back on.
    [Messages.kt](../../composeApp/src/commonMain/kotlin/sonora/multiroom/mobile/ui/Messages.kt) maps
    only `ROUTE_LIMIT_REACHED` and `INPUT_ALREADY_ON_OUTPUT`, so these read "Couldn't start
    playback" / "Couldn't move …". The app hides targets that are off, so the `*_DISABLED` reasons

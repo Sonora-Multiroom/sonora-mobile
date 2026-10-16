@@ -34,8 +34,8 @@ Start Playback already shows the group correctly ("Won't play in Office Speaker 
 
 Separately, since API 0.1.22 the hub refuses to start or move a playback onto a room, group or
 source that is turned off, naming why (the room is off, the group is off, the source is off, or every
-room of the group is off), and it can briefly refuse a move while a room that was just turned back on
-rejoins the playback. The app shows only "Couldn't start playback" or "Couldn't move <source> to
+room of the group is off), and since API 0.1.25 it can briefly refuse a move while a room that was
+just turned back on rejoins the playback. The app shows only "Couldn't start playback" or "Couldn't move <source> to
 <place>" for all of these.
 
 ## Clarifications
@@ -248,10 +248,10 @@ sees one message, after a single retry.
 - The hub runs API 0.1.25 or later and `api/openapi.json` is that version; the rooms list is part of
   that contract. There is no version check: an older hub simply omits the list (FR-002).
 - The refusal reasons (`OUTPUT_DISABLED`, `GROUP_DISABLED`, `INPUT_DISABLED`,
-  `ALL_MEMBERS_DISABLED`, `ROUTE_CHANGING_OUTPUTS`) are documented in the project's agent guide from
-  the hub's 0.1.22 release; the contract's description of the reason field still names only the two
-  older ones. That is a documentation gap on the hub side, recorded as an observation, not a reason
-  to wait.
+  `ALL_MEMBERS_DISABLED` from API 0.1.22, `ROUTE_CHANGING_OUTPUTS` from 0.1.25) are confirmed in the
+  hub's source and documented in the project's agent guide; the contract's description of the reason
+  field still names only the two older ones. That is a documentation gap on the hub side, recorded in
+  the hub's backlog (`error-reason-schema-description`), not a reason to wait.
 - The app keeps showing one playback per room (the separate backlog item on rooms with several
   playbacks is not part of this feature), and still never sends a join mode.
 - Messages appear where start and move failures appear today; only their words change. The design

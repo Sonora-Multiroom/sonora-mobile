@@ -148,16 +148,19 @@ Record the build (CI build number and commit), the device and each row's evidenc
 - 0.1.22 (deployed 2026-10-06): route IDs are opaque and a transfer keeps the route's id;
   `RouteResponse.outputs` lists the outputs a route plays on right now; starting, playing or moving
   onto a disabled output, group or input answers **409** with a `reason` (`OUTPUT_DISABLED`,
-  `GROUP_DISABLED`, `INPUT_DISABLED`, `ALL_MEMBERS_DISABLED`) instead of 400. A transfer can also
-  answer 409 `ROUTE_CHANGING_OUTPUTS`, which clears by itself within moments. The app maps only
+  `GROUP_DISABLED`, `INPUT_DISABLED`, `ALL_MEMBERS_DISABLED`) instead of 400. The app maps only
   `ROUTE_LIMIT_REACHED` and `INPUT_ALREADY_ON_OUTPUT` so far, see
   [docs/backlog/refusal-reasons-and-route-outputs.md](docs/backlog/refusal-reasons-and-route-outputs.md).
+  The contract's description of `ErrorResponse.reason` still names only the 0.1.21 reasons (hub
+  backlog `error-reason-schema-description`).
 - 0.1.23 (hub 025): master mute is a layer above each output's own mute and no longer changes any
   output's `muted`; turning it off restores each output's own mute.
 - 0.1.25 (hub 027, 028): turning off a source stops every route playing it (paused ones
   too), and an auto-remove source is then removed; turning off a group stops the routes addressed
   to it; turning a room back on puts it back into every live group route of an enabled group
-  containing it, under the same route id. 028 is internal (sound-card channel use).
+  containing it, under the same route id. While that room rejoins, a transfer answers 409
+  `ROUTE_CHANGING_OUTPUTS`, which clears by itself within moments. 028 is internal (sound-card
+  channel use).
 - Generate a Kotlin multiplatform client (Ktor + kotlinx.serialization) from it at build time,
   e.g. OpenAPI Generator `kotlin` with `library=multiplatform`. Do not commit generated code. Wrap
   it behind a small hand-written repository interface so screens never touch generated types.
