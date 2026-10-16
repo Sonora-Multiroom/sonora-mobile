@@ -152,6 +152,20 @@ Rationale: each dependency is a multiplatform compatibility risk and a future iO
 - If branch protection ever makes the CI check required, the documentation-only skip MUST move
   inside the job (a path-filter step that skips the Gradle steps), so the check always reports
   and documentation-only pull requests are not blocked.
+- A feature is finished only when the full app test, `docs/testing/full-app-test.md`, covers what
+  it delivered. In the feature's branch, before its pull request, the script MUST be updated: rows
+  added for every user-visible behaviour in the feature's `quickstart.md` §2, rows whose behaviour
+  the feature changes or removes updated or deleted, the fixture extended where a row needs it,
+  and the header (features covered, app version, hub API, date) bumped. Every plan's Constitution
+  Check MUST list this rule, and every `tasks.md` MUST end its final phase with the task "Update
+  docs/testing/full-app-test.md for this feature".
+- A feature pull request that leaves the full app test unchanged is a blocking review finding,
+  unless the pull request states why the feature has no on-device behaviour. The same applies when
+  a hub API upgrade changes behaviour: the affected rows MUST be updated in the change that
+  records the new API version.
+- Rationale for the full app test rule: each feature's quickstart describes the app as it was when
+  that feature shipped; the full app test is the only check of the app as it is now, and it goes
+  stale unless every feature keeps it current.
 - iOS builds will run on a separate GitHub Actions macOS runner once the iOS target is enabled.
 - Commits use Conventional Commit messages that explain why, not just what.
 
@@ -166,4 +180,4 @@ Rationale: each dependency is a multiplatform compatibility risk and a future iO
 - Reviews of specs, plans and implementations MUST check compliance with every principle;
   unjustified complexity or deviation is a blocking finding.
 
-**Version**: 1.3.0 | **Ratified**: 2026-10-01 | **Last Amended**: 2026-10-04
+**Version**: 1.4.0 | **Ratified**: 2026-10-01 | **Last Amended**: 2026-10-16
