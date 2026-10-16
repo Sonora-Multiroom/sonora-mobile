@@ -237,7 +237,7 @@ Kitchen" in amber, the second its kind line (quickstart §2 row 1).
   AGENTS.md "On-device verification" (volumes noted and set to 1 first; test routes stopped before
   volumes are restored; the source turned back on at the end). Record evidence in
   specs/005-source-off-confirm/verification.md.
-- [ ] T024 [P] When the feature ships: delete docs/backlog/source-off-stops-playback.md and its row
+- [X] T024 [P] When the feature ships: delete docs/backlog/source-off-stops-playback.md and its row
   in docs/backlog/INDEX.md (AGENTS.md "Backlog").
 
 ---
