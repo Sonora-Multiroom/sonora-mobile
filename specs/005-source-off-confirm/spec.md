@@ -146,7 +146,7 @@ one reads "Playing in Kitchen" in amber and the idle one keeps its kind line ("S
 ### Functional Requirements
 
 - **FR-001**: Turning off a configured source that is on and that any playback uses (in any state
-  other than stopped: playing, paused, starting or failed) MUST first open the centred
+  other than stopped: playing, paused, starting, failed, or a status the app does not recognise) MUST first open the centred
   confirmation dialog in the style of rooms and groups (004 FR-014): title "Turn off <source>?";
   text "<source> is playing in <where>. Turning it off stops playback there.", where <where> names
   each playback's room or group once, joined with " and " (as the removal dialog, 004 FR-017);

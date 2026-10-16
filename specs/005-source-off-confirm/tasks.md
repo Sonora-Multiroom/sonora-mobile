@@ -59,8 +59,9 @@ Every test task comes before its implementation task and MUST be seen failing fi
   Note in research R4 whether the canvas keeps the kind line's text style (`label12`) or uses the
   rooms' `body13` for the playing line; T020 follows it.
 
-**Checkpoint**: implementation of US3's row (T020) waits for T003; everything else may start after
-T001.
+**Checkpoint**: no story task (T006 onwards) starts before T003 is committed: the spec requires the
+design update before implementation (FR-010, Constitution VI). T004–T005 (pure domain rule, no UI)
+may run while T002 waits for the user.
 
 ---
 
@@ -131,8 +132,8 @@ dialog names both; "Keep playing" sends nothing; "Turn off" sends `enabled=false
   it (only `Remove` returns `REMOVE_LABEL`). Makes T007 pass.
 - [ ] T011 [US1] In main/ui/settings/SettingsViewModel.kt make `confirmationFor` choose the rule by
   the open confirmation's type (research R5): `Remove` → `removeConfirmation`, otherwise
-  `turnOffConfirmation(open.key, snapshot)`; pass the open `ConfirmState` (or its confirmation) in
-  instead of only the key. `onToggle` needs no new branch: it already asks `turnOffConfirmation`.
+  `turnOffConfirmation(open.key, snapshot)`; its signature becomes
+  `private fun confirmationFor(open: ConfirmState, snapshot: HubSnapshot): Confirmation?`. `onToggle` needs no new branch: it already asks `turnOffConfirmation`.
   Makes T008 pass.
 
 **Checkpoint**: US1 works on its own; all tests green.
@@ -149,22 +150,28 @@ confirm: no "keeps playing" message (quickstart §2 rows 3, 6, 7).
 
 ### Tests for User Story 2 (write first, see them fail)
 
-- [ ] T012 [P] [US2] In test/ui/settings/SettingsViewModelTest.kt add
-  `turningOffAnIdleSourceSendsAtOnceWithoutAMessage`: no live route → `onToggle(..., false)` opens
-  no dialog, makes one `setSourceEnabled` call, and after success `state.message` is null and
-  `AppMessages` received nothing. Add `turningASourceOnNeverAsks`.
-- [ ] T013 [P] [US2] In test/ui/session/SettingsActionsTest.kt replace
+What fails here: T012 guards behaviour that already holds and passes before T016 (a regression
+test, written now so T016 cannot break it); T013 and T014 remove assertions about the code T016
+deletes. The failing test for T016 is T015: it calls `setEnabled` without the `keepsPlaying`
+argument, so the test source set does not compile until T016. Write T015 last, after T012–T014
+have been run, so the compile break hides no other result.
+
+- [ ] T012 [P] [US2] Regression tests in test/ui/settings/SettingsViewModelTest.kt (pass before and
+  after T016): `turningOffAnIdleSourceSendsAtOnceWithoutAMessage`: no live route →
+  `onToggle(..., false)` opens no dialog, makes one `setSourceEnabled` call, and after success
+  `state.message` is null and `AppMessages` received nothing; and `turningASourceOnNeverAsks`.
+- [ ] T013 [P] [US2] In test/ui/settings/SettingsTextTest.kt split
+  `theKeepsPlayingMessageAndTheEmptyText`: drop the `keepsPlayingMessage` assertion, keep the
+  `CONFIGURED_EMPTY` one (rename the test `theConfiguredEmptyText`).
+- [ ] T014 [P] [US2] In test/domain/SettingsConfirmTest.kt delete the `keepsPlaying` section
+  (`keepsPlayingWhenALiveRouteUsesTheSource` and its idle/stopped counterpart); `sourcePlaces`
+  (T004) covers the same cases.
+- [ ] T015 [US2] Last, after T012–T014 were run: in test/ui/session/SettingsActionsTest.kt replace
   `aSourceStillInUseSaysItKeepsPlayingOnSuccessOnly` with
   `turningASourceOffReportsNothingOnSuccessAndTheFailureOtherwise`: success → no message; a 500 →
   "Couldn't turn Radio 2 off". Change every `setEnabled(key, name, value, keepsPlaying = …)` and
-  positional `setEnabled(…, false)` call in this file to the three-argument form (fails to compile
-  until T016, which counts as failing).
-- [ ] T014 [P] [US2] In test/ui/settings/SettingsTextTest.kt split
-  `theKeepsPlayingMessageAndTheEmptyText`: drop the `keepsPlayingMessage` assertion, keep the
-  `CONFIGURED_EMPTY` one (rename the test `theConfiguredEmptyText`).
-- [ ] T015 [P] [US2] In test/domain/SettingsConfirmTest.kt delete the `keepsPlaying` section
-  (`keepsPlayingWhenALiveRouteUsesTheSource` and its idle/stopped counterpart); `sourcePlaces`
-  (T004) covers the same cases.
+  positional four-argument `setEnabled(…)` call in this file to the three-argument form. Run the
+  tests: compilation fails, which is the failing test for T016.
 
 ### Implementation for User Story 2
 
@@ -172,7 +179,8 @@ confirm: no "keeps playing" message (quickstart §2 rows 3, 6, 7).
   main/domain/SettingsConfirm.kt, `keepsPlayingMessage` from main/ui/settings/SettingsText.kt, the
   `keepsPlaying` parameter and its `report(...)` line from `SettingsActions.setEnabled` in
   main/ui/session/SettingsActions.kt (update its KDoc), and the `keepsPlaying = …` arguments and
-  import in main/ui/settings/SettingsViewModel.kt (`onToggle`, `onConfirm`). Makes T012–T015 pass.
+  import in main/ui/settings/SettingsViewModel.kt (`onToggle`, `onConfirm`). Makes T015 compile and
+  pass; T012 stays green.
 
 **Checkpoint**: US1 + US2 = the full fix of the user-visible fault; build and all tests green.
 
@@ -192,7 +200,8 @@ Kitchen" in amber, the second its kind line (quickstart §2 row 1).
   `playingIn = emptyList()`); add cases: playing in a room → `["Living Room"]`; on a group →
   `["Downstairs"]`; two places → both once; only paused → non-empty; idle or Stopped-only → empty;
   the source off with a live route → empty ("Empty when nothing plays it or the source is off",
-  data-model.md). Runtime rows unchanged.
+  data-model.md). Two snapshots in turn (playing, then the route stopped) give a non-empty then
+  an empty `playingIn`. Runtime rows unchanged.
 - [ ] T018 [P] [US3] In test/ui/settings/SettingsTextTest.kt extend `configuredLines`:
   `playingIn = ["Kitchen"]` → "Playing in Kitchen"; `["Kitchen", "Downstairs"]` → "Playing in
   Kitchen and Downstairs"; empty → the existing kind lines unchanged. Add a test for the colour
@@ -237,12 +246,13 @@ Kitchen" in amber, the second its kind line (quickstart §2 row 1).
 
 ### Phase Dependencies
 
-- **Setup (T001–T003)**: T001 first. T002 → T003 is a local step with the user and only blocks T020.
+- **Setup (T001–T003)**: T001 first. T002 → T003 is a local step with the user and blocks every
+  story task (T006 onwards).
 - **Foundational (T004–T005)**: after T001; blocks every story (all use `sourcePlaces`).
-- **US1 (T006–T011)**: after T005.
+- **US1 (T006–T011)**: after T003 and T005.
 - **US2 (T012–T016)**: after US1 (T011), because `onConfirm` and `onToggle` are touched by both and
   US1's tests use the dialog flow; T016 also removes what US1 leaves unused.
-- **US3 (T017–T020)**: after T005; independent of US1/US2 except T020 shares SettingsText.kt with
+- **US3 (T017–T020)**: after T003 and T005; independent of US1/US2 except T020 shares SettingsText.kt with
   T010 and T016 (do them one after another).
 - **Polish (T021–T024)**: after the stories; T023 needs an installed build.
 
@@ -253,7 +263,7 @@ Kitchen" in amber, the second its kind line (quickstart §2 row 1).
 ### Parallel Opportunities
 
 - T006, T007, T008 (three different test files).
-- T012–T015 (four different test files).
+- T012–T014 (three different test files); T015 after them.
 - T017, T018.
 - T010 alongside T009 (different files) once their tests are written.
 - T022 and T024 alongside T021.
