@@ -41,6 +41,7 @@ iosApp/                                # Xcode project stub (not built)
 design/screens/*.dc.html               # design source, see "Design"
 docs/licenses/                         # OFL licences for the bundled fonts
 docs/backlog/                          # proposed features not yet specified, see "Backlog"
+docs/testing/full-app-test.md          # full on-device regression script, see "Full app test"
 ```
 
 Use the current stable versions of Kotlin, Compose Multiplatform, AGP and Ktor; look them up, do
@@ -59,6 +60,19 @@ not rely on memory. The cloud environment provides JDK 17+ and the Android SDK v
 There is no emulator and no hub in the cloud. Verification here = the build passes and unit tests
 pass. The user installs the APK and tries it against the real hub locally; record the results in
 `specs/NNN-*/verification.md` and link it from the pull request.
+
+## Full app test
+
+When the user asks for a "full app test" (or a regression run, or to test the whole app), follow
+[docs/testing/full-app-test.md](docs/testing/full-app-test.md) from a local session. Use it for the
+whole app; a feature's `quickstart.md` covers only that feature. Each run's report goes to
+`docs/testing/runs/` and is committed on its own on the current branch, or on a new `docs/…`
+branch from `main` if the current branch is already merged (not pushed unless asked).
+
+A feature is not finished until the script covers what it delivered: the constitution
+("Development Workflow & Quality Gates", since 1.4.0) makes updating it a gate before the feature's
+pull request and the last task of every `tasks.md`. How to update it: "Keeping this script
+current" in the script.
 
 ## On-device verification (local sessions)
 
@@ -82,6 +96,13 @@ the `quickstart.md` §2 checks itself instead of handing them all to the user.
   screen_off_timeout`, set `settings put system screen_off_timeout 1800000`, and restore the saved
   value at the end. `svc power stayon true` does not help on battery: it only applies while the
   phone is charging. Between steps the adb taps reset the timeout anyway; long pauses let it lock.
+- Before driving the phone with `input`, turn on Do Not Disturb (save `settings get global
+  zen_mode`, then `cmd notification set_dnd none`; restore at the end) and check before every tap,
+  swipe, key or text that Sonora is the foreground app (`dumpsys activity activities | grep
+  topResumedActivity`). On 2026-10-16 a notification dropped over the app, a tap opened a
+  messaging app, and the next keystrokes were typed into the user's chat.
+- The Pixel 5 accepts `input tap`; the POCO refuses it unless "USB debugging (Security
+  settings)" is on, so on the POCO the user taps.
 - Read the screen with `uiautomator dump` (text, content descriptions, bounds) and
   `exec-out screencap -p`. A dump takes ~2.5 s, so never time anything with it; for timings
   ("Now Playing within ~3 s") capture `screencap` in a loop with timestamps and read the frames.
@@ -96,13 +117,6 @@ the `quickstart.md` §2 checks itself instead of handing them all to the user.
   test routes **first**, then restore the volumes, so nothing plays loud.
 - Starting on a busy room replaces what the user was listening to; say so before starting.
 - Turning an output or input off for a check: turn it back on afterwards.
-- Before driving the phone with `input`, turn on Do Not Disturb (save `settings get global
-  zen_mode`, then `cmd notification set_dnd none`; restore at the end) and check before every tap,
-  swipe, key or text that Sonora is the foreground app (`dumpsys activity activities | grep
-  topResumedActivity`). On 2026-10-16 a notification dropped over the app, a tap opened a
-  messaging app, and the next keystrokes were typed into the user's chat.
-- The Pixel 5 accepts `input tap`; the POCO refuses it unless "USB debugging (Security
-  settings)" is on, so on the POCO the user taps.
 - Python on Windows prints `\r\n`; strip `\r` before putting printed IDs into URLs. Its console
   encoding is cp1251, so printing hub names or screen dumps with emoji fails: call
   `sys.stdout.reconfigure(encoding="utf-8")` in the script (`PYTHONIOENCODING` is ignored under
