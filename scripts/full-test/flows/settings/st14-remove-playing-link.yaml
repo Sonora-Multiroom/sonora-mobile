@@ -1,0 +1,20 @@
+appId: sonora.multiroom.mobile
+name: "ST14 Removing a playing link asks first and stops it"
+tags: [settings]
+onFlowStart:
+  - runFlow: ../common/cleanup.yaml
+onFlowComplete:
+  - runFlow: ../common/cleanup.yaml
+---
+- runScript: { file: ../../hub.js, env: { ACTION: "play", URI: "${LINK}", TARGET: "${G2_ID}", TYPE: "SINGLE_OUTPUT" } }
+- launchApp
+- tapOn: Settings
+- tapOn: { text: Sources, index: 0 }
+- scrollUntilVisible: { element: "Remove Playback .*" }
+- tapOn: "Remove Playback .*"
+- assertVisible: "Playback .* is playing in ${G2_NAME}\\. Removing it stops playback there\\."
+- tapOn: Remove
+- retry:
+    maxRetries: 3
+    commands:
+      - runScript: { file: ../../hub.js, env: { ACTION: "expectRoutes", COUNT: "0" } }

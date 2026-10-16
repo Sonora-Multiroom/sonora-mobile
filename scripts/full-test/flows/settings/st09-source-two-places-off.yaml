@@ -1,0 +1,24 @@
+appId: sonora.multiroom.mobile
+name: "ST09 A source playing in two places, the dialog names both and Turn off stops both"
+tags: [settings]
+onFlowStart:
+  - runFlow: ../common/cleanup.yaml
+onFlowComplete:
+  - runFlow: ../common/cleanup.yaml
+---
+- runScript: { file: ../../hub.js, env: { ACTION: "start", INPUT: "${STREAM_ID}", TARGET: "${SOLO_ID}", TYPE: "SINGLE_OUTPUT" } }
+- runScript: { file: ../../hub.js, env: { ACTION: "start", INPUT: "${STREAM_ID}", TARGET: "${GROUP_ID}", TYPE: "OUTPUT_GROUP" } }
+- launchApp
+- tapOn: Settings
+- tapOn: { text: Sources, index: 0 }
+- scrollUntilVisible: { element: "${STREAM_NAME}", centerElement: true }
+- assertVisible: "Playing in (${GROUP_NAME} and ${SOLO_NAME}|${SOLO_NAME} and ${GROUP_NAME})"
+- tapOn: ${STREAM_NAME}
+- assertVisible: "${STREAM_NAME} is playing in (${GROUP_NAME} and ${SOLO_NAME}|${SOLO_NAME} and ${GROUP_NAME})\\. Turning it off stops playback there\\."
+- tapOn: Turn off
+- retry:
+    maxRetries: 3
+    commands:
+      - runScript: { file: ../../hub.js, env: { ACTION: "expectEnabled", KIND: "inputs", ID: "${STREAM_ID}", ENABLED: "false" } }
+      - runScript: { file: ../../hub.js, env: { ACTION: "expectRoutes", COUNT: "0", INPUT: "${STREAM_ID}" } }
+- assertNotVisible: ".*keeps playing.*"

@@ -1,0 +1,25 @@
+appId: sonora.multiroom.mobile
+name: "ST04 An idle room turns off and on without a dialog"
+tags: [settings]
+onFlowStart:
+  - runFlow: ../common/cleanup.yaml
+onFlowComplete:
+  - runFlow: ../common/cleanup.yaml
+---
+- launchApp
+- tapOn: Settings
+- tapOn: { text: Rooms, index: 0 }
+- tapOn: ${SOLO_NAME}
+- assertNotVisible: "Turn off ${SOLO_NAME}\\?"
+- retry:
+    maxRetries: 3
+    commands:
+      - runScript: { file: ../../hub.js, env: { ACTION: "expectEnabled", KIND: "outputs", ID: "${SOLO_ID}", ENABLED: "false" } }
+- tapOn: { text: Rooms, index: 1 }
+- assertVisible: { text: Turned off, below: "${SOLO_NAME}" }
+- tapOn: Settings
+- tapOn: ${SOLO_NAME}
+- retry:
+    maxRetries: 3
+    commands:
+      - runScript: { file: ../../hub.js, env: { ACTION: "expectEnabled", KIND: "outputs", ID: "${SOLO_ID}", ENABLED: "true" } }

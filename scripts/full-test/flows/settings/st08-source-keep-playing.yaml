@@ -1,0 +1,20 @@
+appId: sonora.multiroom.mobile
+name: "ST08 Turning a playing source off asks first, Keep playing changes nothing"
+tags: [settings]
+onFlowStart:
+  - runFlow: ../common/cleanup.yaml
+onFlowComplete:
+  - runFlow: ../common/cleanup.yaml
+---
+- runScript: { file: ../../hub.js, env: { ACTION: "start", INPUT: "${STREAM_ID}", TARGET: "${SOLO_ID}", TYPE: "SINGLE_OUTPUT" } }
+- launchApp
+- tapOn: Settings
+- tapOn: { text: Sources, index: 0 }
+- scrollUntilVisible: { element: "${STREAM_NAME}", centerElement: true }
+- assertVisible: "Playing in ${SOLO_NAME}"
+- tapOn: ${STREAM_NAME}
+- assertVisible: "Turn off ${STREAM_NAME}\\?"
+- assertVisible: "${STREAM_NAME} is playing in ${SOLO_NAME}\\. Turning it off stops playback there\\."
+- tapOn: Keep playing
+- runScript: { file: ../../hub.js, env: { ACTION: "expectEnabled", KIND: "inputs", ID: "${STREAM_ID}", ENABLED: "true" } }
+- runScript: { file: ../../hub.js, env: { ACTION: "expectRoutes", COUNT: "1", INPUT: "${STREAM_ID}" } }

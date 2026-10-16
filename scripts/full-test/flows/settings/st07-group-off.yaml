@@ -1,0 +1,26 @@
+appId: sonora.multiroom.mobile
+name: "ST07 Turning a playing group off asks first and stops its playback"
+tags: [settings]
+onFlowStart:
+  - runFlow: ../common/cleanup.yaml
+onFlowComplete:
+  - runFlow: ../common/cleanup.yaml
+---
+- runScript: { file: ../../hub.js, env: { ACTION: "start", INPUT: "${STREAM_ID}", TARGET: "${GROUP_ID}", TYPE: "OUTPUT_GROUP" } }
+- launchApp
+- tapOn: Settings
+- tapOn: Groups
+- tapOn: ${GROUP_NAME}
+- assertVisible: "Turn off ${GROUP_NAME}\\?"
+- assertVisible: ".*Turning the group off stops playback in all of these rooms\\."
+- tapOn: Turn off
+- retry:
+    maxRetries: 3
+    commands:
+      - runScript: { file: ../../hub.js, env: { ACTION: "expectEnabled", KIND: "groups", ID: "${GROUP_ID}", ENABLED: "false" } }
+      - runScript: { file: ../../hub.js, env: { ACTION: "expectRoutes", COUNT: "0" } }
+- tapOn: ${GROUP_NAME}
+- retry:
+    maxRetries: 3
+    commands:
+      - runScript: { file: ../../hub.js, env: { ACTION: "expectEnabled", KIND: "groups", ID: "${GROUP_ID}", ENABLED: "true" } }

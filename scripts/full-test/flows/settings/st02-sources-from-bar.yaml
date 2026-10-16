@@ -1,0 +1,12 @@
+appId: sonora.multiroom.mobile
+name: "ST02 The bottom bar's Sources opens Settings on the Sources tab"
+tags: [settings]
+onFlowStart:
+  - runFlow: ../common/cleanup.yaml
+onFlowComplete:
+  - runFlow: ../common/cleanup.yaml
+---
+- launchApp
+- tapOn: Sources
+- assertVisible: FROM CONFIGURATION
+- assertVisible: "Hub connection: .*"

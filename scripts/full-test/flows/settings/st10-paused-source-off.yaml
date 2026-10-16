@@ -1,0 +1,23 @@
+appId: sonora.multiroom.mobile
+name: "ST10 Turning a paused source off asks first"
+tags: [settings]
+onFlowStart:
+  - runFlow: ../common/cleanup.yaml
+onFlowComplete:
+  - runFlow: ../common/cleanup.yaml
+---
+- runScript: { file: ../../hub.js, env: { ACTION: "enable", KIND: "inputs", ID: "${PAUSEABLE_ID}", ENABLED: "true" } }
+- runScript: { file: ../../hub.js, env: { ACTION: "start", INPUT: "${PAUSEABLE_ID}", TARGET: "${SOLO_ID}", TYPE: "SINGLE_OUTPUT" } }
+- runScript: { file: ../../hub.js, env: { ACTION: "pause", ROUTE: "${output.routeId}", PAUSED: "true" } }
+- launchApp
+- tapOn: Settings
+- tapOn: { text: Sources, index: 0 }
+- scrollUntilVisible: { element: "${PAUSEABLE_NAME}", centerElement: true }
+- tapOn: ${PAUSEABLE_NAME}
+- assertVisible: "Turn off ${PAUSEABLE_NAME}\\?"
+- tapOn: Turn off
+- retry:
+    maxRetries: 3
+    commands:
+      - runScript: { file: ../../hub.js, env: { ACTION: "expectEnabled", KIND: "inputs", ID: "${PAUSEABLE_ID}", ENABLED: "false" } }
+      - runScript: { file: ../../hub.js, env: { ACTION: "expectRoutes", COUNT: "0", INPUT: "${PAUSEABLE_ID}" } }

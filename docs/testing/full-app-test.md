@@ -140,6 +140,12 @@ into the report. Where the hub lacks a role, mark the rows that need it `n/a`.
 
 ## ST. Settings (004, 005)
 
+**Automated**: ST01–ST16 run as Maestro flows, one per row, in
+[scripts/full-test/flows/settings/](../../scripts/full-test/flows/settings/):
+`scripts/full-test/run.sh --device <serial> --tags settings` (gates, snapshot, Do Not Disturb and
+teardown included; Maestro CLI in `~/.maestro`). Record its JUnit result per row in the report and
+recheck failures by hand. ST17 stays manual. When a row below changes, change its flow too.
+
 | # | Setup (`curl`) | Do | Expect |
 |---|---|---|---|
 | ST1 | — | Bottom bar → Settings | Hub row "Connected" + address; Rooms tab; each room's status line right |
