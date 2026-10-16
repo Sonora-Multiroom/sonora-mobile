@@ -8,7 +8,8 @@ are listed under "Development" when they affect contributors.
 
 ## [0.5.0-alpha] - Unreleased
 
-Confirm before turning off a playing source ([spec](specs/005-source-off-confirm/)).
+Confirm before turning off a playing source ([spec](specs/005-source-off-confirm/),
+[#11](https://github.com/Sonora-Multiroom/sonora-mobile/pull/11)).
 Since hub API 0.1.25 turning a source off stops everything playing from it; the app now says so.
 
 ### Changed
