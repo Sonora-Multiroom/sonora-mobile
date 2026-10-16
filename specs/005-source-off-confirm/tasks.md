@@ -47,7 +47,7 @@ Every test task comes before its implementation task and MUST be seen failing fi
 
 **Purpose**: version bump and the design update that Constitution VI requires before code.
 
-- [ ] T001 Set `sonora.versionName=0.5.0-alpha` and `sonora.versionCode=5` in gradle.properties as
+- [X] T001 Set `sonora.versionName=0.5.0-alpha` and `sonora.versionCode=5` in gradle.properties as
   the first implementation commit (AGENTS.md "Bump the app version first").
 - [ ] T002 **Local, needs the user**: update the Claude Design canvas
   (https://claude.ai/artifact/R7e4yABDYUuytc64XxNNKK, Settings screen, Sources tab) per research R7:
