@@ -50,11 +50,19 @@ fun keepsPlaying(sourceId: String, snapshot: HubSnapshot): Boolean =
  */
 fun removeConfirmation(sourceId: String, snapshot: HubSnapshot): Confirmation.Remove? {
     val source = snapshot.sources.firstOrNull { it.id == sourceId } ?: return null
+    val where = sourcePlaces(sourceId, snapshot)
+    return if (where.isEmpty()) null else Confirmation.Remove(source.name, where)
+}
+
+/**
+ * Where a live route (any state but stopped) plays [sourceId]: each room or group it was addressed
+ * to, named once, in the hub's order. A group is named by its own name, not its members.
+ */
+internal fun sourcePlaces(sourceId: String, snapshot: HubSnapshot): List<String> {
     val rooms = snapshot.rooms.associateBy { it.id }
     val groups = snapshot.groups.associateBy { it.id }
-    val where = liveRoutes(snapshot)
+    return liveRoutes(snapshot)
         .filter { it.inputId == sourceId }
         .map { describeTarget(it.target, rooms, groups, masterMuted = false).title }
         .distinct()
-    return if (where.isEmpty()) null else Confirmation.Remove(source.name, where)
 }

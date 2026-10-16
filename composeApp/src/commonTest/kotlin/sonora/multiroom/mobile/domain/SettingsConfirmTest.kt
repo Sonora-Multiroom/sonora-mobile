@@ -105,6 +105,49 @@ class SettingsConfirmTest {
         assertFalse(keepsPlaying("radio", base()))
     }
 
+    // ---- Where a source plays -----------------------------------------------------------------
+
+    @Test
+    fun aRouteToARoomIsNamedByTheRoom() =
+        assertEquals(listOf("Bedroom"), sourcePlaces("radio", base(listOf(route("r", "radio", Target.Room("bedroom"))))))
+
+    @Test
+    fun aRouteToAGroupIsNamedByTheGroupNotItsMembers() =
+        assertEquals(listOf("Downstairs"), sourcePlaces("radio", base(listOf(route("r", "radio", Target.Group("g"))))))
+
+    @Test
+    fun severalPlacesInHubOrderEachOnce() {
+        val s = base(
+            listOf(
+                route("r1", "radio", Target.Room("bedroom")),
+                route("r2", "radio", Target.Group("g")),
+                route("r3", "radio", Target.Room("bedroom")),
+            ),
+        )
+        assertEquals(listOf("Bedroom", "Downstairs"), sourcePlaces("radio", s))
+    }
+
+    @Test
+    fun pausedStartingFailedAndUnknownRoutesCount() {
+        val paused = route("r", "radio", Target.Room("bedroom")).copy(paused = true)
+        assertEquals(listOf("Bedroom"), sourcePlaces("radio", base(listOf(paused))))
+        for (status in listOf(RouteStatus.Starting, RouteStatus.Failed, RouteStatus.Unknown)) {
+            assertEquals(listOf("Bedroom"), sourcePlaces("radio", base(listOf(route("r", "radio", Target.Room("bedroom"), status)))), "$status")
+        }
+    }
+
+    @Test
+    fun stoppedRoutesAndOtherSourcesDoNotCount() {
+        val s = base(
+            listOf(
+                route("r1", "radio", Target.Room("bedroom"), RouteStatus.Stopped),
+                route("r2", "jazz", Target.Room("kitchen")),
+            ),
+        )
+        assertEquals(emptyList<String>(), sourcePlaces("radio", s))
+        assertEquals(emptyList<String>(), sourcePlaces("radio", base()))
+    }
+
     // ---- Remove (US2) -------------------------------------------------------------------------
 
     private val link = source("link", "A link", SourceOrigin.Runtime, "https://soundcloud.com/x")

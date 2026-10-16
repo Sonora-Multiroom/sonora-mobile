@@ -69,14 +69,14 @@ may run while T002 waits for the user.
 
 **Purpose**: the one rule for "where does a source play" (research R2), used by all three stories.
 
-- [ ] T004 Write failing tests for `sourcePlaces(sourceId, snapshot)` in
+- [X] T004 Write failing tests for `sourcePlaces(sourceId, snapshot)` in
   test/domain/SettingsConfirmTest.kt (new section "Where a source plays"): a route addressed to a
   room → `["Bedroom"]`; to a group → `["Downstairs"]` (the group's name, not its members); two
   routes in different places → both, in the hub's route order; two routes in the same place →
   named once; Paused, Starting and Failed routes count; a Stopped route does not; routes of other
   sources are ignored; no routes → empty. Reuse the file's `base()`, `route(...)` and `withLink()`
   helpers.
-- [ ] T005 Implement `internal fun sourcePlaces(sourceId: String, snapshot: HubSnapshot): List<String>`
+- [X] T005 Implement `internal fun sourcePlaces(sourceId: String, snapshot: HubSnapshot): List<String>`
   in main/domain/SettingsConfirm.kt: `liveRoutes(snapshot)` filtered by `inputId == sourceId`,
   mapped to `describeTarget(it.target, rooms, groups, masterMuted = false).title`, `distinct()`.
   Rewrite `removeConfirmation` to use it, with unchanged results (its existing tests stay green).
