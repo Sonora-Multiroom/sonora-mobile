@@ -76,6 +76,7 @@ const val CONFIGURED_EMPTY = "No sources in the hub's configuration."
 fun confirmTitle(c: Confirmation): String = when (c) {
     is Confirmation.TurnOffRoom -> "Turn off ${c.room}?"
     is Confirmation.TurnOffGroup -> "Turn off ${c.group}?"
+    is Confirmation.TurnOffSource -> "Turn off ${c.source}?"
     is Confirmation.Remove -> "Remove ${c.source}?"
 }
 
@@ -87,6 +88,9 @@ fun confirmBody(c: Confirmation): String = when (c) {
     is Confirmation.TurnOffGroup ->
         "${joinNames(c.sources)} is playing on ${c.members.joinToString(", ")}. " +
             "Turning the group off stops playback in all of these rooms."
+
+    is Confirmation.TurnOffSource ->
+        "${c.source} is playing in ${joinNames(c.where)}. Turning it off stops playback there."
 
     is Confirmation.Remove ->
         "${c.source} is playing in ${joinNames(c.where)}. Removing it stops playback there."

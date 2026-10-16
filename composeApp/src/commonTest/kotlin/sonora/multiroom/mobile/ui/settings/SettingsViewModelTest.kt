@@ -323,15 +323,40 @@ class SettingsViewModelTest {
         assertEquals(1, s.repo.calls.count { it.name == "setGroupEnabled" })
     }
 
+    private val radioKey = ItemKey(ItemKind.Source, "radio")
+
     @Test
-    fun aSourceTurnedOffWhileInUseDoesNotAskAndSaysItKeepsPlaying() = runViewModelTest {
+    fun turningOffAPlayingSourceAsksFirstAndKeepsTheSwitchOn() = runViewModelTest {
         val s = live()
-        s.vm.onToggle(ItemKey(ItemKind.Source, "radio"), "Radio Paradise", false); runCurrent()
+        s.vm.onToggle(radioKey, "Radio Paradise", false); runCurrent()
+        assertEquals(Confirmation.TurnOffSource("Radio Paradise", listOf("Downstairs")), s.state.confirm?.confirmation)
+        assertTrue(s.repo.calls.none { it.name == "setSourceEnabled" })
+        assertTrue(s.lists().configuredSources.first { it.row.id == "radio" }.shownEnabled)
+
+        s.vm.onConfirmCancel(); runCurrent()
         assertNull(s.state.confirm)
-        assertEquals(1, s.repo.calls.count { it.name == "setSourceEnabled" })
-        assertEquals("Radio Paradise is off. What's playing from it keeps playing.", s.state.message)
-        s.vm.consumeMessage(); runCurrent()
-        assertNull(s.state.message)
+        assertTrue(s.repo.calls.none { it.name == "setSourceEnabled" })
+
+        s.vm.onToggle(radioKey, "Radio Paradise", false); runCurrent()
+        s.vm.onConfirm(); runCurrent()
+        assertNull(s.state.confirm)
+        assertEquals(listOf(listOf<Any>("radio", false)), s.repo.calls.filter { it.name == "setSourceEnabled" }.map { it.args })
+    }
+
+    @Test
+    fun anOpenSourceDialogStaysATurnOffDialogAcrossRefreshes() = runViewModelTest {
+        val s = live()
+        s.vm.onToggle(radioKey, "Radio Paradise", false); runCurrent()
+
+        s.repo.snapshotResult = {
+            HubResult.Ok(hubSnapshot(routes = listOf(route("r", "radio", Target.Group("g")), route("r2", "radio", Target.Room("office")))))
+        }
+        advanceTimeBy(2500); runCurrent()
+        assertEquals(Confirmation.TurnOffSource("Radio Paradise", listOf("Downstairs", "Office")), s.state.confirm?.confirmation)
+
+        s.repo.snapshotResult = { HubResult.Ok(hubSnapshot(routes = emptyList())) }
+        advanceTimeBy(2500); runCurrent()
+        assertEquals(Confirmation.TurnOffSource("Radio Paradise", listOf("Downstairs", "Office")), s.state.confirm?.confirmation)
     }
 
     @Test

@@ -97,6 +97,19 @@ class SettingsTextTest {
     }
 
     @Test
+    fun sourceDialog() {
+        val one = Confirmation.TurnOffSource("Radio Paradise", listOf("Kitchen"))
+        assertEquals("Turn off Radio Paradise?", confirmTitle(one))
+        assertEquals("Radio Paradise is playing in Kitchen. Turning it off stops playback there.", confirmBody(one))
+        assertEquals("Turn off", confirmLabel(one))
+        val two = Confirmation.TurnOffSource("Radio Paradise", listOf("Kitchen", "Downstairs"))
+        assertEquals(
+            "Radio Paradise is playing in Kitchen and Downstairs. Turning it off stops playback there.",
+            confirmBody(two),
+        )
+    }
+
+    @Test
     fun theKeepsPlayingMessageAndTheEmptyText() {
         assertEquals("Jazz FM is off. What's playing from it keeps playing.", keepsPlayingMessage("Jazz FM"))
         assertEquals("No sources in the hub's configuration.", CONFIGURED_EMPTY)

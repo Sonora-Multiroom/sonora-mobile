@@ -156,7 +156,7 @@ class SettingsViewModel(
                 val snapshot = (s as? SessionState.Connected)?.snapshot ?: return@collect
                 local.update { l ->
                     val open = l.confirm ?: return@update l
-                    val fresh = confirmationFor(open.key, snapshot) ?: return@update l
+                    val fresh = confirmationFor(open, snapshot) ?: return@update l
                     l.copy(confirm = open.copy(confirmation = fresh))
                 }
             }
@@ -224,9 +224,10 @@ class SettingsViewModel(
         )
     }
 
-    /** Turning off asks for rooms and groups, removing asks for a runtime source. */
-    private fun confirmationFor(key: ItemKey, snapshot: HubSnapshot): Confirmation? =
-        if (key.kind == ItemKind.Source) removeConfirmation(key.id, snapshot) else turnOffConfirmation(key, snapshot)
+    /** The open dialog's rule: a source key can be a removal or a turn-off, so the type decides. */
+    private fun confirmationFor(open: ConfirmState, snapshot: HubSnapshot): Confirmation? =
+        if (open.confirmation is Confirmation.Remove) removeConfirmation(open.key.id, snapshot)
+        else turnOffConfirmation(open.key, snapshot)
 
     fun onRemove(sourceId: String, name: String) {
         val snapshot = liveSnapshot() ?: return

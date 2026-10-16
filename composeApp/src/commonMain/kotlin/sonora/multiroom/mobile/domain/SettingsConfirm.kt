@@ -10,13 +10,17 @@ sealed interface Confirmation {
     data class TurnOffGroup(val group: String, val sources: List<String>, val members: List<String>) : Confirmation
 
     /** [where] names the rooms or groups whose playback of the source would stop. */
+    data class TurnOffSource(val source: String, val where: List<String>) : Confirmation
+
+    /** [where] names the rooms or groups whose playback of the source would stop. */
     data class Remove(val source: String, val where: List<String>) : Confirmation
 }
 
 /**
  * Null means "send at once". A room that is on and covered by any live route, its own or a group's,
- * or a group that is on and has its own live route, asks first (research R4); turning on, a source
- * (FR-014) and anything the hub no longer lists never do. The rules are those of [SettingsBuilder].
+ * a group that is on and has its own live route, or a source that is on and plays anywhere, asks
+ * first, because the hub stops that playback; turning on and anything the hub no longer lists never
+ * do. The room and group rules are those of [SettingsBuilder].
  */
 fun turnOffConfirmation(key: ItemKey, snapshot: HubSnapshot): Confirmation? {
     val names = sourceNames(snapshot)
@@ -36,7 +40,11 @@ fun turnOffConfirmation(key: ItemKey, snapshot: HubSnapshot): Confirmation? {
             Confirmation.TurnOffGroup(group.name, sources, group.memberIds.mapNotNull { byId[it]?.name })
         }
 
-        ItemKind.Source -> null
+        ItemKind.Source -> {
+            val source = snapshot.sources.firstOrNull { it.id == key.id }?.takeIf { it.enabled } ?: return null
+            val where = sourcePlaces(source.id, snapshot)
+            if (where.isEmpty()) null else Confirmation.TurnOffSource(source.name, where)
+        }
     }
 }
 

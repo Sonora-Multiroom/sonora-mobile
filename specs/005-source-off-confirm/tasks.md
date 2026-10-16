@@ -96,20 +96,20 @@ dialog names both; "Keep playing" sends nothing; "Turn off" sends `enabled=false
 
 ### Tests for User Story 1 (write first, see them fail)
 
-- [ ] T006 [P] [US1] In test/domain/SettingsConfirmTest.kt, replace
+- [X] T006 [P] [US1] In test/domain/SettingsConfirmTest.kt, replace
   `turnOffConfirmation(ItemKey(ItemKind.Source, "radio"), s)` returning null (the "any source
   switch" case) with: a source playing in Living Room →
   `Confirmation.TurnOffSource("Radio Paradise", listOf("Living Room"))`; playing on Downstairs →
   `where = ["Downstairs"]`; in two places → both, once each; only paused → asks; idle → null; only
   a Stopped route → null; the source is off (`enabled = false`) with a live route → null; a source
   id the hub does not list → null. Room and group cases stay as they are.
-- [ ] T007 [P] [US1] In test/ui/settings/SettingsTextTest.kt add the dialog rows of the
+- [X] T007 [P] [US1] In test/ui/settings/SettingsTextTest.kt add the dialog rows of the
   [copy table](contracts/settings-ui.md#copy-table-additions-for-settingstexttest):
   `confirmTitle(TurnOffSource("Radio Paradise", ["Kitchen"]))` = "Turn off Radio Paradise?";
   `confirmBody` = "Radio Paradise is playing in Kitchen. Turning it off stops playback there.";
   with `["Kitchen", "Downstairs"]` the body reads "… playing in Kitchen and Downstairs. …";
   `confirmLabel` = "Turn off".
-- [ ] T008 [P] [US1] In test/ui/settings/SettingsViewModelTest.kt replace
+- [X] T008 [P] [US1] In test/ui/settings/SettingsViewModelTest.kt replace
   `aSourceTurnedOffWhileInUseDoesNotAskAndSaysItKeepsPlaying` with
   `turningOffAPlayingSourceAsksFirstAndKeepsTheSwitchOn`: `onToggle(Source "radio", false)` with a
   live route opens `ConfirmState` holding `TurnOffSource`, makes no `setSourceEnabled` call and the
@@ -121,16 +121,16 @@ dialog names both; "Keep playing" sends nothing; "Turn off" sends `enabled=false
 
 ### Implementation for User Story 1
 
-- [ ] T009 [US1] In main/domain/SettingsConfirm.kt add
+- [X] T009 [US1] In main/domain/SettingsConfirm.kt add
   `data class TurnOffSource(val source: String, val where: List<String>) : Confirmation` and the
   `ItemKind.Source` branch of `turnOffConfirmation`: the source is listed, `enabled` is true and
   `sourcePlaces` is not empty → `TurnOffSource(name, places)`, else null. Update the KDoc that says
   a source never asks. Makes T006 pass.
-- [ ] T010 [P] [US1] In main/ui/settings/SettingsText.kt add the `TurnOffSource` cases to
+- [X] T010 [P] [US1] In main/ui/settings/SettingsText.kt add the `TurnOffSource` cases to
   `confirmTitle` ("Turn off <source>?") and `confirmBody` ("<source> is playing in
   ${joinNames(where)}. Turning it off stops playback there."); `confirmLabel` returns "Turn off" for
   it (only `Remove` returns `REMOVE_LABEL`). Makes T007 pass.
-- [ ] T011 [US1] In main/ui/settings/SettingsViewModel.kt make `confirmationFor` choose the rule by
+- [X] T011 [US1] In main/ui/settings/SettingsViewModel.kt make `confirmationFor` choose the rule by
   the open confirmation's type (research R5): `Remove` → `removeConfirmation`, otherwise
   `turnOffConfirmation(open.key, snapshot)`; its signature becomes
   `private fun confirmationFor(open: ConfirmState, snapshot: HubSnapshot): Confirmation?`. `onToggle` needs no new branch: it already asks `turnOffConfirmation`.

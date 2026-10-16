@@ -80,10 +80,53 @@ class SettingsConfirmTest {
         assertNull(turnOffConfirmation(downstairs, off))
     }
 
+    private val radioKey = ItemKey(ItemKind.Source, "radio")
+
     @Test
-    fun aSourceNeverAsks() {
+    fun aSourcePlayingInARoomAsksWhereItStops() {
         val s = base(listOf(route("r", "radio", Target.Room("living"))))
-        assertNull(turnOffConfirmation(ItemKey(ItemKind.Source, "radio"), s))
+        assertEquals(Confirmation.TurnOffSource("Radio Paradise", listOf("Living Room")), turnOffConfirmation(radioKey, s))
+    }
+
+    @Test
+    fun aSourcePlayingOnAGroupNamesTheGroup() {
+        val s = base(listOf(route("r", "radio", Target.Group("g"))))
+        assertEquals(Confirmation.TurnOffSource("Radio Paradise", listOf("Downstairs")), turnOffConfirmation(radioKey, s))
+    }
+
+    @Test
+    fun aSourceInSeveralPlacesNamesEachOnce() {
+        val s = base(
+            listOf(
+                route("r1", "radio", Target.Group("g")),
+                route("r2", "radio", Target.Room("bedroom")),
+                route("r3", "radio", Target.Room("bedroom")),
+            ),
+        )
+        assertEquals(
+            Confirmation.TurnOffSource("Radio Paradise", listOf("Downstairs", "Bedroom")),
+            turnOffConfirmation(radioKey, s),
+        )
+    }
+
+    @Test
+    fun aSourceOnlyPausedStillAsks() {
+        val s = base(listOf(route("r", "radio", Target.Room("bedroom")).copy(paused = true)))
+        assertEquals(Confirmation.TurnOffSource("Radio Paradise", listOf("Bedroom")), turnOffConfirmation(radioKey, s))
+    }
+
+    @Test
+    fun anIdleSourceSendsAtOnce() {
+        assertNull(turnOffConfirmation(radioKey, base()))
+        assertNull(turnOffConfirmation(radioKey, base(listOf(route("r", "radio", Target.Room("living"), RouteStatus.Stopped)))))
+    }
+
+    @Test
+    fun aSourceThatIsOffOrUnknownSendsAtOnce() {
+        val playing = base(listOf(route("r", "radio", Target.Room("living"))))
+        val off = playing.copy(sources = listOf(source("radio", "Radio Paradise", enabled = false), jazz))
+        assertNull(turnOffConfirmation(radioKey, off))
+        assertNull(turnOffConfirmation(ItemKey(ItemKind.Source, "ghost"), playing))
     }
 
     @Test
