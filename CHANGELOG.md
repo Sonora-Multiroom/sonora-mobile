@@ -6,6 +6,23 @@ User-facing changes to the Sonora Multiroom mobile app, one entry per feature. T
 the feature's spec folder and pull request. Repository-only changes (documentation, CI, tooling)
 are listed under "Development" when they affect contributors.
 
+## [0.5.0-alpha] - Unreleased
+
+Confirm before turning off a playing source ([spec](specs/005-source-off-confirm/)).
+Since hub API 0.1.25 turning a source off stops everything playing from it; the app now says so.
+
+### Changed
+
+- Turning off a configured source that is playing (or paused) now asks first, as rooms and groups
+  do: "Turn off Radio Paradise?" names every room and group where it plays. Idle sources still
+  turn off in one tap.
+- On Settings → Sources, a configured source that is playing reads "Playing in <rooms and
+  groups>" in amber instead of its kind line, so you can see which switches will ask.
+
+### Removed
+
+- The message "<source> is off. What's playing from it keeps playing.", which was no longer true.
+
 ## [0.4.0-alpha] - 2026-10-05
 
 Settings tabs and sources ([spec](specs/004-settings-sources/),
