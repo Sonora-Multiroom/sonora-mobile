@@ -115,12 +115,25 @@ Record the build (CI build number and commit), the device and each row's evidenc
 
 ## API
 
-- [api/openapi.json](api/openapi.json) was fetched from the production hub on 2026-10-01
-  (API version **0.1.21**, unchanged when re-fetched on 2026-10-04); refresh it with
-  `./gradlew refreshOpenApi` from a local session. It also contains v1 paths (`/api/*` without `v2`) and TTS extension
-  paths (`/api/tts/*`): **use only `/api/v2/**`**.
+- [api/openapi.json](api/openapi.json) was fetched from the production hub on 2026-10-16
+  (API version **0.1.25**); refresh it with `./gradlew refreshOpenApi` from a local session. It
+  also contains TTS extension paths (`/api/tts/*`): **use only `/api/v2/**`**. The hub removed
+  REST v1 in 0.1.24.
 - 0.1.21 added join modes (`RouteResponse.joinMode`, `InputResponse.defaultJoinMode`) and admission
   refusals on errors (`ErrorResponse.reason`, `outputId`). The app never sends a `joinMode`.
+- 0.1.22 (deployed 2026-10-06): route IDs are opaque and a transfer keeps the route's id;
+  `RouteResponse.outputs` lists the outputs a route plays on right now; starting, playing or moving
+  onto a disabled output, group or input answers **409** with a `reason` (`OUTPUT_DISABLED`,
+  `GROUP_DISABLED`, `INPUT_DISABLED`, `ALL_MEMBERS_DISABLED`) instead of 400. A transfer can also
+  answer 409 `ROUTE_CHANGING_OUTPUTS`, which clears by itself within moments. The app maps only
+  `ROUTE_LIMIT_REACHED` and `INPUT_ALREADY_ON_OUTPUT` so far, see
+  [docs/backlog/refusal-reasons-and-route-outputs.md](docs/backlog/refusal-reasons-and-route-outputs.md).
+- 0.1.23 (hub 025): master mute is a layer above each output's own mute and no longer changes any
+  output's `muted`; turning it off restores each output's own mute.
+- 0.1.25 (hub 027, 028): turning off a source stops every route playing it (paused ones
+  too), and an auto-remove source is then removed; turning off a group stops the routes addressed
+  to it; turning a room back on puts it back into every live group route of an enabled group
+  containing it, under the same route id. 028 is internal (sound-card channel use).
 - Generate a Kotlin multiplatform client (Ktor + kotlinx.serialization) from it at build time,
   e.g. OpenAPI Generator `kotlin` with `library=multiplatform`. Do not commit generated code. Wrap
   it behind a small hand-written repository interface so screens never touch generated types.
@@ -137,7 +150,7 @@ Record the build (CI build number and commit), the device and each row's evidenc
 | Pause / resume | `PUT /api/v2/routes/{routeId}/pause` `{paused}`, **only when `RouteResponse.pauseable`** |
 | Start playback (link) | `POST /api/v2/play` `{uri, targetId, targetType, displayName?, volume?}` |
 | Start playback (configured source) | `POST /api/v2/routes` `{inputId, targetId, targetType}` |
-| Move to room | `POST /api/v2/routes/{routeId}/transfer` `{targetId, targetType}`, only when `transferable` and the route is Playing (never while Paused: the hub's behaviour is unchecked). The response is the NEW route; follow its id |
+| Move to room | `POST /api/v2/routes/{routeId}/transfer` `{targetId, targetType}`, only when `transferable` and the route is Playing (never while Paused: the hub's behaviour is unchecked). Since API 0.1.22 the response is the same route with the same `routeId`; before 0.1.22 it was a new route. Follow the returned id either way |
 | Settings | `PUT /api/v2/{outputs,groups,inputs}/{id}/enabled` `{enabled}`, `DELETE /api/v2/inputs/{id}`, `GET /api/v2/extensions` (only while the Extensions tab is open, on the session's refreshes), `GET /api/v2/outputs?includeDisabled=true` (the "Test connection" check of a drafted hub address) |
 
 `targetType` is `SINGLE_OUTPUT` or `OUTPUT_GROUP`.
@@ -151,6 +164,8 @@ Record the build (CI build number and commit), the device and each row's evidenc
   `targetId` names only what was addressed, so to find "what plays on output X" check both
   single-output routes on X and group routes whose group contains X.
 - `enabled = false` on an output/group/input means "cannot start new playback"; show it as "Off".
+  Turning one off also stops what plays on or from it (see 0.1.25 above): a room leaves group
+  playback, which plays on in its other rooms.
 - `OutputResponse.available = false` means hardware not connected.
 - Inputs with `source = EPHEMERAL` were added at runtime (links played, DLNA); `STATIC` come from
   configuration. Only ephemeral ones get a delete action.
@@ -171,10 +186,11 @@ Record the build (CI build number and commit), the device and each row's evidenc
   group pill shows the loudest member; dragging scales each member by new/old loudest (rounded,
   clamped 0–100) via `PUT /api/v2/outputs/{id}/volume`, throttled; if all members are 0, each is
   set to the new value.
-- No rooms in a playback's answer: `RouteResponse` names only the group it was addressed to. Since
-  turning a room off drops it from group playback (and turning it on does not add it back), a group
-  route may play on fewer rooms than its group has; the app cannot tell and still counts the room
-  as part of it (feature 004).
+- No rooms in a playback's answer: `RouteResponse` names only the group it was addressed to, so a
+  group route playing on fewer rooms than its group has (a member turned off) is still counted on
+  every member (feature 004). **Closed in API 0.1.22** by `RouteResponse.outputs`, which the app
+  does not use yet, see
+  [docs/backlog/refusal-reasons-and-route-outputs.md](docs/backlog/refusal-reasons-and-route-outputs.md).
 
 ## Design
 

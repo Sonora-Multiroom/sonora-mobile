@@ -1,16 +1,16 @@
 # Rooms with several playbacks: main playback as the card, the others nested under it
 
-**Status:** Proposed, not started. Written 2026-10-04 while specifying `003-start-playback`.
-Intended as the next feature after 004 (Settings and Sources took `004-…`).
-**Origin:** The hub's `023-multi-route-output-mixing` (API 0.1.21, deployed 2026-10-02) lets one
-output play several routes at once: `MIX` routes play alongside, and `DUCK_OTHERS` routes
-(announcements, e.g. the TTS extension) lower everything else while they play. The app was built
-on the rule "an output plays at most one route" (AGENTS.md, "Domain rules"), which no longer holds.
-[003's spec](../../specs/003-start-playback/spec.md) (Assumptions) defers this work here.
-**Depends on:** `api/openapi.json` at 0.1.21 (refreshed 2026-10-04). Probably a hub API addition
-(see Open question 1), which belongs in the `multiroom-ai` backlog.
-**Effort:** Medium. Domain mapping, Rooms and Now Playing UI, the move sheet's notes, a design
-update first, and tests.
+- **Status:** Proposed, not started. Written 2026-10-04 while specifying `003-start-playback`.
+  Intended as the next feature after 004 (Settings and Sources took `004-…`).
+- **Origin:** The hub's `023-multi-route-output-mixing` (API 0.1.21, deployed 2026-10-02) lets one
+  output play several routes at once: `MIX` routes play alongside, and `DUCK_OTHERS` routes
+  (announcements, e.g. the TTS extension) lower everything else while they play. The app was built
+  on the rule "an output plays at most one route" (AGENTS.md, "Domain rules"), which no longer
+  holds. [003's spec](../../specs/003-start-playback/spec.md) (Assumptions) defers this work here.
+- **Depends on:** `api/openapi.json` at 0.1.21 (refreshed 2026-10-04). Probably a hub API addition
+  (see Open question 1), which belongs in the `multiroom-ai` backlog.
+- **Effort:** Medium. Domain mapping, Rooms and Now Playing UI, the move sheet's notes, a design
+  update first, and tests.
 
 ## Problem
 
