@@ -25,7 +25,12 @@ sealed interface UserAction {
  * The only place error copy is written (contracts/hub-repository.md "User-facing messages"). It
  * never includes anything the hub said, so hub wording cannot reach the screen (Constitution V).
  */
-fun actionErrorMessage(action: UserAction, targetName: String, error: HubError): String {
+fun actionErrorMessage(
+    action: UserAction,
+    targetName: String,
+    error: HubError,
+    roomName: (outputId: String) -> String? = { null },
+): String {
     val unreachable = error is HubError.Unreachable
     val gone = error is HubError.Rejected && error.status == 404
     val reason = " Can't reach the hub."
@@ -55,9 +60,17 @@ fun actionErrorMessage(action: UserAction, targetName: String, error: HubError):
         }
 
         // A 404 cannot tell a vanished playback from a vanished destination: general text.
-        is UserAction.Move ->
-            if (unreachable) "Couldn't move $targetName to ${action.destination}.$reason"
-            else "Couldn't move $targetName to ${action.destination}."
+        is UserAction.Move -> {
+            val off = turnedOff(error, action.destination, targetName, roomName)
+            when {
+                off != null -> turnedOffMessage(off)
+                // Only after the one quiet retry: a room is still rejoining the playback.
+                error is HubError.Rejected && error.reason == RefusalReason.ROUTE_CHANGING_OUTPUTS ->
+                    "Couldn't move $targetName to ${action.destination}. Try again in a moment."
+                unreachable -> "Couldn't move $targetName to ${action.destination}.$reason"
+                else -> "Couldn't move $targetName to ${action.destination}."
+            }
+        }
     }
 }
 
@@ -67,8 +80,46 @@ private fun verbMessage(verb: String, targetName: String, unreachable: Boolean, 
     else -> "Couldn't $verb $targetName."
 }
 
+/** What a refusal said is turned off; the copy is in [turnedOffMessage]. */
+sealed interface TurnedOff {
+    data class Room(val name: String) : TurnedOff
+    data class Group(val name: String) : TurnedOff
+    data class Source(val name: String) : TurnedOff
+
+    /** Every room of the group [group] is turned off. */
+    data class AllRooms(val group: String) : TurnedOff
+}
+
+/**
+ * The thing a start or move refusal says is turned off, or null when the refusal says nothing of
+ * the kind. The reason decides whatever the HTTP status. [target] is the chosen target's name,
+ * used when the hub names no room or one this app does not know; [source] is null for a link,
+ * which then has nothing to name.
+ */
+fun turnedOff(error: HubError, target: String, source: String?, roomName: (outputId: String) -> String?): TurnedOff? {
+    if (error !is HubError.Rejected) return null
+    return when (error.reason) {
+        RefusalReason.OUTPUT_DISABLED -> TurnedOff.Room(error.outputId?.let(roomName) ?: target)
+        RefusalReason.GROUP_DISABLED -> TurnedOff.Group(target)
+        RefusalReason.ALL_MEMBERS_DISABLED -> TurnedOff.AllRooms(target)
+        RefusalReason.INPUT_DISABLED -> source?.let { TurnedOff.Source(it) }
+        else -> null
+    }
+}
+
+fun turnedOffMessage(t: TurnedOff): String = when (t) {
+    is TurnedOff.Room -> "${t.name} is turned off"
+    is TurnedOff.Group -> "${t.name} is turned off"
+    is TurnedOff.Source -> "${t.name} is turned off"
+    is TurnedOff.AllRooms -> "All rooms in ${t.group} are turned off"
+}
+
 /** Why starting playback failed (research R6); the copy is in [startFailureMessage]. */
 sealed interface StartFailure {
+    /** The lists on screen are out of date: the caller asks the hub for a fresh snapshot. */
+    val needsRefresh: Boolean get() = this is TurnedOff
+
+    data class TurnedOff(val what: sonora.multiroom.mobile.ui.TurnedOff) : StartFailure
     data class RoomFull(val room: String) : StartFailure
     data class AlreadyThere(val source: String, val room: String) : StartFailure
     data object LinkUnusable : StartFailure
@@ -99,10 +150,12 @@ fun startFailure(
     is HubError.Rejected -> {
         val room = error.outputId?.let(roomName) ?: names.target
         val source = names.source
+        val off = turnedOff(error, names.target, source, roomName)
         when {
             error.reason == RefusalReason.ROUTE_LIMIT_REACHED -> StartFailure.RoomFull(room)
             error.reason == RefusalReason.INPUT_ALREADY_ON_OUTPUT ->
                 if (kind == StartKind.Source && source != null) StartFailure.AlreadyThere(source, room) else StartFailure.Other
+            off != null -> StartFailure.TurnedOff(off)
             error.status == 404 ->
                 StartFailure.NoLongerOnHub(if (kind == StartKind.Source) source ?: names.target else names.target)
             kind == StartKind.Link -> when (error.status) {
@@ -117,6 +170,7 @@ fun startFailure(
 }
 
 fun startFailureMessage(failure: StartFailure): String = when (failure) {
+    is StartFailure.TurnedOff -> turnedOffMessage(failure.what)
     is StartFailure.RoomFull -> "${failure.room} can't play more at once"
     is StartFailure.AlreadyThere -> "${failure.source} is already playing in ${failure.room}"
     StartFailure.LinkUnusable -> "The hub couldn't play this link"

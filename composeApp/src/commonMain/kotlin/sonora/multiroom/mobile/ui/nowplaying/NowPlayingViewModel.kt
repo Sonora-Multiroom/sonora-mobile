@@ -2,6 +2,7 @@ package sonora.multiroom.mobile.ui.nowplaying
 
 import sonora.multiroom.mobile.data.HubError
 import sonora.multiroom.mobile.data.HubResult
+import sonora.multiroom.mobile.data.RefusalReason
 import sonora.multiroom.mobile.domain.MoveDestinations
 import sonora.multiroom.mobile.domain.NowPlayingBuilder
 import sonora.multiroom.mobile.domain.NowPlayingContent
@@ -17,11 +18,13 @@ import sonora.multiroom.mobile.ui.session.VolumeDragController
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlin.time.Duration.Companion.seconds
 
 /**
  * One playback in detail. It follows [followedRouteId] (which changes when the hub answers a move
@@ -147,8 +150,18 @@ class NowPlayingViewModel(
         return if (s.controlsEnabled) s.content else null
     }
 
-    private fun reportFailure(action: UserAction, targetName: String, error: HubError) =
-        _state.update { it.copy(message = actionErrorMessage(action, targetName, error)) }
+    private fun reportFailure(
+        action: UserAction,
+        targetName: String,
+        error: HubError,
+        roomName: (String) -> String? = { null },
+    ) = _state.update { it.copy(message = actionErrorMessage(action, targetName, error, roomName)) }
+
+    /** Room names from the session's latest snapshot, for the `outputId` of a refusal. */
+    private fun roomNames(): (String) -> String? {
+        val rooms = (session.state.value as? SessionState.Connected)?.snapshot?.rooms.orEmpty()
+        return { id -> rooms.firstOrNull { it.id == id }?.name }
+    }
 
     /** Marks [action] in flight (its control is disabled, FR-013); false if it already was. */
     private fun startAction(action: NowPlayingAction): Boolean {
@@ -269,10 +282,17 @@ class NowPlayingViewModel(
         val id = followedRouteId
         val destination = sheet.content.rooms.plus(sheet.content.groups).first { it.target == selected }
         viewModelScope.launch {
-            when (val result = repo.transferRoute(id, selected)) {
+            var result = repo.transferRoute(id, selected)
+            // A room is rejoining the playback; the hub says this clears within moments. Move
+            // stays busy and the sheet open while it waits, and closing the screen cancels it.
+            if (result is HubResult.Err && result.error.isRouteChanging) {
+                delay(MOVE_RETRY_DELAY)
+                result = repo.transferRoute(id, selected)
+            }
+            when (result) {
                 is HubResult.Ok -> {
-                    // The hub's answer is a NEW route id. Follow it, and ignore refreshes that
-                    // started before this moment: they cannot know the new route yet.
+                    // Follow the id the hub answers (the same one since API 0.1.22, a new one
+                    // before), and ignore refreshes that started before this moment.
                     fenceSeq = session.startedSeq
                     followedRouteId = result.value.id
                     finishAction(NowPlayingAction.Move)
@@ -282,14 +302,18 @@ class NowPlayingViewModel(
                 is HubResult.Err -> {
                     finishAction(NowPlayingAction.Move)
                     _state.update { it.copy(sheet = null) }
-                    reportFailure(UserAction.Move(destination.ctaName), content.sourceName, result.error)
+                    reportFailure(UserAction.Move(destination.ctaName), content.sourceName, result.error, roomNames())
                 }
             }
             session.requestRefresh()
         }
     }
 
+    private val HubError.isRouteChanging: Boolean
+        get() = this is HubError.Rejected && reason == RefusalReason.ROUTE_CHANGING_OUTPUTS
+
     private companion object {
         const val FOLLOWED_KEY = "followedRouteId"
+        val MOVE_RETRY_DELAY = 1.seconds
     }
 }

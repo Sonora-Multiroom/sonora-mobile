@@ -6,6 +6,7 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertIs
+import kotlin.test.assertTrue
 
 class MessagesTest {
     private val unreachable = HubError.Unreachable
@@ -95,7 +96,7 @@ class MessagesTest {
     // ---- Start playback (003, research R6) ---------------------------------------------------
 
     private val names = StartNames("Jazz24", "Bedroom")
-    private val roomName: (String) -> String? = { mapOf("kitchen" to "Kitchen")[it] }
+    private val roomName: (String) -> String? = { mapOf("kitchen" to "Kitchen", "office" to "Office Speaker")[it] }
     private fun source(error: HubError) = startFailure(StartKind.Source, error, names, roomName)
 
     @Test
@@ -162,6 +163,83 @@ class MessagesTest {
         assertEquals(StartFailure.RoomFull("Kitchen"), link(HubError.Rejected(422, null, "ROUTE_LIMIT_REACHED", "kitchen")))
         // A link has no source name yet, so this one is not named.
         assertEquals(StartFailure.Other, link(HubError.Rejected(409, null, "INPUT_ALREADY_ON_OUTPUT", "kitchen")))
+    }
+
+    // ---- Turned off (006) ---------------------------------------------------------------------
+
+    private fun turnedOff(reason: String, outputId: String? = null) = HubError.Rejected(409, null, reason, outputId)
+    private val groupNames = StartNames("Jazz24", "Living Room")
+    private val groupLinkNames = StartNames(null, "Living Room")
+
+    private fun startText(kind: StartKind, error: HubError, n: StartNames) =
+        startFailureMessage(startFailure(kind, error, n, roomName))
+
+    @Test
+    fun aStartRefusedForSomethingTurnedOffNamesIt() {
+        for (kind in StartKind.entries) {
+            val n = if (kind == StartKind.Source) names else linkNames
+            val g = if (kind == StartKind.Source) groupNames else groupLinkNames
+            assertEquals("Office Speaker is turned off", startText(kind, turnedOff("OUTPUT_DISABLED", "office"), n), kind.name)
+            assertEquals("Bedroom is turned off", startText(kind, turnedOff("OUTPUT_DISABLED", "ghost"), n), kind.name)
+            assertEquals("Bedroom is turned off", startText(kind, turnedOff("OUTPUT_DISABLED"), n), kind.name)
+            assertEquals("Living Room is turned off", startText(kind, turnedOff("GROUP_DISABLED"), g), kind.name)
+            assertEquals("All rooms in Living Room are turned off", startText(kind, turnedOff("ALL_MEMBERS_DISABLED"), g), kind.name)
+            assertEquals("Couldn't start playback", startText(kind, turnedOff("SOMETHING_NEW"), n), kind.name)
+        }
+        assertEquals("Jazz24 is turned off", startText(StartKind.Source, turnedOff("INPUT_DISABLED"), names))
+        // A link has no source name to give.
+        assertEquals("Couldn't start playback", startText(StartKind.Link, turnedOff("INPUT_DISABLED"), linkNames))
+    }
+
+    @Test
+    fun theReasonDecidesATurnedOffRefusalWhateverTheStatus() {
+        for (status in listOf(400, 409, 422)) {
+            assertEquals(
+                StartFailure.TurnedOff(TurnedOff.Room("Office Speaker")),
+                source(HubError.Rejected(status, null, "OUTPUT_DISABLED", "office")),
+            )
+        }
+    }
+
+    @Test
+    fun onlyATurnedOffRefusalAsksForARefresh() {
+        val turnedOffFailures = listOf(
+            source(turnedOff("OUTPUT_DISABLED", "office")), source(turnedOff("GROUP_DISABLED")),
+            source(turnedOff("ALL_MEMBERS_DISABLED")), source(turnedOff("INPUT_DISABLED")),
+            link(turnedOff("OUTPUT_DISABLED")),
+        )
+        for (f in turnedOffFailures) {
+            assertIs<StartFailure.TurnedOff>(f)
+            assertTrue(f.needsRefresh, f.toString())
+        }
+        val others = listOf(
+            StartFailure.RoomFull("Kitchen"), StartFailure.AlreadyThere("Jazz24", "Kitchen"), StartFailure.LinkUnusable,
+            StartFailure.LinkUnreachable, StartFailure.ServiceDown, StartFailure.NoLongerOnHub("Bedroom"),
+            StartFailure.HubUnreachable, StartFailure.Other,
+        )
+        for (f in others) assertFalse(f.needsRefresh, f.toString())
+    }
+
+    private fun moveText(error: HubError) = actionErrorMessage(UserAction.Move("Bedroom"), "KissFM", error, roomName)
+
+    @Test
+    fun aMoveRefusedForSomethingTurnedOffNamesIt() {
+        assertEquals("Office Speaker is turned off", moveText(turnedOff("OUTPUT_DISABLED", "office")))
+        assertEquals("Bedroom is turned off", moveText(turnedOff("OUTPUT_DISABLED", "ghost")))
+        assertEquals("Bedroom is turned off", moveText(turnedOff("GROUP_DISABLED")))
+        assertEquals("All rooms in Bedroom are turned off", moveText(turnedOff("ALL_MEMBERS_DISABLED")))
+        assertEquals("KissFM is turned off", moveText(turnedOff("INPUT_DISABLED")))
+        assertEquals("Couldn't move KissFM to Bedroom.", moveText(turnedOff("SOMETHING_NEW")))
+        assertEquals("Couldn't move KissFM to Bedroom. Try again in a moment.", moveText(turnedOff("ROUTE_CHANGING_OUTPUTS")))
+        assertEquals("Couldn't move KissFM to Bedroom. Can't reach the hub.", moveText(unreachable))
+    }
+
+    @Test
+    fun aRefusalsWordingNeverReachesTheMessage() {
+        // The error carries the problem's type only; every message is a fixed string around names.
+        val withType = HubError.Rejected(409, "urn:multiroom:error:conflict", "OUTPUT_DISABLED", "office")
+        assertFalse("urn:" in moveText(withType))
+        assertFalse("urn:" in startText(StartKind.Source, withType, names))
     }
 
     // ---- Settings (004, FR-013) --------------------------------------------------------------
