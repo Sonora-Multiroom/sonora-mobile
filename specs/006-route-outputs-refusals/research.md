@@ -158,7 +158,9 @@ design rests on, read from the code on `006-route-outputs-refusals` (2026-10-18)
 - **Decision**:
   - The design gets one copy addition, the Move sheet's "Leaves <group>" note. It is recorded in
     the spec's 2026-10-18 clarification, as Constitution VI allows, and added to
-    `design/screens/Transfer.dc.html` (sample row) and the canvas before the UI code.
+    `design/screens/Transfer.dc.html` (sample row) and the canvas alongside the UI code. The
+    spec's record is what lets the code go first; the Move sheet is checked against the updated
+    design before the pull request.
   - The first commit sets `sonora.versionName=0.6.0-alpha` and `sonora.versionCode=6`.
   - Once implemented: in AGENTS.md, the "No rooms in a playback's answer" hub gap is noted as used
     by the app, the domain rule "what plays on output X" now reads `outputs`, and the five reasons

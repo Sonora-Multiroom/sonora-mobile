@@ -31,8 +31,9 @@ Technically:
   turned-off refusal.
 - **View model**: `NowPlayingViewModel.onConfirmMove` retries `ROUTE_CHANGING_OUTPUTS` once after
   1 s ([R8](research.md#r8-one-quiet-retry-of-a-move)).
-- **Design**: one copy addition, recorded in the spec's clarifications and added to the canvas
-  first ([R9](research.md#r9-design-documentation-and-version)).
+- **Design**: one copy addition, recorded in the spec's clarifications, which is what Constitution VI
+  asks of a departure. The canvas is updated alongside the code, and the sheet is checked against
+  it before the pull request ([R9](research.md#r9-design-documentation-and-version)).
 
 ## Technical Context
 
@@ -77,7 +78,7 @@ backlog and the full app test.
 | III. Shared-First | ✅ | All changes are in `commonMain` / `commonTest`. No platform source-set changes. `delay` is from kotlinx.coroutines |
 | IV. Test-First | ✅ | The occupancy rule, every builder's 2026-10-17 results, the copy tables and the retry get failing tests first ([quickstart](quickstart.md) §1, FR-011, FR-012). The `outputs` mapping is tested against `MockEngine` |
 | V. Resilient LAN Networking | ✅ | Unknown reasons keep today's messages. A missing or unknown-only list falls back. An unreachable hub during the retry takes the existing path. The retry happens once, with no loop, so it cannot hang |
-| VI. Design Fidelity & Accessibility | ✅ | Cards, lists and pills keep their look (FR-004). The new note "Leaves <group>" is recorded in the spec (2026-10-18) and added to the canvas and `Transfer.dc.html` before the code. It uses the existing note style and colour (textMuted, contrast already checked) |
+| VI. Design Fidelity & Accessibility | ✅ | Cards, lists and pills keep their look (FR-004). The new note "Leaves <group>" is recorded in the spec (2026-10-18), which meets the principle for a departure; the canvas and `Transfer.dc.html` are updated alongside the code, and the sheet is checked against them before the pull request. It uses the existing note style and colour (textMuted, contrast already checked) |
 | VII. Minimal Dependencies | ✅ | None added |
 | Full app test gate | ✅ planned | The final task updates `docs/testing/full-app-test.md`: rows for quickstart §2, N6's notes, and the header bumped to 006 / 0.6.0-alpha |
 

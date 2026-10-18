@@ -53,7 +53,8 @@ Every test task comes before its implementation task and MUST be seen failing fi
 
 ## Phase 1: Setup
 
-**Purpose**: version bump and the design update Constitution VI requires before the UI code.
+**Purpose**: version bump and the design update. The spec's 2026-10-18 clarification already
+records the new note, as Constitution VI requires, so the UI code need not wait for the canvas.
 
 - [ ] T001 Set `sonora.versionName=0.6.0-alpha` and `sonora.versionCode=6` in gradle.properties as
   the first implementation commit (AGENTS.md "Bump the app version first").
@@ -133,7 +134,8 @@ Office Speaker under "Off", nothing names it as playing or stopping. Variant C: 
   `destinationNoteText(LeavesGroup("Living Room")) == "Leaves Living Room"` and
   `LeavesGroup("Living Room").warning == false`. Write these first; they will not compile until
   T019 adds `LeavesGroup`, which is their failing state.
-- [ ] T012 [P] [US1] In test/domain/StartConsequenceTest.kt add the contract's extra case: rooms
+- [ ] T012 [P] [US1] In test/domain/StartConsequenceTest.kt add the contract's extra case (not
+  fixture A: there the room left out is off and cannot be chosen, so the notice cannot differ): rooms
   `bedroom`, `kitchen` on; group [`bedroom`, `kitchen`]; KissFM on that group with
   `outputs = ["kitchen"]`; starting a source on Bedroom gives `line == null`; with
   `outputs = null` it gives `WillStop([AffectedPlayback("KissFM", "<group name>")])` (as in 005).
@@ -147,7 +149,10 @@ Office Speaker under "Off", nothing names it as playing or stopping. Variant C: 
 - [ ] T014 [P] [US1] In test/ui/rooms/RoomsViewModelControlsTest.kt add: with fixture A on the
   `FakeHub`, dragging the Living Room card's pill to 60 and releasing sends
   `setRoomVolume("kitchen", 60)` only, never for `office`; with B it sends `office` 60 and
-  `kitchen` 45, as `GroupVolume.scale` does today.
+  `kitchen` 45, as `GroupVolume.scale` does today. In test/ui/nowplaying/NowPlayingViewModelTest.kt
+  add the same for Now Playing's group pill: in A, a drag to 60 sends `setRoomVolume("kitchen", 60)`
+  only; in B, `office` 60 and `kitchen` 45. Both screens seed the shared `VolumeDragController` from
+  their builder's room volumes, so these pass once T017 and T018 are in.
 
 ### Implementation for User Story 1
 
@@ -165,11 +170,11 @@ Office Speaker under "Off", nothing names it as playing or stopping. Variant C: 
   `occupancy` and `routesByRoom` use `occupiedRooms` and update their KDoc ("a route occupies the
   rooms the hub lists, else …"). Makes T007, T008, T012 and the T013 room cases pass.
 - [ ] T017 [US1] In main/domain/RoomsBuilder.kt use `describeRoute(route, rooms, groups, master)`
-  instead of `describeTarget(route.target, …)`. Makes T009 and T014 pass.
+  instead of `describeTarget(route.target, …)`. Makes T009 and the Rooms cases of T014 pass.
 - [ ] T018 [US1] In main/domain/NowPlayingBuilder.kt build `TargetLine` from
   `describeRoute`. In `volumeSection`, take the group's rooms from `occupiedRooms(route, …)`
   instead of `group.memberIds`; pass the route in, and return null when it is empty, as today.
-  Makes T010 pass.
+  Makes T010 and the Now Playing cases of T014 pass.
 - [ ] T019 [US1] In main/domain/MoveDestinations.kt add
   `data class LeavesGroup(val group: String) : MoveDestinationNote` (not a warning, selectable),
   and use `current = occupiedRooms(route, …)`. Plain room rows skip rooms in `current` and every

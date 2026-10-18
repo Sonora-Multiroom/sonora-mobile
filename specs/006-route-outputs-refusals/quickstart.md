@@ -36,7 +36,7 @@ edits to its existing assertions: those routes carry no `outputs` (SC-005).
 | `MessagesTest`, `DestinationTextTest` | the contract's copy tables (FR-011) |
 | `PlaybackStarterTest` | a `TurnedOff` failure requests a refresh, on the screen and detached; others do not |
 | `NowPlayingViewModelTest` | the contract's retry table on virtual time (1 s), busy state during the wait, no "ended" during it |
-| `RoomsViewModelControlsTest` | group drag in fixture A sets only `kitchen` |
+| `RoomsViewModelControlsTest`, `NowPlayingViewModelTest` | group drag in fixture A sets only `kitchen`, on Rooms and on Now Playing |
 
 ## 2. On-device checks (local session, real hub)
 

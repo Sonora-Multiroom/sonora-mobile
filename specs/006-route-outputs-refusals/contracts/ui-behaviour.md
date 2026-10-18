@@ -78,7 +78,7 @@ Moves (`actionErrorMessage(UserAction.Move("Bedroom"), "KissFM", error, roomName
 | `OUTPUT_DISABLED` | `ghost` | "Bedroom is turned off" |
 | `GROUP_DISABLED` | — | "Bedroom is turned off" (the destination is named whatever it is) |
 | `ALL_MEMBERS_DISABLED` | — | "All rooms in Bedroom are turned off" |
-| `INPUT_DISABLED` | — | "KissFM is turned off" |
+| `INPUT_DISABLED` | — | "KissFM is turned off" (defensive: since API 0.1.25 turning a source off stops its playback, so a move normally gets the existing "no longer on the hub" answer) |
 | `ROUTE_CHANGING_OUTPUTS` | — | "Couldn't move KissFM to Bedroom. Try again in a moment." |
 | `SOMETHING_NEW` | — | "Couldn't move KissFM to Bedroom." |
 | (unreachable) | — | "Couldn't move KissFM to Bedroom. Can't reach the hub." |

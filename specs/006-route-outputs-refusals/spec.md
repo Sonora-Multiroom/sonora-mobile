@@ -4,7 +4,7 @@
 
 **Created**: 2026-10-17
 
-**Status**: Draft
+**Status**: Ready for implementation
 
 **Input**: User description: "@docs/backlog/refusal-reasons-and-route-outputs.md" — use the hub's
 newer route data: the list of rooms a playback really plays on (API 0.1.22), so a room that was
@@ -151,9 +151,8 @@ sees one message, after a single retry.
 2. **Given** a move the hub refuses as "changing rooms" twice, **When** the retry is also refused,
    **Then** the app shows "Couldn't move <source> to <place>. Try again in a moment." and does not
    retry again.
-3. **Given** a retry is pending, **When** the user closes Now Playing, **Then** the retry still
-   runs or is dropped without effect on another screen, and no message about it appears on a screen
-   that did not ask for the move.
+3. **Given** a retry is pending, **When** the user closes Now Playing, **Then** the retry is
+   dropped: no second request is sent, and no message about it appears on any screen.
 
 ---
 
