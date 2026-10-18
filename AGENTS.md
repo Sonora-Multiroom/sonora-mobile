@@ -148,9 +148,10 @@ Record the build (CI build number and commit), the device and each row's evidenc
 - 0.1.22 (deployed 2026-10-06): route IDs are opaque and a transfer keeps the route's id;
   `RouteResponse.outputs` lists the outputs a route plays on right now; starting, playing or moving
   onto a disabled output, group or input answers **409** with a `reason` (`OUTPUT_DISABLED`,
-  `GROUP_DISABLED`, `INPUT_DISABLED`, `ALL_MEMBERS_DISABLED`) instead of 400. The app maps only
-  `ROUTE_LIMIT_REACHED` and `INPUT_ALREADY_ON_OUTPUT` so far, see
-  [docs/backlog/refusal-reasons-and-route-outputs.md](docs/backlog/refusal-reasons-and-route-outputs.md).
+  `GROUP_DISABLED`, `INPUT_DISABLED`, `ALL_MEMBERS_DISABLED`) instead of 400. Since 0.6.0-alpha
+  the app maps these four ("<room> is turned off" and so on, then a refresh) besides
+  `ROUTE_LIMIT_REACHED` and `INPUT_ALREADY_ON_OUTPUT`, and retries a move refused as
+  `ROUTE_CHANGING_OUTPUTS` (0.1.25) once after 1 s.
   The contract's description of `ErrorResponse.reason` still names only the 0.1.21 reasons (hub
   backlog `error-reason-schema-description`).
 - 0.1.23 (hub 025): master mute is a layer above each output's own mute and no longer changes any
@@ -187,9 +188,10 @@ Record the build (CI build number and commit), the device and each row's evidenc
 - Since 0.1.21 an output may carry **several routes** (mixed sources, announcements). Rooms and Now
   Playing still show one per room, see
   [docs/backlog/rooms-with-several-playbacks.md](docs/backlog/rooms-with-several-playbacks.md); only
-  Start Playback reads them all. A group route occupies every member output. A route's
-  `targetId` names only what was addressed, so to find "what plays on output X" check both
-  single-output routes on X and group routes whose group contains X.
+  Start Playback reads them all. A route's `targetId` names only what was addressed, so to find
+  "what plays on output X" read the route's `outputs` first (since API 0.1.22); without it, check
+  both single-output routes on X and group routes whose group contains X. One function decides
+  this for every screen (`occupiedRooms` in `domain/PlaybackRules.kt`).
 - `enabled = false` on an output/group/input means "cannot start new playback"; show it as "Off".
   Turning one off also stops what plays on or from it (see 0.1.25 above): a room leaves group
   playback, which plays on in its other rooms.
@@ -216,8 +218,7 @@ Record the build (CI build number and commit), the device and each row's evidenc
 - No rooms in a playback's answer: `RouteResponse` names only the group it was addressed to, so a
   group route playing on fewer rooms than its group has (a member turned off) is still counted on
   every member (feature 004). **Closed in API 0.1.22** by `RouteResponse.outputs`, which the app
-  does not use yet, see
-  [docs/backlog/refusal-reasons-and-route-outputs.md](docs/backlog/refusal-reasons-and-route-outputs.md).
+  uses since 0.6.0-alpha; a route without it falls back to the group's known members.
 
 ## Design
 

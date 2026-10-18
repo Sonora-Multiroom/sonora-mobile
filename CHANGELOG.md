@@ -6,6 +6,28 @@ User-facing changes to the Sonora Multiroom mobile app, one entry per feature. T
 the feature's spec folder and pull request. Repository-only changes (documentation, CI, tooling)
 are listed under "Development" when they affect contributors.
 
+## [0.6.0-alpha] - Unreleased
+
+Rooms a playback is really on, and plain refusal messages
+([spec](specs/006-route-outputs-refusals/), pull request to follow).
+Since hub API 0.1.22 the hub says which rooms each playback plays on; the app now follows it.
+
+### Fixed
+
+- A room turned off while its group plays is no longer shown as playing: Rooms, Now Playing, the
+  Move sheet, Start Playback and Settings show the playback only in the rooms it is on, with no
+  volume pill and no "stops" note for the room that left it.
+
+### Changed
+
+- When the hub refuses to start or move a playback because a room, group or source is turned off,
+  the message names it ("Kitchen is turned off", "All rooms in Downstairs are turned off") and the
+  lists refresh at once, instead of "Couldn't start playback".
+- A move made while a room is rejoining its group's playback is retried once after a second, so
+  it usually just works; if the room is still rejoining, the message asks you to try again in a
+  moment.
+- In the Move sheet, a "<room> only" row reads "Nothing stops" when no other room would stop.
+
 ## [0.5.0-alpha] - Unreleased
 
 Confirm before turning off a playing source ([spec](specs/005-source-off-confirm/),

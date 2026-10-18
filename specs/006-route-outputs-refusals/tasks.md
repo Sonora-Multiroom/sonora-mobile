@@ -100,11 +100,11 @@ Office Speaker under "Off", nothing names it as playing or stopping. Variant C: 
 
 ### Tests for User Story 1 (write first, see them fail)
 
-- [ ] T006 [P] [US1] In test/data/KtorHubRepositorySnapshotTest.kt add `routeOutputsAreMapped`:
+- [X] T006 [P] [US1] In test/data/KtorHubRepositorySnapshotTest.kt add `routeOutputsAreMapped`:
   a route JSON without `outputs` → `Route.outputs == null`; `"outputs":[]` → `emptyList()`;
   `"outputs":["kitchen","","kitchen","office"]` → `["kitchen", "office"]` ("blanks dropped,
   duplicates dropped, hub order kept", data-model.md).
-- [ ] T007 [P] [US1] Create test/domain/OccupiedRoomsTest.kt for
+- [X] T007 [P] [US1] Create test/domain/OccupiedRoomsTest.kt for
   `occupiedRooms(route, rooms, groups)` with one test per row of the data-model table: group G =
   [`office`, `kitchen`] with `outputs` `["kitchen","office"]` → office, kitchen (group order);
   `["kitchen"]` → kitchen; `null` → office, kitchen; `[]` → office, kitchen; `["ghost","kitchen"]`
@@ -112,19 +112,19 @@ Office Speaker under "Off", nothing names it as playing or stopping. Variant C: 
   room target `bedroom` with `["bedroom"]` and with `null` → bedroom; room target unknown id with
   `null` → empty; unknown target with `["kitchen"]` → kitchen, with `null` → empty. Assert room ids
   in order.
-- [ ] T008 [P] [US1] In test/domain/RoutesByRoomTest.kt add: with fixture A, `occupancy` has
+- [X] T008 [P] [US1] In test/domain/RoutesByRoomTest.kt add: with fixture A, `occupancy` has
   `kitchen` → r1 and no `office` key, and `routesByRoom` lists r1 under `kitchen` only; with B,
   both rooms (as today). Extend the file's `route(...)` helper with `outputs: List<String>? = null`.
-- [ ] T009 [P] [US1] In test/domain/RoomsBuilderTest.kt add the contract's Rooms rows for A/B/C:
+- [X] T009 [P] [US1] In test/domain/RoomsBuilderTest.kt add the contract's Rooms rows for A/B/C:
   card `memberNames` (A `["Kitchen Speakers"]`, B and C `["Office Speaker", "Kitchen Speakers"]`),
   `volume` (A 30, B/C 40), `memberVolumes` (A `{kitchen=30}`), `inUse` (A 1, B 2, C 2) of
   `total` 4, idle rows (A: Bathroom and Bedroom NothingPlaying, Office Speaker TurnedOff; B: no
   Office Speaker row; C: Bathroom, Bedroom). Extend the `route(...)` helper with `outputs`.
-- [ ] T010 [P] [US1] In test/domain/NowPlayingBuilderTest.kt add the A/B/C cases: `target.name`
+- [X] T010 [P] [US1] In test/domain/NowPlayingBuilderTest.kt add the A/B/C cases: `target.name`
   "Living Room" and `target.memberNames` (A `["Kitchen Speakers"]`, B/C both, group order);
   `volume.main.roomVolumes` (A `{kitchen=30}`, B/C both); `volume.members` keys
   (A `["member:kitchen"]`, B/C `["member:office", "member:kitchen"]`). Extend the `route(...)` helper.
-- [ ] T011 [P] [US1] In test/domain/MoveDestinationsTest.kt add the contract's Move rows: A —
+- [X] T011 [P] [US1] In test/domain/MoveDestinationsTest.kt add the contract's Move rows: A —
   "Kitchen Speakers only" note `MoveDestinationNote.NothingStops`, selectable;
   "Office Speaker only" `TurnedOff`, not selectable; no row with label "Office Speaker" or
   "Kitchen Speakers" (no duplicate plain row); B — "Kitchen Speakers only" →
@@ -136,19 +136,19 @@ Office Speaker under "Off", nothing names it as playing or stopping. Variant C: 
   in MoveDestinationsTest: a group with one member, playing, gives its "<member> only" row
   `NothingStops` (today an empty `OthersStop`). Write these first; they will not compile until
   T019 adds `NothingStops`, which is their failing state.
-- [ ] T012 [P] [US1] In test/domain/StartConsequenceTest.kt add the contract's extra case (not
+- [X] T012 [P] [US1] In test/domain/StartConsequenceTest.kt add the contract's extra case (not
   fixture A: there the room left out is off and cannot be chosen, so the notice cannot differ): rooms
   `bedroom`, `kitchen` on; group [`bedroom`, `kitchen`]; KissFM on that group with
   `outputs = ["kitchen"]`; starting a source on Bedroom gives `line == null`; with
   `outputs = null` it gives `WillStop([AffectedPlayback("KissFM", "<group name>")])` (as in 005).
-- [ ] T013 [P] [US1] In test/domain/SettingsBuilderTest.kt and test/domain/SettingsConfirmTest.kt
+- [X] T013 [P] [US1] In test/domain/SettingsBuilderTest.kt and test/domain/SettingsConfirmTest.kt
   (helpers in test/domain/SettingsFixtures.kt gain `outputs`): with fixture C, the Office Speaker
   room row is `RoomStatus.Playing(["KissFM"])`; with a group playback whose `outputs` leave out an
   *enabled* member, that member's row is not `Playing`, and `turnOffConfirmation(Room)` for it is
   null; `turnOffConfirmation(Group "living")` in A gives
   `TurnOffGroup("Living Room", ["KissFM"], ["Kitchen Speakers"])`, in B and C
   `members = ["Office Speaker", "Kitchen Speakers"]`.
-- [ ] T014 [P] [US1] In test/ui/rooms/RoomsViewModelControlsTest.kt add: with fixture A on the
+- [X] T014 [P] [US1] In test/ui/rooms/RoomsViewModelControlsTest.kt add: with fixture A on the
   `FakeHub`, dragging the Living Room card's pill to 60 and releasing sends
   `setRoomVolume("kitchen", 60)` only, never for `office`; with B it sends `office` 60 and
   `kitchen` 45, as `GroupVolume.scale` does today. In test/ui/nowplaying/NowPlayingViewModelTest.kt
@@ -158,9 +158,9 @@ Office Speaker under "Off", nothing names it as playing or stopping. Variant C: 
 
 ### Implementation for User Story 1
 
-- [ ] T015 [US1] In main/data/ApiMapping.kt `RouteResponse.toRoute()` map
+- [X] T015 [US1] In main/data/ApiMapping.kt `RouteResponse.toRoute()` map
   `outputs = outputs?.filter { it.isNotBlank() }?.distinct()`. Makes T006 pass.
-- [ ] T016 [US1] In main/domain/PlaybackRules.kt add
+- [X] T016 [US1] In main/domain/PlaybackRules.kt add
   `internal fun occupiedRooms(route: Route, rooms: Map<String, Room>, groups: Map<String, Group>): List<Room>`
   exactly as the data-model pseudocode: the known rooms in `route.outputs`. A group target orders
   them by the group's `memberIds`, then other listed rooms in hub order; other targets keep hub
@@ -171,20 +171,20 @@ Office Speaker under "Off", nothing names it as playing or stopping. Variant C: 
   `occupiedRooms`, `volume = null` and `adjustable = false` for an unknown target. Make
   `occupancy` and `routesByRoom` use `occupiedRooms` and update their KDoc ("a route occupies the
   rooms the hub lists, else …"). Makes T007, T008, T012 and the T013 room cases pass.
-- [ ] T017 [US1] In main/domain/RoomsBuilder.kt use `describeRoute(route, rooms, groups, master)`
+- [X] T017 [US1] In main/domain/RoomsBuilder.kt use `describeRoute(route, rooms, groups, master)`
   instead of `describeTarget(route.target, …)`. Makes T009 and the Rooms cases of T014 pass.
-- [ ] T018 [US1] In main/domain/NowPlayingBuilder.kt build `TargetLine` from
+- [X] T018 [US1] In main/domain/NowPlayingBuilder.kt build `TargetLine` from
   `describeRoute`. In `volumeSection`, take the group's rooms from `occupiedRooms(route, …)`
   instead of `group.memberIds`; pass the route in, and return null when it is empty, as today.
   Makes T010 and the Now Playing cases of T014 pass.
-- [ ] T019 [US1] In main/domain/MoveDestinations.kt add
+- [X] T019 [US1] In main/domain/MoveDestinations.kt add
   `data object NothingStops : MoveDestinationNote` (not a warning, selectable),
   and use `current = occupiedRooms(route, …)`. Plain room rows skip rooms in `current` and every
   member of the current group. A "<member> only" row that is on and connected reads
   `OthersStop(names of current minus the member)`, or `NothingStops` when that is
   empty. In main/ui/nowplaying/DestinationText.kt add
   `MoveDestinationNote.NothingStops -> "Nothing stops"`. Makes T011 pass.
-- [ ] T020 [US1] In main/domain/SettingsConfirm.kt make `TurnOffGroup.members` the occupied rooms
+- [X] T020 [US1] In main/domain/SettingsConfirm.kt make `TurnOffGroup.members` the occupied rooms
   of the group's own live routes. Take the union of `occupiedRooms` over them, keep the group's
   member order, put listed rooms outside the group after them, and fall back to the known members
   when the union is empty. Update the KDoc. Makes the T013 group cases pass. Confirm that
@@ -204,7 +204,7 @@ Office Speaker under "Off", nothing names it as playing or stopping. Variant C: 
 
 ### Tests for User Story 2 (write first, see them fail)
 
-- [ ] T021 [P] [US2] In test/ui/MessagesTest.kt add the contract's start table, using the file's
+- [X] T021 [P] [US2] In test/ui/MessagesTest.kt add the contract's start table, using the file's
   `names`, `linkNames` and `roomName` (extend the map with `"office" to "Office Speaker"`). Build
   the errors as `HubError.Rejected(409, null, reason, outputId)`. Cover: `OUTPUT_DISABLED` with a
   known `outputId` for source and link; with an unknown and with no `outputId` (names the chosen
@@ -215,12 +215,12 @@ Office Speaker under "Off", nothing names it as playing or stopping. Variant C: 
   `StartFailure`. Add the contract's move table for `actionErrorMessage(UserAction.Move("Bedroom"),
   "KissFM", error, roomName)`, except the `ROUTE_CHANGING_OUTPUTS` row (T026). Assert that a
   problem's title/detail never appears (the error carries none; the messages are fixed strings).
-- [ ] T022 [P] [US2] In test/ui/session/PlaybackStarterTest.kt add: a start answered
+- [X] T022 [P] [US2] In test/ui/session/PlaybackStarterTest.kt add: a start answered
   `Rejected(409, null, "OUTPUT_DISABLED", "bedroom")` ends `Failed(TurnedOff(Room("Bedroom")))` and
   triggers one refresh (the session's snapshot calls rise by one), on the screen and after
   `detach()` (then `AppMessages` gets "Bedroom is turned off"). A `ROUTE_LIMIT_REACHED` refusal
   triggers no extra refresh.
-- [ ] T023 [P] [US2] In test/ui/nowplaying/NowPlayingViewModelTest.kt add
+- [X] T023 [P] [US2] In test/ui/nowplaying/NowPlayingViewModelTest.kt add
   `aMoveRefusedBecauseTheRoomIsOffNamesIt`: `transferResult` answers
   `Rejected(409, null, "OUTPUT_DISABLED", "office")` with "office" → "Office Speaker" in the
   session's snapshot; the message is "Office Speaker is turned off"; the sheet closes; exactly one
@@ -228,7 +228,7 @@ Office Speaker under "Off", nothing names it as playing or stopping. Variant C: 
 
 ### Implementation for User Story 2
 
-- [ ] T024 [US2] In main/ui/Messages.kt add
+- [X] T024 [US2] In main/ui/Messages.kt add
   `sealed interface TurnedOff { data class Room(val name: String); data class Group(val name: String); data class Source(val name: String); data class AllRooms(val group: String) }`,
   `fun turnedOff(error: HubError, target: String, source: String?, roomName: (String) -> String?): TurnedOff?`
   per the data-model table ("The reason decides whatever the HTTP status"; `INPUT_DISABLED` with
@@ -240,7 +240,7 @@ Office Speaker under "Off", nothing names it as playing or stopping. Variant C: 
   `roomName: (String) -> String? = { null }`; in its `Move` branch return
   `turnedOffMessage(it)` when `turnedOff(error, action.destination, targetName, roomName)` is not
   null, else the current text. Makes T021 pass (except the T026 row).
-- [ ] T025 [US2] In main/ui/session/PlaybackStarter.kt make `fail(failure)` call
+- [X] T025 [US2] In main/ui/session/PlaybackStarter.kt make `fail(failure)` call
   `session.requestRefresh()` when `failure.needsRefresh`, before posting or publishing it. In
   main/ui/nowplaying/NowPlayingViewModel.kt pass a room-name lookup from the session's latest
   snapshot to `actionErrorMessage` for `UserAction.Move` (only `reportFailure` changes; the other
@@ -260,9 +260,9 @@ On the device: turn a group member back on, then move straight away (quickstart 
 
 ### Tests for User Story 3 (write first, see them fail)
 
-- [ ] T026 [P] [US3] In test/ui/MessagesTest.kt add the move row
+- [X] T026 [P] [US3] In test/ui/MessagesTest.kt add the move row
   `ROUTE_CHANGING_OUTPUTS` → "Couldn't move KissFM to Bedroom. Try again in a moment."
-- [ ] T027 [P] [US3] In test/ui/nowplaying/NowPlayingViewModelTest.kt add one test per row of the
+- [X] T027 [P] [US3] In test/ui/nowplaying/NowPlayingViewModelTest.kt add one test per row of the
   contract's retry table. Script `FakeHub.transferResult` with an `ArrayDeque` of answers or a call
   counter. Use `advanceTimeBy` / `runCurrent` as the file does today.
   (1) changing → Ok: no message, the sheet closes, the returned id is followed, and two
@@ -280,10 +280,10 @@ On the device: turn a group member back on, then move straight away (quickstart 
 
 ### Implementation for User Story 3
 
-- [ ] T028 [US3] In main/ui/Messages.kt, in the `Move` branch of `actionErrorMessage`, after the
+- [X] T028 [US3] In main/ui/Messages.kt, in the `Move` branch of `actionErrorMessage`, after the
   turned-off check: `RefusalReason.ROUTE_CHANGING_OUTPUTS` → "Couldn't move $targetName to
   ${action.destination}. Try again in a moment." Makes T026 pass.
-- [ ] T029 [US3] In main/ui/nowplaying/NowPlayingViewModel.kt `onConfirmMove`: when the first
+- [X] T029 [US3] In main/ui/nowplaying/NowPlayingViewModel.kt `onConfirmMove`: when the first
   `transferRoute` answer is `Rejected` with reason `RefusalReason.ROUTE_CHANGING_OUTPUTS`,
   `delay(MOVE_RETRY_DELAY)` (`1.seconds` in the companion) and send the same transfer once more,
   with Move still in flight and the sheet left open. Then handle that second answer with the
@@ -296,33 +296,33 @@ On the device: turn a group member back on, then move straight away (quickstart 
 
 ## Phase 6: Polish & Cross-Cutting Concerns
 
-- [ ] T030 Check the Move sheet against design/screens/TransferMemberOff.dc.html (depends on T003, T019):
+- [X] T030 Check the Move sheet against design/screens/TransferMemberOff.dc.html (depends on T003, T019):
   the "Nothing stops" note uses the same text style and colour as the other non-warning notes. If
   the design differs, adjust main/ui/nowplaying/MoveSheet.kt.
-- [ ] T031 Run the local checks and read each exit code (`cmd > log; echo $?`):
+- [X] T031 Run the local checks and read each exit code (`cmd > log; echo $?`):
   `./gradlew :androidApp:assembleDebug`, `:composeApp:testAndroidHostTest`, `:composeApp:allTests`,
   `:composeApp:check`. Record the commands, date and test counts in
   specs/006-route-outputs-refusals/verification.md. Create it in 005's format: build under test,
   device, status legend, one row per quickstart §2 check, "Issues found".
-- [ ] T032 [P] Add a `## [0.6.0-alpha]` entry to CHANGELOG.md (spec folder and PR link). Under
+- [X] T032 [P] Add a `## [0.6.0-alpha]` entry to CHANGELOG.md (spec folder and PR link). Under
   Fixed: a room turned off while its group plays is no longer shown as playing, with no volume pill
   and no "stops" note for it. Under Changed: refusals for a room, group or source that is off name
   it; a move made while a room rejoins is retried once; the Move sheet's "<room> only" row reads
   "Nothing stops" when no other room would stop.
-- [ ] T033 [P] Update AGENTS.md (FR-013). In "Hub gaps", the "No rooms in a playback's answer" item
+- [X] T033 [P] Update AGENTS.md (FR-013). In "Hub gaps", the "No rooms in a playback's answer" item
   says the app uses `RouteResponse.outputs` since 0.6.0-alpha, falling back to the group's members
   without it. The domain rule "what plays on output X" reads the route's `outputs` first. The API
   0.1.22 paragraph lists the reasons the app now maps (`OUTPUT_DISABLED`, `GROUP_DISABLED`,
   `INPUT_DISABLED`, `ALL_MEMBERS_DISABLED`, `ROUTE_CHANGING_OUTPUTS` with one retry) and drops the
   link to the backlog item.
-- [ ] T034 [P] Delete docs/backlog/refusal-reasons-and-route-outputs.md and its row in
+- [X] T034 [P] Delete docs/backlog/refusal-reasons-and-route-outputs.md and its row in
   docs/backlog/INDEX.md. Remove or update links to it from docs/backlog/rooms-with-several-playbacks.md
   and anywhere else (`grep -rn refusal-reasons-and-route-outputs`).
 - [ ] T035 **Local**: run quickstart §2 rows 1–12 on the POCO against the real hub, following
   AGENTS.md "On-device verification". Note the volumes and set them to 1 first, stop test routes
   before restoring the volumes, and turn every output, group and source back on at the end. Record
   the evidence in specs/006-route-outputs-refusals/verification.md.
-- [ ] T036 Update docs/testing/full-app-test.md for this feature. Add rows for every quickstart §2
+- [X] T036 Update docs/testing/full-app-test.md for this feature. Add rows for every quickstart §2
   check, in their sections (R, N, S, ST). Update N6's "<G1> only" note expectation for a group
   with a member off ("Nothing stops"). Extend the fixture if a row needs a two-room group with a
   member turned off. Bump the header (features covered through 006, app 0.6.0-alpha, hub API
