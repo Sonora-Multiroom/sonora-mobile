@@ -47,4 +47,10 @@ class DestinationTextTest {
             assertFalse(n.warning, n.toString())
         }
     }
+
+    @Test
+    fun nothingStopsIsAPlainNote() {
+        assertEquals("Nothing stops", destinationNoteText(NothingStops))
+        assertFalse(NothingStops.warning)
+    }
 }

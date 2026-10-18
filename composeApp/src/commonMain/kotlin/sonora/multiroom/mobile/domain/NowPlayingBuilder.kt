@@ -30,7 +30,7 @@ data class TargetLine(
     val target: Target,
     /** The room or group name, else the id. */
     val name: String,
-    /** Group only: the known members in the group's order. */
+    /** Group only: the rooms it plays on, members in the group's order (`occupiedRooms`). */
     val memberNames: List<String>,
     /** The room, or any listed member, has `available = false`. */
     val notConnected: Boolean,
@@ -39,7 +39,7 @@ data class TargetLine(
 data class VolumeSection(
     /** The room pill, or the group pill (the loudest member is what it shows). */
     val main: PillModel,
-    /** Group only: one pill per known member. */
+    /** Group only: one pill per room it plays on. */
     val members: List<PillModel>,
     val mute: MuteModel,
     /** Master mute is on: "All rooms are muted". */
@@ -71,7 +71,7 @@ object NowPlayingBuilder {
         val live = cardStatus == CardStatus.LiveStream
         // A live stream is shown as Playing plus the badge and the line, not as chip text (FR-006).
         val status = if (live) CardStatus.Playing else cardStatus
-        val described = describeTarget(route.target, rooms, groups, master)
+        val described = describeRoute(route, rooms, groups, master)
         val kind = source?.kind ?: inferSourceKind(SourceOrigin.Configured, null)
 
         return NowPlayingContent.Playback(
@@ -87,16 +87,16 @@ object NowPlayingBuilder {
             pauseEnabled = status == CardStatus.Playing || status == CardStatus.Paused,
             paused = status == CardStatus.Paused,
             moveVisible = route.transferable && status == CardStatus.Playing && route.target !is Target.Unknown,
-            volume = volumeSection(route.target, rooms, groups, master),
+            volume = volumeSection(route, rooms, groups, master),
         )
     }
 
     private fun volumeSection(
-        target: Target,
+        route: Route,
         rooms: Map<String, Room>,
         groups: Map<String, Group>,
         master: Boolean,
-    ): VolumeSection? = when (target) {
+    ): VolumeSection? = when (val target = route.target) {
         is Target.Room -> rooms[target.id]?.let { room ->
             val muted = master || room.muted
             VolumeSection(
@@ -108,7 +108,8 @@ object NowPlayingBuilder {
         }
 
         is Target.Group -> groups[target.id]?.let { group ->
-            val members = group.memberIds.mapNotNull { rooms[it] }
+            // Only the rooms the playback is on get a pill (a member turned off has left it).
+            val members = occupiedRooms(route, rooms, groups)
             if (members.isEmpty()) return@let null
             val muted = master || group.muted
             VolumeSection(

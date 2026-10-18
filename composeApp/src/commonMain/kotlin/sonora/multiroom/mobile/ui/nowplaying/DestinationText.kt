@@ -13,6 +13,7 @@ fun destinationNoteText(note: MoveDestinationNote): String = when (note) {
         joinNames(note.rooms) + if (note.rooms.size == 1) " stops" else " stop"
     is MoveDestinationNote.Members ->
         note.rooms.joinToString(" + ") + suffix(note.turnedOff, note.notConnected)
+    MoveDestinationNote.NothingStops -> "Nothing stops"
     MoveDestinationNote.TurnedOff -> "Turned off"
     MoveDestinationNote.NotConnected -> "Not connected"
     MoveDestinationNote.NoRooms -> "No rooms"

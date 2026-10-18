@@ -285,4 +285,22 @@ class SettingsBuilderTest {
         )
         assertEquals(listOf("new", "old", "u1", "u2"), build(s).runtimeSources.map { it.id })
     }
+
+    // ---- 006: the rooms the hub lists ------------------------------------------------------------
+
+    @Test
+    fun aRoomRejoiningItsGroupsPlaybackIsPlaying() =
+        assertEquals(RoomStatus.Playing(listOf("KissFM")), statusOf(MemberOff.snapshot(MemberOff.Variant.C), "office"))
+
+    @Test
+    fun aMemberTheHubLeftOutOfTheGroupsPlaybackIsNotPlaying() {
+        val s = snapshot(
+            rooms = listOf(room("a"), room("b")),
+            groups = listOf(group("g", "G", listOf("a", "b"))),
+            routes = listOf(route("r", "radio", Target.Group("g"), outputs = listOf("b"))),
+            sources = listOf(radio),
+        )
+        assertEquals(RoomStatus.InGroups(listOf("G")), statusOf(s, "a"))
+        assertEquals(RoomStatus.Playing(listOf("Radio Paradise")), statusOf(s, "b"))
+    }
 }

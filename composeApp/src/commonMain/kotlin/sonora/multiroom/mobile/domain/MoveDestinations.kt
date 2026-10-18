@@ -35,8 +35,11 @@ sealed interface MoveDestinationNote {
 
     data class WillStopOnGroup(val source: String, val group: String) : MoveDestinationNote
 
-    /** "<Room> only": the other members of the current group stop. */
+    /** "<Room> only": the other rooms the playback is on stop. */
     data class OthersStop(val rooms: List<String>) : MoveDestinationNote
+
+    /** "<Room> only" when the playback is on that room alone: moving stops nothing. */
+    data object NothingStops : MoveDestinationNote
 
     /** A free group: the rooms it would play on, plus the members that cannot play. */
     data class Members(
@@ -67,8 +70,8 @@ object MoveDestinations {
         val sourceNames = snapshot.sources.associate { it.id to it.name }
         fun sourceName(r: Route) = sourceNames[r.inputId] ?: r.inputId
 
-        val current = describeTarget(route.target, rooms, groups, masterMuted = false)
-        val header = MoveSheetContent(sourceName(route), current.title, emptyList(), emptyList())
+        val title = describeTarget(route.target, rooms, groups, masterMuted = false).title
+        val header = MoveSheetContent(sourceName(route), title, emptyList(), emptyList())
         if (route.target is Target.Unknown) return header
 
         // Who else occupies which room: the current route is excluded, so the rooms it plays on
@@ -76,7 +79,10 @@ object MoveDestinations {
         val others = occupancy(snapshot.copy(routes = snapshot.routes.filter { it.id != route.id }))
 
         val currentGroup = (route.target as? Target.Group)?.let { groups[it.id] }
-        val currentMembers = current.occupies
+        // The rooms the playback is on now; a member turned off has left it and stops nothing.
+        val current = occupiedRooms(route, rooms, groups)
+        // Members get a "<room> only" row instead, so they never also appear as a plain row.
+        val skipped = current.map { it.id }.toSet() + currentGroup?.memberIds.orEmpty()
 
         fun occupiedNote(room: Room): MoveDestinationNote {
             val other = others[room.id] ?: return MoveDestinationNote.Idle
@@ -96,7 +102,7 @@ object MoveDestinations {
 
         val roomRows = mutableListOf<MoveDestination>()
         for (room in snapshot.rooms) {
-            if (room.id in currentMembers) continue
+            if (room.id in skipped) continue
             val note = roomNote(room)
             roomRows += MoveDestination(
                 target = Target.Room(room.id),
@@ -113,7 +119,10 @@ object MoveDestinations {
                 val note = when {
                     !member.enabled -> MoveDestinationNote.TurnedOff
                     !member.available -> MoveDestinationNote.NotConnected
-                    else -> MoveDestinationNote.OthersStop(members.filter { it.id != member.id }.map { it.name })
+                    else -> {
+                        val others = current.filter { it.id != member.id }.map { it.name }
+                        if (others.isEmpty()) MoveDestinationNote.NothingStops else MoveDestinationNote.OthersStop(others)
+                    }
                 }
                 roomRows += MoveDestination(
                     target = Target.Room(member.id),

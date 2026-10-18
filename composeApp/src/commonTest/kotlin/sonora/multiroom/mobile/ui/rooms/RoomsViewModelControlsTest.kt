@@ -10,6 +10,7 @@ import sonora.multiroom.mobile.domain.CardAction
 import sonora.multiroom.mobile.domain.Group
 import sonora.multiroom.mobile.domain.HubAddress
 import sonora.multiroom.mobile.domain.HubSnapshot
+import sonora.multiroom.mobile.domain.MemberOff
 import sonora.multiroom.mobile.domain.Room
 import sonora.multiroom.mobile.domain.RoomsContent
 import sonora.multiroom.mobile.domain.Route
@@ -139,6 +140,21 @@ class RoomsViewModelControlsTest {
         val sent = s.repo.calls.filter { it.name == "setRoomVolume" }.map { it.args.toList() }.toSet()
         assertEquals(setOf<List<Any>>(listOf("living", 35), listOf("kitchen", 18)), sent)
         s.vm.onHidden()
+    }
+
+    @Test
+    fun aGroupDragSetsOnlyTheRoomsTheHubListsTheGroupPlayingOn() = runViewModelTest {
+        fun drag(variant: MemberOff.Variant): Set<List<Any>> {
+            val s = live(MemberOff.snapshot(variant))
+            s.vm.onVolumeDragStart("r1")
+            s.vm.onVolumeDrag("r1", 60)
+            s.vm.onVolumeDragEnd("r1", 60)
+            runCurrent()
+            s.vm.onHidden()
+            return s.repo.calls.filter { it.name == "setRoomVolume" }.map { it.args.toList() }.toSet()
+        }
+        assertEquals(setOf<List<Any>>(listOf("kitchen", 60)), drag(MemberOff.Variant.A))
+        assertEquals(setOf<List<Any>>(listOf("office", 60), listOf("kitchen", 45)), drag(MemberOff.Variant.B))
     }
 
     // ---- Releasing a drag before the hub confirms (review findings) ------------------------

@@ -32,7 +32,7 @@ data class NowPlayingCard(
     val volume: Int?,
     /** Whether the pill has something it can set; false shows the value but ignores drags. */
     val volumeAdjustable: Boolean,
-    /** Group only: the known members' volumes, the base for scaling a drag. */
+    /** Group only: the volumes of the rooms it plays on, the base for scaling a drag. */
     val memberVolumes: Map<String, Int>,
     val muted: Boolean,
     val notConnected: Boolean,
@@ -60,7 +60,7 @@ object RoomsBuilder {
         val cards = live.map { route ->
             val source = sources[route.inputId]
             val (status, action, actionEnabled) = statusAndAction(route, source?.uri)
-            val target = describeTarget(route.target, rooms, groups, master)
+            val target = describeRoute(route, rooms, groups, master)
             occupied += target.occupies
             NowPlayingCard(
                 key = route.id,

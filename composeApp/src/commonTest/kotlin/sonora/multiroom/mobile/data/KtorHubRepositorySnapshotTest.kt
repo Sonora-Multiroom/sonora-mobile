@@ -219,6 +219,21 @@ class KtorHubRepositorySnapshotTest {
         )
     }
 
+    @Test
+    fun routeOutputsAreMapped() = runTest {
+        fun route(id: String, outputs: String?) =
+            """{"routeId":"$id","inputId":"i","targetId":"g","targetType":"OUTPUT_GROUP","status":"ACTIVE"${outputs?.let { ""","outputs":$it""" } ?: ""}}"""
+        val s = snapshotOf(
+            Hub(
+                routes = "[" + listOf(
+                    route("1", null), route("2", "[]"), route("3", """["kitchen","","kitchen","office"]"""),
+                ).joinToString(",") + "]",
+            ),
+        )
+        // Blanks dropped, duplicates dropped, hub order kept.
+        assertEquals(listOf(null, emptyList(), listOf("kitchen", "office")), s.routes.map { it.outputs })
+    }
+
     // ---- 004: autoRemove and createdAt (contract test 8) -------------------------------------
 
     private suspend fun sourceFrom(extra: String): Source {

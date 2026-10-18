@@ -11,8 +11,14 @@ class StartConsequenceTest {
     private fun source(id: String, name: String, default: JoinMode? = null, origin: SourceOrigin = SourceOrigin.Configured) =
         Source(id, name, "http://x/$id", origin, false, true, inferSourceKind(origin, "http://x/$id"), default)
 
-    private fun route(id: String, input: String, target: Target, mode: JoinMode = JoinMode.Replace, status: RouteStatus = RouteStatus.Active) =
-        Route(id, input, target, status, false, false, true, mode)
+    private fun route(
+        id: String,
+        input: String,
+        target: Target,
+        mode: JoinMode = JoinMode.Replace,
+        status: RouteStatus = RouteStatus.Active,
+        outputs: List<String>? = null,
+    ) = Route(id, input, target, status, false, false, true, mode, outputs)
 
     private val bedroom = Target.Room("bedroom")
     private val downstairs = Target.Group("down")
@@ -198,5 +204,22 @@ class StartConsequenceTest {
         val s = snapshot(rooms = listOf(room("bedroom", "Bedroom", muted = true)), masterMuted = true)
         assertEquals(MuteNote.AllRoomsMuted, of(s, StartWhat.Source("jazz"), bedroom).mute)
         assertEquals(MuteNote.AllRoomsMuted, of(snapshot(masterMuted = true), StartWhat.Source("jazz"), bedroom).mute)
+    }
+
+    // ---- 006: the rooms the hub lists ------------------------------------------------------------
+
+    @Test
+    fun aRoomTheHubLeftOutOfAGroupPlaybackHasNothingToStop() {
+        fun withOutputs(outputs: List<String>?) = snapshot(
+            routes = listOf(route("r1", "kiss", Target.Group("living"), outputs = outputs)),
+            sources = listOf(source("kiss", "KissFM"), source("jazz", "Jazz24")),
+            rooms = listOf(room("bedroom", "Bedroom"), room("kitchen", "Kitchen Speakers")),
+            groups = listOf(Group("living", "Living Room", listOf("bedroom", "kitchen"), muted = false, enabled = true)),
+        )
+        assertEquals(null, line(withOutputs(listOf("kitchen")), "jazz", bedroom))
+        assertEquals(
+            ConsequenceLine.WillStop(listOf(AffectedPlayback("KissFM", "Living Room"))),
+            line(withOutputs(null), "jazz", bedroom),
+        )
     }
 }

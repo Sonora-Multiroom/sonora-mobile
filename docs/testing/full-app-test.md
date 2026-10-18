@@ -4,7 +4,7 @@ A regression run of the whole app on a real phone against the real hub. Every fe
 `quickstart.md` checks only what that feature added, at the time it shipped. This script checks
 what the app does **today**, across every shipped feature, in one pass.
 
-**Covers features**: 001–005 (`0.5.0-alpha`) · **Hub API**: 0.1.25 · **Last updated**: 2026-10-16
+**Covers features**: 001–006 (`0.6.0-alpha`) · **Hub API**: 0.1.25 · **Last updated**: 2026-10-18
 
 Run it when the user asks for a "full app test", before a release, after a hub upgrade, and after
 a dependency update that touches Compose, Ktor or the generated client.
@@ -56,7 +56,7 @@ into the report. Where the hub lacks a role, mark the rows that need it `n/a`.
 
 | Role | Needs | Used by |
 |---|---|---|
-| `GROUP` | a group of two rooms, `G1` and `G2` | R4, N5–N7, S5, ST6–ST7 |
+| `GROUP` | a group of two rooms, `G1` and `G2` | R4, R10–R12, N5–N7, N12–N14, S5, S14, ST6–ST7, ST18 |
 | `SOLO` | a room in no group, or in a group other than `GROUP` | R1, N7, ST5 |
 | `STREAM` | a known-good `http(s)` stream (KissFM) | most rows |
 | `STREAM2` | a second known-good stream (KissFM 2.0 Deep) | S4, N7 |
@@ -91,7 +91,7 @@ into the report. Where the hub lacks a role, mark the rows that need it `n/a`.
 | F9 | Kill the app (`am force-stop`) and reopen | Rooms loads without asking |
 | F10 | Settings footer | `Sonora <version> - Alpha - Build <n> (<sha>)` matching P6 |
 
-## R. Rooms (001)
+## R. Rooms (001, 006)
 
 | # | Setup (`curl`) | Do | Expect |
 |---|---|---|---|
@@ -104,8 +104,11 @@ into the report. Where the hub lacks a role, mark the rows that need it `n/a`.
 | R7 | One output muted by `curl` | Master mute on, then off | On: every pill frozen, "Unmute all rooms". Off: the muted output is still muted, others not (hub 0.1.23) |
 | R8 | Every room busy | Scroll Rooms | "Play something" is still there (003 issue 1) |
 | R9 | — | Tap each tab, a card, an idle room's play button, "Play something"; Back from each | Settings, Now Playing, Start Playback with that room selected, Start Playback empty; Back returns to Rooms |
+| R10 | `STREAM` on `GROUP`; then `PUT /outputs/G1/enabled {false}`; `GET /routes` shows `outputs: [G2]` | Rooms | The card lists `G2` only, its pill shows `G2`'s volume; "N of M rooms in use" leaves `G1` out; `G1` under "Off" |
+| R11 | as R10, `G1` and `G2` at volume 1 | Drag the group pill to ~5 % | Only `G2` changes (`GET /outputs`); `G1` keeps 1 |
+| R12 | as R10, then `PUT /outputs/G1/enabled {true}` | Wait one refresh on Rooms, then on Now Playing | Both rooms shown again, in the group's order (not the order they joined), with `G1`'s pill |
 
-## N. Now Playing and Move to room (002)
+## N. Now Playing and Move to room (002, 006)
 
 | # | Setup (`curl`) | Do | Expect |
 |---|---|---|---|
@@ -114,14 +117,18 @@ into the report. Where the hub lacks a role, mark the rows that need it `n/a`.
 | N3 | `PAUSEABLE` on a room | Pause, Resume, Stop | Stop returns to Rooms; the room is idle |
 | N4 | Now Playing open | Stop the route by `curl` | Back on Rooms within ~3 s with "Playback on <target> ended" |
 | N5 | `STREAM` on `GROUP` | Drag the group pill; drag `G1` only; mute and unmute the group | Ratio kept; only `G1` changes and the group pill shows the new loudest; mute follows on the hub. Then master mute on in Rooms → back here: pills frozen, mute disabled, "All rooms are muted"; master mute off |
-| N6 | `STREAM` on `GROUP`, `STREAM2` on `SOLO`, a room off (with four rooms that leaves none idle; the "Idle" note is then seen in N7) | "Move to room…" | Nothing preselected, Move disabled. Notes: idle "Idle", busy "<STREAM2> will stop", "<G1> only" → "<G2> stops", the off room dimmed, group notes |
+| N6 | `STREAM` on `GROUP`, `STREAM2` on `SOLO`, a room off (with four rooms that leaves none idle; the "Idle" note is then seen in N7) | "Move to room…" | Nothing preselected, Move disabled. Notes: idle "Idle", busy "<STREAM2> will stop", "<G1> only" → "<G2> stops", the off room dimmed, group notes. If the room off is a member of `GROUP`, the other member's "only" row reads "Nothing stops" instead (see N13) |
 | N7 | as N6 | Move to an idle room, to the busy room, to a group, then "<room> only" | After each: Now Playing shows the new target within ~3 s without going back to Rooms; the busy room's playback stopped as announced; `routeId` unchanged in `GET /routes` (0.1.22) |
 | N8 | `PAUSEABLE` playing, transferable | Pause | "Move to room…" disappears |
 | N9 | Sheet open | Cancel; swipe down; Back | Each closes it with no change on the hub |
 | N10 | — | On Rooms drag a pill, release, within 1 s tap Settings then Rooms | The pill does not jump back before the hub confirms |
 | N11 | After a move | Home, `am kill`, check `pidof` (kill -9 via `run-as` if needed), reopen from recents | Now Playing for the moved playback on its new target, no "ended" message |
+| N12 | as R10 (`G1` off while `STREAM` plays on `GROUP`) | Open the card | "on <group> · <G2>"; pills `GROUP` and `G2` only |
+| N13 | as N12 | "Move to room…"; then pick "<G2> only" → Move | "<G2> only" reads "Nothing stops" in the plain grey note (not amber); "<G1> only" reads "Turned off"; `G1` is listed once. The move is accepted, the sheet closes, music keeps playing on `G2`, Now Playing reads "on <G2>". Turn `G1` back on |
+| N14 | `STREAM` on `GROUP`, both members on | Settings → Rooms: turn `G1` off ("Turn off"), then on; go straight to Now Playing → "Move to room…" → an idle room → Move. Repeat 3 times | Each move succeeds with no message (a refusal while `G1` rejoins is retried once after ~1 s). If the rejoin is always too fast to hit, record "not reached": the view-model tests cover the retry |
+| N15 | `STREAM` on a room, Move sheet open with an idle room `B` selected; then `PUT /outputs/B/enabled {false}` | Move | "<B> is turned off"; the sheet closes; the next sheet shows `B` "Turned off". Turn `B` back on |
 
-## S. Start Playback (003)
+## S. Start Playback (003, 006)
 
 | # | Setup (`curl`) | Do | Expect |
 |---|---|---|---|
@@ -137,14 +144,17 @@ into the report. Where the hub lacks a role, mark the rows that need it `n/a`.
 | S10 | `G1` off | Select `GROUP` | "Won't play in <G1> (turned off)"; turn `G1` back on |
 | S11 | — | Play on `LINK`, Close at once | Rooms; the playback appears, or a failure message shows there |
 | S12 | — | Play on `SLOWLINK`, Close at once | Rooms; ~10 s later the failure message shows on Rooms |
+| S13 | Start Playback open with an idle room `R` selected; then `PUT /outputs/R/enabled {false}` | Play `STREAM` | "<R> is turned off"; `R` shows as off right after. Turn `R` back on |
+| S14 | Start Playback open on `GROUP`; then `PUT /groups/GROUP/enabled {false}`. Then the same with the group on and both members off | Play | "<GROUP> is turned off"; afterwards `GROUP` is off in the list. With both members off: "All rooms in <GROUP> are turned off". Turn everything back on |
+| S15 | Start Playback open with `STREAM` selected; then `PUT /inputs/STREAM/enabled {false}` | Play | "<STREAM> is turned off"; `STREAM` leaves the source list. Turn it back on |
 
-## ST. Settings (004, 005)
+## ST. Settings (004, 005, 006)
 
 **Automated**: ST01–ST16 run as Maestro flows, one per row, in
 [scripts/full-test/flows/settings/](../../scripts/full-test/flows/settings/):
 `scripts/full-test/run.sh --device <serial> --tags settings` (gates, snapshot, Do Not Disturb and
 teardown included; Maestro CLI in `~/.maestro`). Record its JUnit result per row in the report and
-recheck failures by hand. ST17 stays manual. When a row below changes, change its flow too.
+recheck failures by hand. ST17 and ST18 stay manual. When a row below changes, change its flow too.
 
 | # | Setup (`curl`) | Do | Expect |
 |---|---|---|---|
@@ -165,6 +175,7 @@ recheck failures by hand. ST17 stays manual. When a row below changes, change it
 | ST15 | — | Extensions tab | Every extension of `GET /extensions` with its badge and connection line |
 | ST16 | — | Flip a room switch and tap Rooms at once | The change lands on the hub. Put the room back |
 | ST17 | **User**: TalkBack on | A switch row, the tabs, the hub row, a trash button, a dialog | Each read once, with its state; no name read twice |
+| ST18 | as R10 (`G1` off while `STREAM` plays on `GROUP`) | Settings → Rooms; then Groups → turn `GROUP` off → "Keep playing" | `G1` reads "Off"; the dialog says `STREAM` is playing on `G2` only. Turn `G1` back on |
 
 ## X. Connection loss (001, 002, 003, 004)
 

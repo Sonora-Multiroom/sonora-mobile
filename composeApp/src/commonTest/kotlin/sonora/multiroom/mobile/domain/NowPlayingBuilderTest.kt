@@ -36,7 +36,8 @@ class NowPlayingBuilderTest {
         paused: Boolean = false,
         pauseable: Boolean = false,
         transferable: Boolean = true,
-    ) = Route(id, inputId, target, status, paused, pauseable, transferable)
+        outputs: List<String>? = null,
+    ) = Route(id, inputId, target, status, paused, pauseable, transferable, outputs = outputs)
 
     private fun snapshot(
         rooms: List<Room> = listOf(room("living", "Living Room", 70), room("kitchen", "Kitchen", 35)),
@@ -267,5 +268,37 @@ class NowPlayingBuilderTest {
         val m = playback(muted).volume!!
         assertTrue(m.mute.muted)
         assertTrue(m.main.muted)
+    }
+
+    // ---- 006: the rooms the hub lists (contract fixture "2026-10-17") ----------------------------
+
+    @Test
+    fun theHeadingNamesOnlyTheRoomsTheHubLists() {
+        val a = playback(MemberOff.snapshot(MemberOff.Variant.A)).target
+        assertEquals("Living Room", a.name)
+        assertEquals(listOf("Kitchen Speakers"), a.memberNames)
+        for (variant in listOf(MemberOff.Variant.B, MemberOff.Variant.C)) {
+            val t = playback(MemberOff.snapshot(variant)).target
+            assertEquals("Living Room", t.name, variant.name)
+            assertEquals(listOf("Office Speaker", "Kitchen Speakers"), t.memberNames, variant.name)
+        }
+    }
+
+    @Test
+    fun theGroupPillsCoverOnlyTheRoomsTheHubLists() {
+        val a = playback(MemberOff.snapshot(MemberOff.Variant.A)).volume!!
+        assertEquals(mapOf("kitchen" to 30), a.main.roomVolumes)
+        assertEquals(listOf("member:kitchen"), a.members.map { it.key })
+        for (variant in listOf(MemberOff.Variant.B, MemberOff.Variant.C)) {
+            val v = playback(MemberOff.snapshot(variant)).volume!!
+            assertEquals(mapOf("office" to 40, "kitchen" to 30), v.main.roomVolumes, variant.name)
+            assertEquals(listOf("member:office", "member:kitchen"), v.members.map { it.key }, variant.name)
+        }
+    }
+
+    @Test
+    fun aListOfOnlyUnknownRoomsFallsBackToTheMembers() {
+        val v = playback(snapshot(routes = listOf(route("r1", "radio", Target.Group("down"), outputs = listOf("ghost"))))).volume!!
+        assertEquals(mapOf("living" to 70, "kitchen" to 35), v.main.roomVolumes)
     }
 }

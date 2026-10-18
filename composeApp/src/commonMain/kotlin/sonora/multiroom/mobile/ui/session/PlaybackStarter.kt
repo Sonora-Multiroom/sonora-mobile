@@ -85,6 +85,7 @@ class PlaybackStarter(
     }
 
     private fun fail(failure: StartFailure) {
+        if (failure.needsRefresh) session.requestRefresh()
         if (detached) {
             _attempt.value = null
             messages.post(startFailureMessage(failure))

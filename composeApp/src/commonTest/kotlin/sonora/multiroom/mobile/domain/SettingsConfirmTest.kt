@@ -206,4 +206,29 @@ class SettingsConfirmTest {
     @Test
     fun aStoppedRouteDoesNotCount() =
         assertNull(removeConfirmation("link", withLink(route("r", "link", Target.Room("bedroom"), RouteStatus.Stopped))))
+
+    // ---- 006: the rooms the hub lists ------------------------------------------------------------
+
+    @Test
+    fun aMemberTheHubLeftOutOfTheGroupsPlaybackTurnsOffAtOnce() {
+        val s = base(listOf(route("r", "radio", Target.Group("g"), outputs = listOf("kitchen"))))
+        assertNull(turnOffConfirmation(living, s))
+        assertEquals(Confirmation.TurnOffRoom("Kitchen", listOf("Radio Paradise")), turnOffConfirmation(ItemKey(ItemKind.Room, "kitchen"), s))
+    }
+
+    @Test
+    fun turningOffAGroupNamesOnlyTheRoomsItsPlaybackIsOn() {
+        val living = ItemKey(ItemKind.Group, "living")
+        assertEquals(
+            Confirmation.TurnOffGroup("Living Room", listOf("KissFM"), listOf("Kitchen Speakers")),
+            turnOffConfirmation(living, MemberOff.snapshot(MemberOff.Variant.A)),
+        )
+        for (variant in listOf(MemberOff.Variant.B, MemberOff.Variant.C)) {
+            assertEquals(
+                Confirmation.TurnOffGroup("Living Room", listOf("KissFM"), listOf("Office Speaker", "Kitchen Speakers")),
+                turnOffConfirmation(living, MemberOff.snapshot(variant)),
+                variant.name,
+            )
+        }
+    }
 }

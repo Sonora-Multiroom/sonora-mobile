@@ -7,6 +7,11 @@ data class ItemKey(val kind: ItemKind, val id: String)
 /** What a change would stop; the dialog text is made from it (`ui/settings/SettingsText.kt`). */
 sealed interface Confirmation {
     data class TurnOffRoom(val room: String, val sources: List<String>) : Confirmation
+
+    /**
+     * [members] are the rooms the group's own playbacks are on: its members in the group's order,
+     * then any other room the hub lists; its known members when no playback reports a room.
+     */
     data class TurnOffGroup(val group: String, val sources: List<String>, val members: List<String>) : Confirmation
 
     /** [where] names the rooms or groups whose playback of the source would stop. */
@@ -37,7 +42,12 @@ fun turnOffConfirmation(key: ItemKey, snapshot: HubSnapshot): Confirmation? {
             val sources = playingNames(own, names)
             if (sources.isEmpty()) return null
             val byId = snapshot.rooms.associateBy { it.id }
-            Confirmation.TurnOffGroup(group.name, sources, group.memberIds.mapNotNull { byId[it]?.name })
+            val groups = snapshot.groups.associateBy { it.id }
+            val on = own.flatMap { occupiedRooms(it, byId, groups) }.distinctBy { it.id }
+            val (members, others) = on.partition { it.id in group.memberIds }
+            val rooms = members.sortedBy { group.memberIds.indexOf(it.id) } + others
+            val names = rooms.ifEmpty { group.memberIds.mapNotNull { byId[it] } }.map { it.name }
+            Confirmation.TurnOffGroup(group.name, sources, names)
         }
 
         ItemKind.Source -> {

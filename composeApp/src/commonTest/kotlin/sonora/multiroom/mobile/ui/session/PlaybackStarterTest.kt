@@ -15,6 +15,7 @@ import sonora.multiroom.mobile.domain.StartNames
 import sonora.multiroom.mobile.domain.StartWhat
 import sonora.multiroom.mobile.domain.Target
 import sonora.multiroom.mobile.ui.StartFailure
+import sonora.multiroom.mobile.ui.TurnedOff
 import sonora.multiroom.mobile.ui.rooms.FakeFactory
 import sonora.multiroom.mobile.ui.rooms.unreachable
 import kotlinx.coroutines.launch
@@ -115,6 +116,39 @@ class PlaybackStarterTest {
         s.repo.startResults += HubResult.Err(HubError.Rejected(409, null, "ROUTE_LIMIT_REACHED", "kitchen"))
         s.startJazz(); runCurrent()
         assertEquals(StartAttempt.Failed(StartFailure.RoomFull("Kitchen")), s.attempt)
+    }
+
+    @Test
+    fun aTurnedOffRefusalNamesTheRoomAndRefreshesOnce() = runTest {
+        val s = setup()
+        val before = s.repo.snapshotCalls
+        s.repo.startResults += HubResult.Err(HubError.Rejected(409, null, "OUTPUT_DISABLED", "bedroom"))
+        s.startJazz(); runCurrent()
+        assertEquals(StartAttempt.Failed(StartFailure.TurnedOff(TurnedOff.Room("Bedroom"))), s.attempt)
+        assertEquals(before + 1, s.repo.snapshotCalls)
+    }
+
+    @Test
+    fun aDetachedTurnedOffRefusalIsPostedAndRefreshes() = runTest {
+        val s = setup()
+        s.repo.startDelayMs = 100
+        s.repo.startResults += HubResult.Err(HubError.Rejected(409, null, "OUTPUT_DISABLED", "bedroom"))
+        s.startJazz(); runCurrent()
+        s.starter.detach()
+        val before = s.repo.snapshotCalls
+        advanceTimeBy(100); runCurrent()
+        assertEquals(listOf("Bedroom is turned off"), s.posted)
+        assertNull(s.attempt)
+        assertEquals(before + 1, s.repo.snapshotCalls)
+    }
+
+    @Test
+    fun aRoomFullRefusalAsksForNoExtraRefresh() = runTest {
+        val s = setup()
+        val before = s.repo.snapshotCalls
+        s.repo.startResults += HubResult.Err(HubError.Rejected(409, null, "ROUTE_LIMIT_REACHED", "kitchen"))
+        s.startJazz(); runCurrent()
+        assertEquals(before, s.repo.snapshotCalls)
     }
 
     @Test

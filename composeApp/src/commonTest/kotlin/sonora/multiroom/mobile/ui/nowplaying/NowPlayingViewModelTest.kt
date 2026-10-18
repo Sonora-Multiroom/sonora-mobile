@@ -6,6 +6,7 @@ import sonora.multiroom.mobile.data.InMemoryHubAddressStore
 import sonora.multiroom.mobile.domain.Group
 import sonora.multiroom.mobile.domain.HubAddress
 import sonora.multiroom.mobile.domain.HubSnapshot
+import sonora.multiroom.mobile.domain.MemberOff
 import sonora.multiroom.mobile.domain.Room
 import sonora.multiroom.mobile.domain.Route
 import sonora.multiroom.mobile.domain.RouteStatus
@@ -20,6 +21,7 @@ import sonora.multiroom.mobile.ui.session.AppMessages
 import sonora.multiroom.mobile.ui.session.Connection
 import sonora.multiroom.mobile.ui.session.HubSession
 import androidx.lifecycle.SavedStateHandle
+import androidx.lifecycle.ViewModelStore
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.advanceTimeBy
@@ -327,6 +329,19 @@ class NowPlayingViewModelTest {
     }
 
     @Test
+    fun aMainPillDragSetsOnlyTheRoomsTheHubListsTheGroupPlayingOn() = runViewModelTest {
+        fun drag(variant: MemberOff.Variant): Set<List<Any>> {
+            val s = live(snapshot = MemberOff.snapshot(variant))
+            s.vm.onVolumeDragStart("main"); s.vm.onVolumeDrag("main", 60); s.vm.onVolumeDragEnd("main", 60)
+            runCurrent()
+            s.vm.onHidden()
+            return s.calls("setRoomVolume").map { it.args }.toSet()
+        }
+        assertEquals(setOf<List<Any>>(listOf("kitchen", 60)), drag(MemberOff.Variant.A))
+        assertEquals(setOf<List<Any>>(listOf("office", 60), listOf("kitchen", 45)), drag(MemberOff.Variant.B))
+    }
+
+    @Test
     fun aMemberDragChangesOnlyThatRoomAndTheGroupMaxFollows() = runViewModelTest {
         val s = live()
         s.vm.onVolumeDragStart("member:kitchen")
@@ -573,6 +588,113 @@ class NowPlayingViewModelTest {
         s.repo.transferResult = { unreachable }
         s.confirmMoveToBedroom(); runCurrent()
         assertEquals("Couldn't move Radio Paradise to Bedroom. Can't reach the hub.", s.ui.message)
+        s.vm.onHidden()
+    }
+
+    @Test
+    fun aMoveRefusedBecauseTheRoomIsOffNamesIt() = runViewModelTest {
+        val snap = snapshot().let { it.copy(rooms = it.rooms.map { r -> if (r.id == "office") r.copy(name = "Office Speaker") else r }) }
+        val s = live(snapshot = snap)
+        s.repo.transferResult = { HubResult.Err(HubError.Rejected(409, null, "OUTPUT_DISABLED", "office")) }
+        val before = s.repo.snapshotCalls
+        s.confirmMoveToBedroom(); runCurrent()
+        assertEquals("Office Speaker is turned off", s.ui.message)
+        assertNull(s.ui.sheet)
+        assertEquals(1, s.calls("transferRoute").size)
+        assertEquals(before + 1, s.repo.snapshotCalls)
+        s.vm.onHidden()
+    }
+
+    // ---- 006: one quiet retry while a room rejoins ---------------------------------------------
+
+    private val changing = HubResult.Err(HubError.Rejected(409, null, "ROUTE_CHANGING_OUTPUTS"))
+
+    /** Answers the transfers in order; a call past the end fails the test. */
+    private fun Setup.answerTransfers(vararg answers: HubResult<Route>) {
+        val queue = ArrayDeque(answers.toList())
+        repo.transferResult = { queue.removeFirstOrNull() ?: error("unexpected transfer") }
+    }
+
+    @Test
+    fun aMoveRefusedWhileARoomRejoinsIsRetriedOnceAfterASecondAndSucceedsQuietly() = runViewModelTest {
+        val s = live()
+        s.answerTransfers(changing, HubResult.Ok(moved()))
+        s.confirmMoveToBedroom(); runCurrent()
+        // Waiting: Move still busy, the sheet open, and a refresh without the route ends nothing.
+        assertTrue(NowPlayingAction.Move in s.ui.inFlight)
+        assertNotNull(s.ui.sheet)
+        s.refresh(snapshot(r1 = false)); runCurrent()
+        assertNull(s.ui.exit)
+        s.repo.snapshotResult = { HubResult.Ok(snapshot(r1 = false, extra = listOf(moved()))) }
+        advanceTimeBy(1000); runCurrent()
+        val calls = s.calls("transferRoute")
+        assertEquals(2, calls.size)
+        assertEquals(calls[0].args, calls[1].args)
+        assertTrue(calls[1].at - calls[0].at >= 1000, "${calls[1].at - calls[0].at} ms apart")
+        assertEquals("r9", s.handle.get<String>("followedRouteId"))
+        assertNull(s.ui.sheet)
+        assertNull(s.ui.message)
+        assertNull(s.ui.exit)
+        assertFalse(NowPlayingAction.Move in s.ui.inFlight)
+        s.vm.onHidden()
+    }
+
+    @Test
+    fun aSecondChangingRefusalAsksToTryAgainAndIsNotRetried() = runViewModelTest {
+        val s = live()
+        s.answerTransfers(changing, changing)
+        s.confirmMoveToBedroom(); runCurrent()
+        advanceTimeBy(1000); runCurrent()
+        assertEquals("Couldn't move Radio Paradise to Bedroom. Try again in a moment.", s.ui.message)
+        assertNull(s.ui.sheet)
+        advanceTimeBy(5_000); runCurrent()
+        assertEquals(2, s.calls("transferRoute").size)
+        s.vm.onHidden()
+    }
+
+    @Test
+    fun aTurnedOffAnswerToTheRetryNamesTheRoom() = runViewModelTest {
+        val s = live()
+        s.answerTransfers(changing, HubResult.Err(HubError.Rejected(409, null, "OUTPUT_DISABLED", "bedroom")))
+        s.confirmMoveToBedroom(); runCurrent()
+        advanceTimeBy(1000); runCurrent()
+        assertEquals("Bedroom is turned off", s.ui.message)
+        assertEquals(2, s.calls("transferRoute").size)
+        s.vm.onHidden()
+    }
+
+    @Test
+    fun anUnreachableHubOnTheRetrySaysSo() = runViewModelTest {
+        val s = live()
+        s.answerTransfers(changing, unreachable)
+        s.confirmMoveToBedroom(); runCurrent()
+        advanceTimeBy(1000); runCurrent()
+        assertEquals("Couldn't move Radio Paradise to Bedroom. Can't reach the hub.", s.ui.message)
+        assertEquals(2, s.calls("transferRoute").size)
+        s.vm.onHidden()
+    }
+
+    @Test
+    fun closingTheScreenDuringTheWaitCancelsTheRetry() = runViewModelTest {
+        val s = live()
+        val store = ViewModelStore().apply { put("now-playing", s.vm) }
+        s.answerTransfers(changing, HubResult.Ok(moved()))
+        s.confirmMoveToBedroom(); runCurrent()
+        s.vm.onHidden()
+        store.clear()
+        advanceTimeBy(5_000); runCurrent()
+        assertEquals(1, s.calls("transferRoute").size)
+        assertEquals(emptyList(), s.posted)
+    }
+
+    @Test
+    fun aTurnedOffRefusalIsNotRetried() = runViewModelTest {
+        val s = live()
+        s.answerTransfers(HubResult.Err(HubError.Rejected(409, null, "OUTPUT_DISABLED", "bedroom")))
+        s.confirmMoveToBedroom(); runCurrent()
+        advanceTimeBy(5_000); runCurrent()
+        assertEquals("Bedroom is turned off", s.ui.message)
+        assertEquals(1, s.calls("transferRoute").size)
         s.vm.onHidden()
     }
 

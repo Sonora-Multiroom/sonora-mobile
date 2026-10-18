@@ -19,8 +19,8 @@ class MoveDestinationsTest {
     private fun src(id: String, name: String) =
         Source(id, name, "http://x/$id", SourceOrigin.Configured, false, true, SourceKind.Stream)
 
-    private fun route(id: String, input: String, target: Target, status: RouteStatus = RouteStatus.Active) =
-        Route(id, input, target, status, paused = false, pauseable = false, transferable = true)
+    private fun route(id: String, input: String, target: Target, status: RouteStatus = RouteStatus.Active, outputs: List<String>? = null) =
+        Route(id, input, target, status, paused = false, pauseable = false, transferable = true, outputs = outputs)
 
     private val sources = listOf(src("jazz", "Jazz24"), src("morning", "Morning playlist"), src("radio", "Radio Paradise"))
 
@@ -279,5 +279,54 @@ class MoveDestinationsTest {
             route("r1", "radio", Target.Room("living")), route("r2", "jazz", Target.Room("kitchen"), RouteStatus.Stopped),
         ))
         assertEquals(Idle, build(s).room("Kitchen").note)
+    }
+
+    // ---- 006: the rooms the hub lists (contract fixture "2026-10-17") ----------------------------
+
+    private fun memberOff(variant: MemberOff.Variant) = build(MemberOff.snapshot(variant))
+
+    @Test fun withAMemberOffTheOtherMembersOnlyRowStopsNothing() {
+        val a = memberOff(MemberOff.Variant.A)
+        val kitchen = a.room("Kitchen Speakers only")
+        assertEquals(NothingStops, kitchen.note)
+        assertTrue(kitchen.selectable)
+        val office = a.room("Office Speaker only")
+        assertEquals(TurnedOff, office.note)
+        assertFalse(office.selectable)
+        assertTrue(a.rooms.none { it.label == "Office Speaker" || it.label == "Kitchen Speakers" })
+    }
+
+    @Test fun withoutTheHubsListEveryMemberStopsAsBefore() {
+        val b = memberOff(MemberOff.Variant.B)
+        assertEquals(OthersStop(listOf("Office Speaker")), b.room("Kitchen Speakers only").note)
+        assertEquals(TurnedOff, b.room("Office Speaker only").note)
+        assertTrue(b.rooms.none { it.label == "Office Speaker" || it.label == "Kitchen Speakers" })
+    }
+
+    @Test fun afterRejoiningTheOtherMemberStopsAgain() {
+        val c = memberOff(MemberOff.Variant.C)
+        assertEquals(OthersStop(listOf("Office Speaker")), c.room("Kitchen Speakers only").note)
+        assertEquals(OthersStop(listOf("Kitchen Speakers")), c.room("Office Speaker only").note)
+        assertTrue(c.rooms.none { it.label == "Office Speaker" || it.label == "Kitchen Speakers" })
+    }
+
+    @Test fun aRoomAnotherGroupsPlaybackLeftOutIsIdle() {
+        val s = snap(
+            listOf(room("bedroom"), room("kitchen"), room("bathroom")),
+            groups = listOf(group("bk", listOf("bedroom", "kitchen"), "Upstairs")),
+            routes = listOf(
+                route("r3", "radio", Target.Room("bathroom")),
+                route("r2", "jazz", Target.Group("bk"), outputs = listOf("bedroom")),
+            ),
+        )
+        val c = build(s, "r3")
+        assertEquals(Idle, c.room("Kitchen").note)
+        assertEquals(WillStopOnGroup("Jazz24", "Upstairs"), c.room("Bedroom").note)
+    }
+
+    @Test fun aGroupWithOneMemberOffersItsMemberWithNothingStopping() {
+        val s = snap(five, groups = listOf(group("solo", listOf("kitchen"), "Solo")), routes = listOf(route("r1", "radio", Target.Group("solo"))))
+        assertEquals(NothingStops, build(s).room("Kitchen only").note)
+        assertTrue(build(s).room("Kitchen only").selectable)
     }
 }
