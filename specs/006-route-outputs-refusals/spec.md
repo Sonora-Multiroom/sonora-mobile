@@ -46,6 +46,14 @@ just turned back on rejoins the playback. The app shows only "Couldn't start pla
   listing the rooms? → A: No. The rooms line lists only the rooms playing, and the rooms left out
   appear under "Off" like any room that is turned off; no design change (FR-004).
 
+### Session 2026-10-18
+
+- Q: In Move to room…, a "<room> only" row of a group playback that already plays on that room
+  alone (the other members were turned off) has no room left that would stop. What does its note
+  say? → A: "Leaves <group>" (e.g. "Leaves Living Room"), in the normal note style, not as a
+  warning: the move turns the group playback into a room playback, so the rooms turned off will
+  not rejoin it. This is the one copy addition to the Move sheet's design.
+
 ## User Scenarios & Testing *(mandatory)*
 
 ### User Story 1 - A room that was turned off is no longer shown as playing (Priority: P1)
@@ -75,8 +83,8 @@ shown in the playback again.
    heading names the group and "Kitchen Speakers" only, and there is no volume pill for Office
    Speaker.
 3. **Given** the same state, **When** the user opens Move to room…, **Then** the "Kitchen Speakers
-   only" row does not say that Office Speaker stops, and the "Office Speaker only" row reads "Turned
-   off" as today.
+   only" row does not say that Office Speaker stops (it reads "Leaves Living Room"), and the "Office
+   Speaker only" row reads "Turned off" as today.
 4. **Given** the same state, **When** the user drags the group's volume pill, **Then** only Kitchen
    Speakers' volume changes, and the pill shows the loudest of the rooms that play.
 5. **Given** the same state, **When** the user turns Office Speaker back on and the hub reports the
