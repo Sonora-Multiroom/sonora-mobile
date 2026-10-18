@@ -6,6 +6,7 @@ import sonora.multiroom.mobile.data.InMemoryHubAddressStore
 import sonora.multiroom.mobile.domain.Group
 import sonora.multiroom.mobile.domain.HubAddress
 import sonora.multiroom.mobile.domain.HubSnapshot
+import sonora.multiroom.mobile.domain.MemberOff
 import sonora.multiroom.mobile.domain.Room
 import sonora.multiroom.mobile.domain.Route
 import sonora.multiroom.mobile.domain.RouteStatus
@@ -324,6 +325,19 @@ class NowPlayingViewModelTest {
         assertEquals(listOf(35, 18), section.members.map { shownVolume(it, s.ui.pending) })
         assertTrue(s.repo.calls.none { it.name.contains("Group") })
         s.vm.onHidden()
+    }
+
+    @Test
+    fun aMainPillDragSetsOnlyTheRoomsTheHubListsTheGroupPlayingOn() = runViewModelTest {
+        fun drag(variant: MemberOff.Variant): Set<List<Any>> {
+            val s = live(snapshot = MemberOff.snapshot(variant))
+            s.vm.onVolumeDragStart("main"); s.vm.onVolumeDrag("main", 60); s.vm.onVolumeDragEnd("main", 60)
+            runCurrent()
+            s.vm.onHidden()
+            return s.calls("setRoomVolume").map { it.args }.toSet()
+        }
+        assertEquals(setOf<List<Any>>(listOf("kitchen", 60)), drag(MemberOff.Variant.A))
+        assertEquals(setOf<List<Any>>(listOf("office", 60), listOf("kitchen", 45)), drag(MemberOff.Variant.B))
     }
 
     @Test

@@ -35,7 +35,8 @@ class RoomsBuilderTest {
         status: RouteStatus = RouteStatus.Active,
         paused: Boolean = false,
         pauseable: Boolean = false,
-    ) = Route(id, inputId, target, status, paused, pauseable, transferable = false)
+        outputs: List<String>? = null,
+    ) = Route(id, inputId, target, status, paused, pauseable, transferable = false, outputs = outputs)
 
     private fun snapshot(
         rooms: List<Room> = emptyList(),
@@ -421,5 +422,62 @@ class RoomsBuilderTest {
     @Test
     fun noRoomsIsItsOwnState() {
         assertEquals(RoomsContent.NoRooms, RoomsBuilder.build(snapshot()))
+    }
+
+    // ---- 006: the rooms the hub lists (contract fixture "2026-10-17") ----------------------------
+
+    private fun memberOff(variant: MemberOff.Variant) = build(MemberOff.snapshot(variant))
+
+    @Test
+    fun aGroupCardShowsOnlyTheRoomsTheHubLists() {
+        val a = memberOff(MemberOff.Variant.A).cards.single()
+        assertEquals("Living Room", a.title)
+        assertEquals(listOf("Kitchen Speakers"), a.memberNames)
+        assertEquals(30, a.volume)
+        assertEquals(mapOf("kitchen" to 30), a.memberVolumes)
+        assertEquals(CardStatus.LiveStream, a.status)
+        for (variant in listOf(MemberOff.Variant.B, MemberOff.Variant.C)) {
+            val card = memberOff(variant).cards.single()
+            assertEquals(listOf("Office Speaker", "Kitchen Speakers"), card.memberNames, variant.name)
+            assertEquals(40, card.volume, variant.name)
+            assertEquals(mapOf("office" to 40, "kitchen" to 30), card.memberVolumes, variant.name)
+        }
+    }
+
+    @Test
+    fun aRoomLeftOutOfItsGroupsPlaybackIsCountedAndListedAsOff() {
+        val a = memberOff(MemberOff.Variant.A)
+        assertEquals(1 to 4, a.inUse to a.total)
+        assertEquals(
+            listOf(
+                IdleRow("bathroom", "Bathroom", IdleState.NothingPlaying),
+                IdleRow("bedroom", "Bedroom", IdleState.NothingPlaying),
+                IdleRow("office", "Office Speaker", IdleState.TurnedOff),
+            ),
+            a.idle,
+        )
+    }
+
+    @Test
+    fun withoutTheHubsListOrAfterRejoiningEveryMemberIsInUse() {
+        for (variant in listOf(MemberOff.Variant.B, MemberOff.Variant.C)) {
+            val c = memberOff(variant)
+            assertEquals(2 to 4, c.inUse to c.total, variant.name)
+            assertEquals(listOf("bathroom", "bedroom"), c.idle.map { it.roomId }, variant.name)
+        }
+    }
+
+    @Test
+    fun aRoomOutsideTheGroupThatTheHubListsIsInUse() {
+        val c = build(
+            snapshot(
+                rooms = listOf(room("a"), room("b"), room("c")),
+                groups = listOf(group("g", listOf("a", "b"))),
+                sources = listOf(radio),
+                routes = listOf(route("r1", "radio", Target.Group("g"), outputs = listOf("a", "c"))),
+            ),
+        )
+        assertEquals(listOf("a", "c"), c.cards.single().memberVolumes.keys.toList())
+        assertEquals(listOf("b"), c.idle.map { it.roomId })
     }
 }

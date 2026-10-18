@@ -12,7 +12,8 @@ class RoutesByRoomTest {
         target: Target,
         status: RouteStatus = RouteStatus.Active,
         joinMode: JoinMode = JoinMode.Replace,
-    ) = Route(id, "in-$id", target, status, paused = false, pauseable = false, transferable = true, joinMode = joinMode)
+        outputs: List<String>? = null,
+    ) = Route(id, "in-$id", target, status, paused = false, pauseable = false, transferable = true, joinMode = joinMode, outputs = outputs)
 
     private fun snapshot(vararg routes: Route) = HubSnapshot(
         rooms = listOf(room("a"), room("b"), room("c")),
@@ -54,6 +55,28 @@ class RoutesByRoomTest {
     @Test
     fun anUnknownTargetCoversNothing() {
         assertEquals(emptyMap(), routesByRoom(snapshot(route("r1", Target.Unknown("a")))))
+    }
+
+    @Test
+    fun aGroupRouteIsListedOnlyUnderTheRoomsTheHubLists() {
+        val r = route("r1", Target.Group("g"), outputs = listOf("b"))
+        assertEquals(mapOf("b" to listOf(r)), routesByRoom(snapshot(r)))
+    }
+
+    @Test
+    fun aRoomTurnedOffWhileItsGroupPlaysIsNotOccupied() {
+        val a = MemberOff.snapshot(MemberOff.Variant.A)
+        assertEquals(listOf("kitchen"), occupancy(a).keys.toList())
+        assertEquals("r1", occupancy(a).getValue("kitchen").id)
+        assertEquals(listOf("kitchen"), routesByRoom(a).keys.toList())
+        assertEquals(listOf("r1"), routesByRoom(a).getValue("kitchen").map { it.id })
+    }
+
+    @Test
+    fun withoutTheHubsListEveryMemberIsOccupiedAsBefore() {
+        val b = MemberOff.snapshot(MemberOff.Variant.B)
+        assertEquals(listOf("office", "kitchen"), occupancy(b).keys.toList())
+        assertEquals(listOf("office", "kitchen"), routesByRoom(b).keys.toList())
     }
 
     @Test

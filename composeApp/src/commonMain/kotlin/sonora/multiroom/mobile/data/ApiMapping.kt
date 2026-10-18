@@ -105,6 +105,7 @@ internal fun RouteResponse.toRoute(): Route? {
             RouteResponse.JoinMode.DUCK_OTHERS -> JoinMode.Announcement
             null -> JoinMode.Unknown
         },
+        outputs = outputs?.filter { it.isNotBlank() }?.distinct(),
     )
 }
 

@@ -20,8 +20,13 @@ internal fun source(
     autoRemove = autoRemove, createdAt = createdAt,
 )
 
-internal fun route(id: String, input: String, target: Target, status: RouteStatus = RouteStatus.Active) =
-    Route(id, input, target, status, paused = false, pauseable = false, transferable = true)
+internal fun route(
+    id: String,
+    input: String,
+    target: Target,
+    status: RouteStatus = RouteStatus.Active,
+    outputs: List<String>? = null,
+) = Route(id, input, target, status, paused = false, pauseable = false, transferable = true, outputs = outputs)
 
 internal fun snapshot(
     rooms: List<Room> = emptyList(),
