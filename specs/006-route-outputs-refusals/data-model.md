@@ -83,7 +83,7 @@ else (outputs null, empty, or no known room):
 | `RoomsContent.Rooms` | `inUse`, `idle` | from `describeRoute(...).occupies` |
 | `TargetLine` | `memberNames`, `notConnected` | from `describeRoute` |
 | `VolumeSection` (group) | `main.roomVolumes`, `members` | `occupiedRooms`, group order; `null` when none |
-| `MoveDestinationNote` | **new** `LeavesGroup(group: String)` | not a warning; text "Leaves <group>" |
+| `MoveDestinationNote` | **new** `NothingStops` (data object) | not a warning; text "Nothing stops" |
 | `Confirmation.TurnOffGroup` | `members` | occupied rooms of the group's own live routes, in group order; the known members when no route reports any |
 
 ### Move sheet rows (R5)
@@ -93,7 +93,7 @@ else (outputs null, empty, or no known room):
 - "<member> only" rows: one per known member of the current group, as today.
   - turned off → `TurnedOff`; not connected → `NotConnected`.
   - otherwise `others = current − member`: when not empty, `OthersStop(names of others)`; when
-    empty, `LeavesGroup(group name)`.
+    empty, `NothingStops`.
 
 ## Refusals (`ui/Messages.kt`)
 

@@ -4,8 +4,8 @@ Feature: [spec.md](spec.md) · Expected results: [contracts/ui-behaviour.md](con
 
 ## 0. Before implementation (local)
 
-- The design canvas's Move to room sheet has a "<room> only" sample row with the note "Leaves
-  <group>", and `design/screens/Transfer.dc.html` is the updated copy
+- The design canvas has a second Move to room artboard with a member turned off, whose "<room>
+  only" row reads "Nothing stops"; `design/screens/TransferMemberOff.dc.html` is its copy
   ([research R9](research.md#r9-design-documentation-and-version)).
 
 ## 1. Cloud / CI checks (no hub, no emulator)
@@ -30,7 +30,7 @@ edits to its existing assertions: those routes carry no `outputs` (SC-005).
 | `RoutesByRoomTest` | `occupancy` and `routesByRoom` follow the list; unchanged without it |
 | `RoomsBuilderTest` | fixture A/B/C: card rooms, pill value, `memberVolumes`, `inUse`, Idle and Off lists |
 | `NowPlayingBuilderTest` | A/B/C: heading names, member pills, main pill volumes |
-| `MoveDestinationsTest` | A/B/C: "only" notes incl. `LeavesGroup`, no duplicate plain row, "will stop" of other routes follows the list |
+| `MoveDestinationsTest` | A/B/C: "only" notes incl. `NothingStops`, no duplicate plain row, "will stop" of other routes follows the list |
 | `StartConsequenceTest` | the extra case of the contract: no "will stop" for a route that left the room |
 | `SettingsBuilderTest`, `SettingsConfirmTest` | Rooms-tab line and room dialog follow the list; group dialog names occupied rooms |
 | `MessagesTest`, `DestinationTextTest` | the contract's copy tables (FR-011) |
@@ -49,7 +49,7 @@ Room = Office Speaker + Kitchen Speakers).
 |---|---|---|---|
 | 1 | KissFM on `G`; `PUT /outputs/M1/enabled {false}`; `GET /routes` shows `outputs: [M2]` | Rooms | card lists `M2` only; "1 of N rooms in use" counts only `M2` for it; `M1` under "Off" (SC-001) |
 | 2 | as 1 | open the card's Now Playing | "on `G` · `M2`"; pills `G` and `M2` only |
-| 3 | as 1 | "Move to room…" | "`M2` only" reads "Leaves `G`"; "`M1` only" reads "Turned off"; `M1` is listed once |
+| 3 | as 1 | "Move to room…" | "`M2` only" reads "Nothing stops"; "`M1` only" reads "Turned off"; `M1` is listed once. Pick "`M2` only" → Move: the hub accepts it, the sheet closes, music keeps playing on `M2`, and Now Playing reads "on `M2`" (not checked against the hub before) |
 | 4 | as 1, `M2` volume 1 and `M1` volume 1 | drag the group pill on Rooms to ~5 % | only `M2` changes (`GET /outputs`); `M1` keeps 1 |
 | 5 | as 1 | Settings → Rooms; Settings → Groups → turn off `G` → Keep | `M1` row "Off"; dialog says KissFM plays on `M2` only |
 | 6 | as 1, then `PUT /outputs/M1/enabled {true}` | wait one refresh on Rooms and Now Playing | both rooms shown again, in the group's order, with `M1`'s pill (SC-002) |

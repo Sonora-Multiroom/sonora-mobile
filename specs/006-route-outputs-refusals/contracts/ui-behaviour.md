@@ -37,7 +37,7 @@ turned back on: `office` enabled, `outputs: ["kitchen", "office"]`.
 | Rooms: group pill dragged to 60 | only `kitchen` is set: 60 | `office` 60, `kitchen` 45 (as 005) | `office` 60, `kitchen` 45 |
 | Now Playing heading | "on Living Room · Kitchen Speakers" | "… · Office Speaker + Kitchen Speakers" | "… · Office Speaker + Kitchen Speakers" |
 | Now Playing pills | main "Living Room" + member "Kitchen Speakers" | main + Office + Kitchen | main + Office + Kitchen |
-| Move sheet: "Kitchen Speakers only" | note **"Leaves Living Room"** (not a warning) | "Office Speaker stops" | "Office Speaker stops" |
+| Move sheet: "Kitchen Speakers only" | note **"Nothing stops"** (not a warning) | "Office Speaker stops" | "Office Speaker stops" |
 | Move sheet: "Office Speaker only" | "Turned off", unselectable | "Turned off", unselectable | "Kitchen Speakers stops" |
 | Move sheet: plain "Office Speaker" row | absent (no duplicate) | absent | absent |
 | Start Playback on Office Speaker | Office Speaker is turned off, so it cannot be chosen (unchanged) | same | the notice reads "KissFM will stop in Living Room" (unchanged) |
@@ -85,8 +85,8 @@ Moves (`actionErrorMessage(UserAction.Move("Bedroom"), "KissFM", error, roomName
 
 No message contains the hub's `title` or `detail`.
 
-Move sheet note: `destinationNoteText(LeavesGroup("Living Room"))` = "Leaves Living Room", and
-`LeavesGroup(...).warning` = false.
+Move sheet note: `destinationNoteText(NothingStops)` = "Nothing stops", and
+`NothingStops.warning` = false.
 
 ## Move retry (Now Playing)
 

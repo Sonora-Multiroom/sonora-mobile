@@ -24,7 +24,7 @@ Technically:
   playback occupies ([R3](research.md#r3-one-occupancy-rule)). `occupancy`, `routesByRoom` and a
   new `describeRoute` use it. The Rooms, Now Playing, Move, Start Playback and Settings builders
   read it through them ([R4](research.md#r4-describing-a-route-not-just-a-target)). The Move sheet
-  gets one new note, "Leaves <group>" ([R5](research.md#r5-move-sheet-rows)). Group volume follows
+  gets one new note, "Nothing stops" ([R5](research.md#r5-move-sheet-rows)). Group volume follows
   with no new code ([R6](research.md#r6-group-volume)).
 - **Copy**: `Messages.kt` maps the four "turned off" reasons for starts and moves, plus the
   "try again" text ([R7](research.md#r7-refusal-messages)). `PlaybackStarter` refreshes after a
@@ -78,7 +78,7 @@ backlog and the full app test.
 | III. Shared-First | ✅ | All changes are in `commonMain` / `commonTest`. No platform source-set changes. `delay` is from kotlinx.coroutines |
 | IV. Test-First | ✅ | The occupancy rule, every builder's 2026-10-17 results, the copy tables and the retry get failing tests first ([quickstart](quickstart.md) §1, FR-011, FR-012). The `outputs` mapping is tested against `MockEngine` |
 | V. Resilient LAN Networking | ✅ | Unknown reasons keep today's messages. A missing or unknown-only list falls back. An unreachable hub during the retry takes the existing path. The retry happens once, with no loop, so it cannot hang |
-| VI. Design Fidelity & Accessibility | ✅ | Cards, lists and pills keep their look (FR-004). The new note "Leaves <group>" is recorded in the spec (2026-10-18), which meets the principle for a departure; the canvas and `Transfer.dc.html` are updated alongside the code, and the sheet is checked against them before the pull request. It uses the existing note style and colour (textMuted, contrast already checked) |
+| VI. Design Fidelity & Accessibility | ✅ | Cards, lists and pills keep their look (FR-004). The new note "Nothing stops" is recorded in the spec (2026-10-18), which meets the principle for a departure; the canvas and `TransferMemberOff.dc.html` are updated alongside the code, and the sheet is checked against them before the pull request. It uses the existing note style and colour (textMuted, contrast already checked) |
 | VII. Minimal Dependencies | ✅ | None added |
 | Full app test gate | ✅ planned | The final task updates `docs/testing/full-app-test.md`: rows for quickstart §2, N6's notes, and the header bumped to 006 / 0.6.0-alpha |
 
@@ -108,7 +108,7 @@ specs/006-route-outputs-refusals/
 
 ```text
 gradle.properties                                   # 0.6.0-alpha / 6
-design/screens/Transfer.dc.html                     # sample "<room> only" row with "Leaves <group>"
+design/screens/TransferMemberOff.dc.html            # new: Move sheet with a member off, "Nothing stops"
 composeApp/src/commonMain/kotlin/sonora/multiroom/mobile/
 ├── data/
 │   ├── ApiMapping.kt                               # toRoute(): outputs
@@ -118,11 +118,11 @@ composeApp/src/commonMain/kotlin/sonora/multiroom/mobile/
 │   ├── PlaybackRules.kt                            # + occupiedRooms, + describeRoute; occupancy/routesByRoom use them
 │   ├── RoomsBuilder.kt                             # describeRoute
 │   ├── NowPlayingBuilder.kt                        # describeRoute; volumeSection from occupied rooms
-│   ├── MoveDestinations.kt                         # occupied rooms; + LeavesGroup; no duplicate rows
+│   ├── MoveDestinations.kt                         # occupied rooms; + NothingStops; no duplicate rows
 │   └── SettingsConfirm.kt                          # TurnOffGroup.members from occupied rooms
 ├── ui/
 │   ├── Messages.kt                                 # TurnedOff, StartFailure.TurnedOff + needsRefresh, Move reasons
-│   ├── nowplaying/DestinationText.kt               # "Leaves <group>"
+│   ├── nowplaying/DestinationText.kt               # "Nothing stops"
 │   ├── nowplaying/NowPlayingViewModel.kt           # one retry; roomName lookup for messages
 │   └── session/PlaybackStarter.kt                  # refresh on needsRefresh
 composeApp/src/commonTest/kotlin/sonora/multiroom/mobile/

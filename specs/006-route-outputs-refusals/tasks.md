@@ -56,13 +56,14 @@ Every test task comes before its implementation task and MUST be seen failing fi
 **Purpose**: version bump and the design update. The spec's 2026-10-18 clarification already
 records the new note, as Constitution VI requires, so the UI code need not wait for the canvas.
 
-- [ ] T001 Set `sonora.versionName=0.6.0-alpha` and `sonora.versionCode=6` in gradle.properties as
+- [X] T001 Set `sonora.versionName=0.6.0-alpha` and `sonora.versionCode=6` in gradle.properties as
   the first implementation commit (AGENTS.md "Bump the app version first").
-- [ ] T002 **Local, needs the user**: update the Claude Design canvas
+- [X] T002 **Local, needs the user**: update the Claude Design canvas
   (https://claude.ai/artifact/R7e4yABDYUuytc64XxNNKK, Transfer / Move to room sheet) per research
-  R9: one "<room> only" sample row whose note reads "Leaves Living Room" in the existing note style
-  (textMuted, not the warning colour). Get the user's approval of the change.
-- [ ] T003 Copy the updated canvas screen to design/screens/Transfer.dc.html (depends on T002).
+  R9: a second Move artboard with a member turned off, whose "<room> only" row reads "Nothing
+  stops" in the existing note style (textMuted, not the warning colour). Get the user's approval of
+  the change.
+- [X] T003 Copy the new canvas artboard to design/screens/TransferMemberOff.dc.html (depends on T002).
 
 **Checkpoint**: T030 (the note's copy and use) does not start before T003 is committed. Every other
 task may run while T002 waits for the user.
@@ -74,11 +75,11 @@ task may run while T002 waits for the user.
 **Purpose**: the domain field and the refusal-reason names that the stories build on. No behaviour
 changes here.
 
-- [ ] T004 Add `val outputs: List<String>? = null` as the last parameter of `Route` in
+- [X] T004 Add `val outputs: List<String>? = null` as the last parameter of `Route` in
   main/domain/Models.kt, with KDoc: "The rooms the hub says this route plays on right now, in its
   order; null when the hub did not say (before API 0.1.22)." Do not map it yet. All existing tests
   stay green.
-- [ ] T005 [P] In main/data/HubRepository.kt add
+- [X] T005 [P] In main/data/HubRepository.kt add
   `object RefusalReason { const val ROUTE_LIMIT_REACHED = "ROUTE_LIMIT_REACHED"; const val INPUT_ALREADY_ON_OUTPUT = …; const val OUTPUT_DISABLED = …; const val GROUP_DISABLED = …; const val INPUT_DISABLED = …; const val ALL_MEMBERS_DISABLED = …; const val ROUTE_CHANGING_OUTPUTS = … }`
   next to `HubError`, each with the hub API version that added it (0.1.21 / 0.1.22 / 0.1.25). Make
   `startFailure` in main/ui/Messages.kt use the two existing constants instead of string literals.
@@ -124,16 +125,17 @@ Office Speaker under "Off", nothing names it as playing or stopping. Variant C: 
   `volume.main.roomVolumes` (A `{kitchen=30}`, B/C both); `volume.members` keys
   (A `["member:kitchen"]`, B/C `["member:office", "member:kitchen"]`). Extend the `route(...)` helper.
 - [ ] T011 [P] [US1] In test/domain/MoveDestinationsTest.kt add the contract's Move rows: A —
-  "Kitchen Speakers only" note `MoveDestinationNote.LeavesGroup("Living Room")`, selectable;
+  "Kitchen Speakers only" note `MoveDestinationNote.NothingStops`, selectable;
   "Office Speaker only" `TurnedOff`, not selectable; no row with label "Office Speaker" or
   "Kitchen Speakers" (no duplicate plain row); B — "Kitchen Speakers only" →
   `OthersStop(["Office Speaker"])`; C — "Office Speaker only" → `OthersStop(["Kitchen Speakers"])`.
   Add: a second route r2 on group [`bedroom`, `kitchen`] with `outputs = ["bedroom"]` makes the
   "Kitchen Speakers" plain row of a third playback read `Idle`, not "will stop". Extend the
   `route(...)` helper. In test/ui/nowplaying/DestinationTextTest.kt add
-  `destinationNoteText(LeavesGroup("Living Room")) == "Leaves Living Room"` and
-  `LeavesGroup("Living Room").warning == false`. Write these first; they will not compile until
-  T019 adds `LeavesGroup`, which is their failing state.
+  `destinationNoteText(NothingStops) == "Nothing stops"` and `NothingStops.warning == false`. Also
+  in MoveDestinationsTest: a group with one member, playing, gives its "<member> only" row
+  `NothingStops` (today an empty `OthersStop`). Write these first; they will not compile until
+  T019 adds `NothingStops`, which is their failing state.
 - [ ] T012 [P] [US1] In test/domain/StartConsequenceTest.kt add the contract's extra case (not
   fixture A: there the room left out is off and cannot be chosen, so the notice cannot differ): rooms
   `bedroom`, `kitchen` on; group [`bedroom`, `kitchen`]; KissFM on that group with
@@ -176,12 +178,12 @@ Office Speaker under "Off", nothing names it as playing or stopping. Variant C: 
   instead of `group.memberIds`; pass the route in, and return null when it is empty, as today.
   Makes T010 and the Now Playing cases of T014 pass.
 - [ ] T019 [US1] In main/domain/MoveDestinations.kt add
-  `data class LeavesGroup(val group: String) : MoveDestinationNote` (not a warning, selectable),
+  `data object NothingStops : MoveDestinationNote` (not a warning, selectable),
   and use `current = occupiedRooms(route, …)`. Plain room rows skip rooms in `current` and every
   member of the current group. A "<member> only" row that is on and connected reads
-  `OthersStop(names of current minus the member)`, or `LeavesGroup(currentGroup.name)` when that is
+  `OthersStop(names of current minus the member)`, or `NothingStops` when that is
   empty. In main/ui/nowplaying/DestinationText.kt add
-  `is MoveDestinationNote.LeavesGroup -> "Leaves ${note.group}"`. Makes T011 pass.
+  `MoveDestinationNote.NothingStops -> "Nothing stops"`. Makes T011 pass.
 - [ ] T020 [US1] In main/domain/SettingsConfirm.kt make `TurnOffGroup.members` the occupied rooms
   of the group's own live routes. Take the union of `occupiedRooms` over them, keep the group's
   member order, put listed rooms outside the group after them, and fall back to the known members
@@ -294,8 +296,8 @@ On the device: turn a group member back on, then move straight away (quickstart 
 
 ## Phase 6: Polish & Cross-Cutting Concerns
 
-- [ ] T030 Check the Move sheet against design/screens/Transfer.dc.html (depends on T003, T019):
-  the "Leaves <group>" note uses the same text style and colour as the other non-warning notes. If
+- [ ] T030 Check the Move sheet against design/screens/TransferMemberOff.dc.html (depends on T003, T019):
+  the "Nothing stops" note uses the same text style and colour as the other non-warning notes. If
   the design differs, adjust main/ui/nowplaying/MoveSheet.kt.
 - [ ] T031 Run the local checks and read each exit code (`cmd > log; echo $?`):
   `./gradlew :androidApp:assembleDebug`, `:composeApp:testAndroidHostTest`, `:composeApp:allTests`,
@@ -305,8 +307,8 @@ On the device: turn a group member back on, then move straight away (quickstart 
 - [ ] T032 [P] Add a `## [0.6.0-alpha]` entry to CHANGELOG.md (spec folder and PR link). Under
   Fixed: a room turned off while its group plays is no longer shown as playing, with no volume pill
   and no "stops" note for it. Under Changed: refusals for a room, group or source that is off name
-  it; a move made while a room rejoins is retried once; the Move sheet's "<room> only" row can read
-  "Leaves <group>".
+  it; a move made while a room rejoins is retried once; the Move sheet's "<room> only" row reads
+  "Nothing stops" when no other room would stop.
 - [ ] T033 [P] Update AGENTS.md (FR-013). In "Hub gaps", the "No rooms in a playback's answer" item
   says the app uses `RouteResponse.outputs` since 0.6.0-alpha, falling back to the group's members
   without it. The domain rule "what plays on output X" reads the route's `outputs` first. The API
@@ -322,7 +324,7 @@ On the device: turn a group member back on, then move straight away (quickstart 
   the evidence in specs/006-route-outputs-refusals/verification.md.
 - [ ] T036 Update docs/testing/full-app-test.md for this feature. Add rows for every quickstart §2
   check, in their sections (R, N, S, ST). Update N6's "<G1> only" note expectation for a group
-  with a member off ("Leaves <G>"). Extend the fixture if a row needs a two-room group with a
+  with a member off ("Nothing stops"). Extend the fixture if a row needs a two-room group with a
   member turned off. Bump the header (features covered through 006, app 0.6.0-alpha, hub API
   0.1.25, date).
 
@@ -369,7 +371,7 @@ Task: "Move rows in composeApp/src/commonTest/kotlin/sonora/multiroom/mobile/dom
 # After T015–T016, builders together:
 Task: "describeRoute in composeApp/src/commonMain/kotlin/sonora/multiroom/mobile/domain/RoomsBuilder.kt"
 Task: "occupied rooms in composeApp/src/commonMain/kotlin/sonora/multiroom/mobile/domain/NowPlayingBuilder.kt"
-Task: "LeavesGroup in composeApp/src/commonMain/kotlin/sonora/multiroom/mobile/domain/MoveDestinations.kt"
+Task: "NothingStops in composeApp/src/commonMain/kotlin/sonora/multiroom/mobile/domain/MoveDestinations.kt"
 Task: "TurnOffGroup.members in composeApp/src/commonMain/kotlin/sonora/multiroom/mobile/domain/SettingsConfirm.kt"
 ```
 

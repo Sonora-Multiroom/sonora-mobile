@@ -92,13 +92,18 @@ design rests on, read from the code on `006-route-outputs-refusals` (2026-10-18)
   - Plain room rows leave out the rooms of the current playback and every member of the current
     group, so a member that is off appears once, as its "<room> only" row ("Turned off"), as today.
   - A "<member> only" row that is on and connected reads `OthersStop(occupied names minus the
-    member)`. When that list is empty, it reads the new note `LeavesGroup(group name)`, with the
-    text "Leaves <group>". It is not a warning (2026-10-18 clarification).
+    member)`. When that list is empty, it reads the new note `NothingStops`, with the text
+    "Nothing stops". It is not a warning (2026-10-18 clarification). The same rule covers a group
+    with one member, which today prints an empty " stop".
 - **Rationale**: acceptance scenario 3. Excluding by occupied rooms alone would list Office Speaker
   twice, as "Office Speaker" and as "Office Speaker only". An empty `OthersStop` would print
   " stop".
 - **Alternatives considered**: "Idle" (wrong, the room is playing), repeating the room's name
-  (says nothing), no note line (rows of uneven height). The user chose "Leaves <group>".
+  (says nothing), no note line (rows of uneven height), "Leaves <group>" (true of every "only"
+  row, so it says nothing about this one), "<room> won't rejoin" (a hub notion the app never
+  explains, and the other "only" rows would need it too, making them too long), hiding the row
+  (consistent with a room playback's own room, but drops the action). The user chose "Nothing
+  stops".
 
 ## R6. Group volume
 
@@ -156,9 +161,10 @@ design rests on, read from the code on `006-route-outputs-refusals` (2026-10-18)
 ## R9. Design, documentation and version
 
 - **Decision**:
-  - The design gets one copy addition, the Move sheet's "Leaves <group>" note. It is recorded in
-    the spec's 2026-10-18 clarification, as Constitution VI allows, and added to
-    `design/screens/Transfer.dc.html` (sample row) and the canvas alongside the UI code. The
+  - The design gets one copy addition, the Move sheet's "Nothing stops" note. It is recorded in
+    the spec's 2026-10-18 clarification, as Constitution VI allows, and shown on a second Move
+    artboard with a member turned off (`design/screens/TransferMemberOff.dc.html` and the canvas),
+    added alongside the UI code. The
     spec's record is what lets the code go first; the Move sheet is checked against the updated
     design before the pull request.
   - The first commit sets `sonora.versionName=0.6.0-alpha` and `sonora.versionCode=6`.
