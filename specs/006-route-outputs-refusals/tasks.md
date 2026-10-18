@@ -318,7 +318,7 @@ On the device: turn a group member back on, then move straight away (quickstart 
 - [X] T034 [P] Delete docs/backlog/refusal-reasons-and-route-outputs.md and its row in
   docs/backlog/INDEX.md. Remove or update links to it from docs/backlog/rooms-with-several-playbacks.md
   and anywhere else (`grep -rn refusal-reasons-and-route-outputs`).
-- [ ] T035 **Local**: run quickstart §2 rows 1–12 on the POCO against the real hub, following
+- [X] T035 **Local**: run quickstart §2 rows 1–12 on the POCO against the real hub, following
   AGENTS.md "On-device verification". Note the volumes and set them to 1 first, stop test routes
   before restoring the volumes, and turn every output, group and source back on at the end. Record
   the evidence in specs/006-route-outputs-refusals/verification.md.
