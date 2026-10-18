@@ -49,8 +49,9 @@ interface HubRepository {
 
     /**
      * Moves a playback. [target] is [Target.Room] or [Target.Group] (`Target.Unknown` throws
-     * [IllegalArgumentException] and is never sent). Returns the hub's NEW route: the old id is
-     * gone after success.
+     * [IllegalArgumentException] and is never sent). Since API 0.1.22 the answer is the same
+     * route with the same id; before that it was a new route and the old id was gone. Callers
+     * follow the returned id either way.
      */
     suspend fun transferRoute(routeId: String, target: Target): HubResult<Route>
 
@@ -93,6 +94,30 @@ sealed interface HubError {
 
     /** Undecodable body or anything else unexpected. */
     data object Unexpected : HubError
+}
+
+/** The admission refusal reasons the hub sends in [HubError.Rejected.reason]. */
+object RefusalReason {
+    /** The room carries as many playbacks as it can (API 0.1.21). */
+    const val ROUTE_LIMIT_REACHED = "ROUTE_LIMIT_REACHED"
+
+    /** The source already plays on that room (API 0.1.21). */
+    const val INPUT_ALREADY_ON_OUTPUT = "INPUT_ALREADY_ON_OUTPUT"
+
+    /** The room is turned off (API 0.1.22). */
+    const val OUTPUT_DISABLED = "OUTPUT_DISABLED"
+
+    /** The group is turned off (API 0.1.22). */
+    const val GROUP_DISABLED = "GROUP_DISABLED"
+
+    /** The source is turned off (API 0.1.22). */
+    const val INPUT_DISABLED = "INPUT_DISABLED"
+
+    /** Every room of the group is turned off (API 0.1.22). */
+    const val ALL_MEMBERS_DISABLED = "ALL_MEMBERS_DISABLED"
+
+    /** A room is rejoining the playback; clears by itself within moments (API 0.1.25). */
+    const val ROUTE_CHANGING_OUTPUTS = "ROUTE_CHANGING_OUTPUTS"
 }
 
 fun interface HubRepositoryFactory {

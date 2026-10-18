@@ -63,6 +63,11 @@ data class Route(
     val pauseable: Boolean,
     val transferable: Boolean,
     val joinMode: JoinMode = JoinMode.Replace,
+    /**
+     * The rooms the hub says this route plays on right now, in its order; null when the hub did
+     * not say (before API 0.1.22).
+     */
+    val outputs: List<String>? = null,
 )
 
 /** One successful refresh of everything the Rooms screen needs. */

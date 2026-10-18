@@ -1,6 +1,7 @@
 package sonora.multiroom.mobile.ui
 
 import sonora.multiroom.mobile.data.HubError
+import sonora.multiroom.mobile.data.RefusalReason
 import sonora.multiroom.mobile.domain.StartNames
 
 /** What the user was doing when a request failed. */
@@ -99,8 +100,8 @@ fun startFailure(
         val room = error.outputId?.let(roomName) ?: names.target
         val source = names.source
         when {
-            error.reason == "ROUTE_LIMIT_REACHED" -> StartFailure.RoomFull(room)
-            error.reason == "INPUT_ALREADY_ON_OUTPUT" ->
+            error.reason == RefusalReason.ROUTE_LIMIT_REACHED -> StartFailure.RoomFull(room)
+            error.reason == RefusalReason.INPUT_ALREADY_ON_OUTPUT ->
                 if (kind == StartKind.Source && source != null) StartFailure.AlreadyThere(source, room) else StartFailure.Other
             error.status == 404 ->
                 StartFailure.NoLongerOnHub(if (kind == StartKind.Source) source ?: names.target else names.target)
