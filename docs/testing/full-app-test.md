@@ -4,7 +4,7 @@ A regression run of the whole app on a real phone against the real hub. Every fe
 `quickstart.md` checks only what that feature added, at the time it shipped. This script checks
 what the app does **today**, across every shipped feature, in one pass.
 
-**Covers features**: 001–006 (`0.6.0-alpha`) · **Hub API**: 0.1.25 · **Last updated**: 2026-10-18
+**Covers**: `0.6.0-alpha` · **Hub API**: 0.1.25 · **Last updated**: 2026-10-19
 
 Run it when the user asks for a "full app test", before a release, after a hub upgrade, and after
 a dependency update that touches Compose, Ktor or the generated client.
@@ -76,7 +76,7 @@ into the report. Where the hub lacks a role, mark the rows that need it `n/a`.
 | P5 | Tell the user what plays now and that the run will stop it; on their go-ahead, set every output's volume to 1 | Volumes at 1 |
 | P6 | Install the build under test (`adb install -r` the APK from P1, or the CI build the user names); `dumpsys package sonora.multiroom.mobile \| grep versionName` | The expected version; map a CI build to its commit with `gh run list` |
 
-## F. First run and hub address (001, 004)
+## F. First run and hub address
 
 | # | Do | Expect |
 |---|---|---|
@@ -91,7 +91,7 @@ into the report. Where the hub lacks a role, mark the rows that need it `n/a`.
 | F9 | Kill the app (`am force-stop`) and reopen | Rooms loads without asking |
 | F10 | Settings footer | `Sonora <version> - Alpha - Build <n> (<sha>)` matching P6 |
 
-## R. Rooms (001, 006)
+## R. Rooms
 
 | # | Setup (`curl`) | Do | Expect |
 |---|---|---|---|
@@ -102,13 +102,13 @@ into the report. Where the hub lacks a role, mark the rows that need it `n/a`.
 | R5 | `PAUSEABLE` on a room | Pause, then Resume on its card | Card "Paused", then playing; hub `paused` follows |
 | R6 | `STREAM` playing | Card status | "Live stream"; Stop only, no Pause |
 | R7 | One output muted by `curl` | Master mute on, then off | On: every pill frozen, "Unmute all rooms". Off: the muted output is still muted, others not (hub 0.1.23) |
-| R8 | Every room busy | Scroll Rooms | "Play something" is still there (003 issue 1) |
+| R8 | Every room busy | Scroll Rooms | "Play something" is still there (it once scrolled out of reach) |
 | R9 | — | Tap each tab, a card, an idle room's play button, "Play something"; Back from each | Settings, Now Playing, Start Playback with that room selected, Start Playback empty; Back returns to Rooms |
 | R10 | `STREAM` on `GROUP`; then `PUT /outputs/G1/enabled {false}`; `GET /routes` shows `outputs: [G2]` | Rooms | The card lists `G2` only, its pill shows `G2`'s volume; "N of M rooms in use" leaves `G1` out; `G1` under "Off" |
 | R11 | as R10, `G1` and `G2` at volume 1 | Drag the group pill to ~5 % | Only `G2` changes (`GET /outputs`); `G1` keeps 1 |
 | R12 | as R10, then `PUT /outputs/G1/enabled {true}` | Wait one refresh on Rooms, then on Now Playing | Both rooms shown again, in the group's order (not the order they joined), with `G1`'s pill |
 
-## N. Now Playing and Move to room (002, 006)
+## N. Now Playing and Move to room
 
 | # | Setup (`curl`) | Do | Expect |
 |---|---|---|---|
@@ -128,7 +128,7 @@ into the report. Where the hub lacks a role, mark the rows that need it `n/a`.
 | N14 | `STREAM` on `GROUP`, both members on | Settings → Rooms: turn `G1` off ("Turn off"), then on; go straight to Now Playing → "Move to room…" → an idle room → Move. Repeat 3 times | Each move succeeds with no message (a refusal while `G1` rejoins is retried once after ~1 s). If the rejoin is always too fast to hit, record "not reached": the view-model tests cover the retry |
 | N15 | `STREAM` on a room, Move sheet open with an idle room `B` selected; then `PUT /outputs/B/enabled {false}` | Move | "<B> is turned off"; the sheet closes; the next sheet shows `B` "Turned off". Turn `B` back on |
 
-## S. Start Playback (003, 006)
+## S. Start Playback
 
 | # | Setup (`curl`) | Do | Expect |
 |---|---|---|---|
@@ -148,7 +148,7 @@ into the report. Where the hub lacks a role, mark the rows that need it `n/a`.
 | S14 | Start Playback open on `GROUP`; then `PUT /groups/GROUP/enabled {false}`. Then the same with the group on and both members off | Play | "<GROUP> is turned off"; afterwards `GROUP` is off in the list. With both members off: "All rooms in <GROUP> are turned off". Turn everything back on |
 | S15 | Start Playback open with `STREAM` selected; then `PUT /inputs/STREAM/enabled {false}` | Play | "<STREAM> is turned off"; `STREAM` leaves the source list. Turn it back on |
 
-## ST. Settings (004, 005, 006)
+## ST. Settings
 
 **Automated**: ST01–ST16 run as Maestro flows, one per row, in
 [scripts/full-test/flows/settings/](../../scripts/full-test/flows/settings/):
@@ -177,7 +177,7 @@ recheck failures by hand. ST17 and ST18 stay manual. When a row below changes, c
 | ST17 | **User**: TalkBack on | A switch row, the tabs, the hub row, a trash button, a dialog | Each read once, with its state; no name read twice |
 | ST18 | as R10 (`G1` off while `STREAM` plays on `GROUP`) | Settings → Rooms; then Groups → turn `GROUP` off → "Keep playing" | `G1` reads "Off"; the dialog says `STREAM` is playing on `G2` only. Turn `G1` back on |
 
-## X. Connection loss (001, 002, 003, 004)
+## X. Connection loss
 
 | # | Do | Expect |
 |---|---|---|
@@ -232,11 +232,15 @@ A feature is not finished until this script covers what it delivered (Constituti
 Workflow & Quality Gates"). In the feature's branch, before its pull request:
 
 - **Add** rows for every user-visible behaviour in the feature's `quickstart.md` §2, in the section
-  of the screen they belong to (a new screen gets a new section). Name the feature in the section
-  heading.
+  of the screen they belong to (a new screen gets a new section).
 - **Change** rows whose expectation the feature changes, and **delete** rows for behaviour it
   removes. The old feature's quickstart stays as history; this script describes the app as it is.
+- Row IDs (`R4`, `ST5`) belong to this script and are cited by run reports and Maestro flows: never
+  renumber them. A new row takes the next free number in its section; a deleted row leaves a gap.
+- Do not cite feature numbers, spec IDs or a feature's `verification.md`: specs are archived and
+  renumbered, so such references go stale. Say why a row exists in the row itself; `git log` on this
+  file tells which change added it.
 - Update the fixture when a row needs a new kind of source, room or link.
-- Update the header line: features covered, version, hub API, date.
+- Update the header line: version covered, hub API, date.
 - When a hub upgrade changes behaviour (AGENTS.md "API"), update the affected rows in the same
   change that records the new API version.
