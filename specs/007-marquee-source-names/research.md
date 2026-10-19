@@ -64,8 +64,8 @@ chose to honour it, FR-008).
 
 ## R4. Deciding whether a name fits, and the Now Playing two-line rule
 
-**Decision**: One composable `MarqueeText(text, style, color, maxLines, canScroll, startDelayMillis)`
-measures the text with `rememberTextMeasurer()` inside `BoxWithConstraints` at the available width
+**Decision**: One composable `MarqueeText(text, style, color, maxLines, stale, startDelayMillis)`
+works out `canScroll` itself (R2, R3) and measures the text with `rememberTextMeasurer()` inside `BoxWithConstraints` at the available width
 and `maxLines` (1 on Rooms, 2 on Now Playing), keyed on text, style and width. A pure function
 turns the result into one of three layouts:
 
