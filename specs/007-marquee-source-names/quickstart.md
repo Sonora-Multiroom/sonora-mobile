@@ -35,13 +35,13 @@ Radio NV the same way. A played link may also be named directly:
 
 | # | Setup (`curl` on `/api/v2`) | Action in the app | Expected |
 |---|---|---|---|
-| 1 | KissFM (long name) on room `A`; Radio NV (original short name) on room `B` | Rooms | `A`'s source line shows its start, still for ~1.2 s, then scrolls right to left, pauses, repeats (record `screencap` frames with timestamps); no "…"; edges fade; the text never runs under the Stop button. `B`'s name is still, no "…" (SC-005) |
+| 1 | KissFM (long name) on room `A`; Radio NV (original short name) on room `B` | Rooms | `A`'s source line shows its start, still for ~1.2–3 s (depending on the card's position), then scrolls right to left, pauses, repeats (record `screencap` frames with timestamps); no "…"; edges fade; the text never runs under the Stop button. `B`'s name is still, no "…" (SC-005) |
 | 2 | as 1 | watch `A` for one minute | the name never jumps back mid-cycle although the app refreshes (SC-003); it keeps cycling after 3 cycles |
 | 3 | as 1 | rename KissFM to another long name by `curl` | at the next refresh `A` starts again from the beginning of the new name |
-| 4 | as 1 | open Now Playing for `A` | a name that fits two lines wraps and stands still; with a name longer than two lines (use 64 characters), the title is one scrolling line; the whole name can be read by waiting (SC-001) |
+| 4 | as 1; then rename KissFM to 64 characters of short words, e.g. "Up all night to the deep blue sea and back home again by the sea", and first confirm with `animator_duration_scale 0` and a screenshot that it needs three or more lines | open Now Playing for `A` | a name that fits two lines wraps and stands still; with the 64-character name, the title is one scrolling line; the whole name can be read by waiting (SC-001) |
 | 5 | Radio NV renamed long too, on `B` | Rooms | both names scroll, and they start at different moments (FR-009). Note whether it looks too busy |
 | 6 | as 1 | pull down the notification shade over Rooms, wait, close it | the name stops while the shade is down, then starts again from its beginning |
-| 7 | as 1 | home button, wait, reopen | nothing to see in background; on return the name scrolls |
+| 7 | as 1 | home button, wait, reopen | no error and no jump on return; the name scrolls again, from its beginning or from where it was (the background pause itself cannot be observed; Compose pauses its frame clock while the app is stopped, research R2) |
 | 8 | as 1 | the user cuts the phone's Wi-Fi (wireless adb drops, the user observes) | the card dims, the name stands still at its start ending in "…"; when the network is back it scrolls again (SC-004) |
 | 9 | as 1; `settings put global animator_duration_scale 0` (save the old value first) | Rooms and Now Playing | names stand still with "…", on Rooms one line, on Now Playing two lines. Restore the setting: scrolling resumes without reopening the app (SC-004) |
 | 10 | as 1, TalkBack on (the user, if adb cannot) | focus `A`'s source line | the whole name is read once |

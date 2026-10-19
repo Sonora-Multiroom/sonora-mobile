@@ -27,6 +27,10 @@ stale `textMuted`.
 | Name changes | starts from the beginning with the start delay | same |
 | Width changes (badge, font scale, rotation) | measured again; may switch layout; a marquee restarts | same |
 
+"Another window" includes the app's own dialogs and sheets when Android gives them a window of
+their own (the confirmation dialogs, and the Move to room sheet if it opens one): the name behind
+them stops, and starts again from its beginning when they close. This is expected, not a defect.
+
 ## Accessibility
 
 - The text node always holds the full name; TalkBack reads it once whatever the layout.

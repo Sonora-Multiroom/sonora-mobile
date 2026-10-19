@@ -50,7 +50,7 @@ still, and the whole long name can be read by waiting.
 **Acceptance Scenarios**:
 
 1. **Given** a Rooms card whose source name is wider than its line, **When** Rooms is shown,
-   **Then** the name shows its beginning, still, for about a second, then scrolls slowly from right
+   **Then** the name shows its beginning, still, for one to three seconds, then scrolls slowly from right
    to left until its end has been shown, pauses, and repeats for as long as the card is shown.
 2. **Given** a Rooms card whose source name fits its line, **When** Rooms is shown, **Then** the
    name stays still and has no "…".
@@ -145,7 +145,8 @@ lockstep.
   scroll by itself from right to left as a marquee; the user does not drag or tap it to scroll.
   The source name in the Now Playing title MUST keep wrapping to at most two lines and, only when
   two lines are not enough, be shown as one line that scrolls the same way.
-- **FR-002**: A scrolling name MUST first show its beginning still for about 1.2 s, then move at
+- **FR-002**: A scrolling name MUST first show its beginning still for about 1.2 s (on Rooms up to
+  about 3 s, so that several names start at different moments, FR-009), then move at
   a slow, steady reading speed (about 30 dp per second), and after its end has been shown pause
   and repeat for as long as it is shown.
 - **FR-003**: A name that fits its space MUST stand still and MUST NOT show "…". A name that scrolls
@@ -153,9 +154,10 @@ lockstep.
 - **FR-004**: Where a scrolling name is cut at the edges of its space, the edges MUST fade out
   softly instead of cutting hard, and the text MUST stay inside its space (never under the card's
   buttons, the status chip or other text).
-- **FR-005**: A name MUST restart from its beginning only when the name itself changes, or when it
-  appears anew (screen opened, card newly shown). A refresh from the hub that brings the same name
-  MUST NOT restart or disturb it.
+- **FR-005**: A refresh from the hub that brings the same name MUST NOT restart or disturb a
+  scrolling name. It starts again from its beginning, with the initial pause, when the name
+  changes, when it appears anew (screen opened, card newly shown), after it was stopped (stale,
+  window not focused, animations off) or when the width of its line changes.
 - **FR-006**: A name MUST stand still at its beginning, ending in "…" when it does not fit, while
   the hub state it belongs to is shown as stale, and resume scrolling once it is fresh again.
 - **FR-007**: Scrolling MUST stop while the app is not in the foreground or not focused.

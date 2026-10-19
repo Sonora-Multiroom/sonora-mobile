@@ -57,7 +57,7 @@ checked on the device (quickstart §2); no Compose UI test setup is added.
 **Purpose**: the shared `MarqueeText` composable and its layout rule. Nothing uses it yet, so
 nothing user-visible changes.
 
-- [ ] T002 [P] Create test/ui/rooms/MarqueeTextTest.kt with failing tests for
+- [ ] T002 Create test/ui/rooms/MarqueeTextTest.kt with failing tests for
   `marqueeLayout(overflows: Boolean, canScroll: Boolean): MarqueeLayout` (data-model.md
   "MarqueeLayout"): `(false, true)` → `Fits`; `(false, false)` → `Fits`; `(true, false)` →
   `Truncated`; `(true, true)` → `Scrolling`.
