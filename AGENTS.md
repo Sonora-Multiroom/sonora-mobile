@@ -139,8 +139,8 @@ Record the build (CI build number and commit), the device and each row's evidenc
 
 ## API
 
-- [api/openapi.json](api/openapi.json) was fetched from the production hub on 2026-10-16
-  (API version **0.1.25**); refresh it with `./gradlew refreshOpenApi` from a local session. It
+- [api/openapi.json](api/openapi.json) was fetched from the production hub on 2026-10-19
+  (API version **0.1.28**); refresh it with `./gradlew refreshOpenApi` from a local session. It
   also contains TTS extension paths (`/api/tts/*`): **use only `/api/v2/**`**. The hub removed
   REST v1 in 0.1.24.
 - 0.1.21 added join modes (`RouteResponse.joinMode`, `InputResponse.defaultJoinMode`) and admission
@@ -152,8 +152,8 @@ Record the build (CI build number and commit), the device and each row's evidenc
   the app maps these four ("<room> is turned off" and so on, then a refresh) besides
   `ROUTE_LIMIT_REACHED` and `INPUT_ALREADY_ON_OUTPUT`, and retries a move refused as
   `ROUTE_CHANGING_OUTPUTS` (0.1.25) once after 1 s.
-  The contract's description of `ErrorResponse.reason` still names only the 0.1.21 reasons (hub
-  backlog `error-reason-schema-description`).
+  Since 0.1.28 the contract's description of `ErrorResponse.reason` lists every reason and says
+  to treat an unknown one as a generic conflict.
 - 0.1.23 (hub 025): master mute is a layer above each output's own mute and no longer changes any
   output's `muted`; turning it off restores each output's own mute.
 - 0.1.25 (hub 027, 028): turning off a source stops every route playing it (paused ones
@@ -162,6 +162,11 @@ Record the build (CI build number and commit), the device and each row's evidenc
   containing it, under the same route id. While that room rejoins, a transfer answers 409
   `ROUTE_CHANGING_OUTPUTS`, which clears by itself within moments. 028 is internal (sound-card
   channel use).
+- 0.1.28: `PUT /api/v2/inputs/{id}/display-name` `{displayName}` renames an input (at most 64
+  characters; null or blank restores the original name; lasts until a restart for a configured
+  input, until removal for a runtime one). `POST /api/v2/play` answers with the input's
+  `displayName`: the name sent, the title the link resolved to, or a generated placeholder.
+  Resolved titles can be long. The app calls neither the rename nor reads the new field yet.
 - Generate a Kotlin multiplatform client (Ktor + kotlinx.serialization) from it at build time,
   e.g. OpenAPI Generator `kotlin` with `library=multiplatform`. Do not commit generated code. Wrap
   it behind a small hand-written repository interface so screens never touch generated types.
