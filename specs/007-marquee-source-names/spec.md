@@ -108,7 +108,8 @@ lockstep.
    stale (the card or screen is dimmed), **Then** the name goes back to its beginning and stands
    still, ending in "…" if it does not fit, until the state is fresh again.
 2. **Given** a scrolling name, **When** the app leaves the foreground or another window takes the
-   focus, **Then** the scrolling stops, and it resumes when the app is in front again.
+   focus, **Then** the scrolling stops, and when the app is in front again the name starts again
+   from its beginning, with the initial pause.
 3. **Given** the phone's "Remove animations" setting is on, **When** a name does not fit, **Then**
    it stands still at its beginning and ends in "…", as before this feature.
 4. **Given** two or more Rooms cards whose names do not fit, **When** Rooms is shown, **Then** their
