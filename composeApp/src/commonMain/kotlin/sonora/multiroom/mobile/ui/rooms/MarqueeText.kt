@@ -33,7 +33,7 @@ enum class MarqueeLayout {
     /** The name does not fit and may not scroll: `maxLines` lines ending in "…". */
     Truncated,
 
-    /** The name does not fit and may scroll: one line, faded edges, marquee. */
+    /** The name does not fit and may scroll: one line, faded right edge, marquee. */
     Scrolling,
 }
 
@@ -109,12 +109,13 @@ fun MarqueeText(
                         .graphicsLayer { compositingStrategy = CompositingStrategy.Offscreen }
                         .drawWithContent {
                             drawContent()
+                            // Right edge only: a name waiting to scroll starts at the left edge and its
+                            // first letter must not be dimmed.
                             val fade = EdgeFade.toPx().coerceAtMost(size.width / 2)
                             val fraction = fade / size.width
                             drawRect(
                                 brush = Brush.horizontalGradient(
-                                    0f to Color.Transparent,
-                                    fraction to Color.Black,
+                                    0f to Color.Black,
                                     1f - fraction to Color.Black,
                                     1f to Color.Transparent,
                                     startX = 0f,
