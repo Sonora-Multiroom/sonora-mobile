@@ -3,6 +3,7 @@ package sonora.multiroom.mobile.ui.nowplaying
 import sonora.multiroom.mobile.domain.CardStatus
 import sonora.multiroom.mobile.domain.NowPlayingContent
 import sonora.multiroom.mobile.domain.Target
+import sonora.multiroom.mobile.ui.rooms.MarqueeText
 import sonora.multiroom.mobile.ui.rooms.StaleBanner
 import sonora.multiroom.mobile.ui.rooms.statusWord
 import sonora.multiroom.mobile.ui.session.Connection
@@ -213,12 +214,12 @@ private fun PlaybackView(content: NowPlayingContent.Playback, state: NowPlayingU
             modifier = Modifier.padding(start = 20.dp, end = 20.dp, top = 20.dp),
             verticalArrangement = Arrangement.spacedBy(6.dp),
         ) {
-            Text(
+            MarqueeText(
                 content.sourceName,
                 style = type.cardTitle.copy(fontSize = 26.sp, letterSpacing = (-0.52).sp),
                 color = primary,
                 maxLines = 2,
-                overflow = TextOverflow.Ellipsis,
+                stale = state.stale,
             )
             Text(subtitle(content), style = type.body14, color = colors.textMuted, maxLines = 1, overflow = TextOverflow.Ellipsis)
             Row(
