@@ -47,7 +47,7 @@ checked on the device (quickstart §2); no Compose UI test setup is added.
 
 ## Phase 1: Setup
 
-- [ ] T001 Set `sonora.versionName=0.7.0-alpha` and `sonora.versionCode=7` in gradle.properties as
+- [X] T001 Set `sonora.versionName=0.7.0-alpha` and `sonora.versionCode=7` in gradle.properties as
   the first implementation commit (AGENTS.md "Bump the app version first").
 
 ---
@@ -57,11 +57,11 @@ checked on the device (quickstart §2); no Compose UI test setup is added.
 **Purpose**: the shared `MarqueeText` composable and its layout rule. Nothing uses it yet, so
 nothing user-visible changes.
 
-- [ ] T002 Create test/ui/rooms/MarqueeTextTest.kt with failing tests for
+- [X] T002 Create test/ui/rooms/MarqueeTextTest.kt with failing tests for
   `marqueeLayout(overflows: Boolean, canScroll: Boolean): MarqueeLayout` (data-model.md
   "MarqueeLayout"): `(false, true)` → `Fits`; `(false, false)` → `Fits`; `(true, false)` →
   `Truncated`; `(true, true)` → `Scrolling`.
-- [ ] T003 Create main/ui/rooms/MarqueeText.kt (depends on T002) with:
+- [X] T003 Create main/ui/rooms/MarqueeText.kt (depends on T002) with:
   - `enum class MarqueeLayout { Fits, Truncated, Scrolling }` and `internal fun marqueeLayout(overflows, canScroll)`
     making T002 pass.
   - `@Composable fun MarqueeText(text: String, style: TextStyle, color: Color, maxLines: Int, stale: Boolean, modifier: Modifier = Modifier, startDelayMillis: Int = 1_200)`.
@@ -96,7 +96,7 @@ stays still with no "…".
 **Independent Test**: quickstart §2 rows 1–3: a long name scrolls, a short one is still, a refresh
 does not restart it, a rename restarts it.
 
-- [ ] T004 [US1] In main/ui/rooms/NowPlayingCard.kt replace the source line
+- [X] T004 [US1] In main/ui/rooms/NowPlayingCard.kt replace the source line
   `Text(card.sourceName, style = type.body14, color = primary, maxLines = 1, overflow = TextOverflow.Ellipsis)`
   with `MarqueeText(card.sourceName, style = type.body14, color = primary, maxLines = 1, stale = stale)`
   (depends on T003). Leave the room title and the status line as they are. Check that the source
@@ -113,7 +113,7 @@ becomes one scrolling line.
 
 **Independent Test**: quickstart §2 row 4.
 
-- [ ] T005 [US2] In main/ui/nowplaying/NowPlayingScreen.kt (`PlaybackView`) replace the title
+- [X] T005 [US2] In main/ui/nowplaying/NowPlayingScreen.kt (`PlaybackView`) replace the title
   `Text(content.sourceName, style = type.cardTitle.copy(fontSize = 26.sp, letterSpacing = (-0.52).sp), color = primary, maxLines = 2, overflow = TextOverflow.Ellipsis)`
   with `MarqueeText(content.sourceName, style = <the same style>, color = primary, maxLines = 2, stale = state.stale)`
   (depends on T003). Leave the subtitle and the target line as they are. Independent of T004.
@@ -131,18 +131,18 @@ on Rooms start at different moments.
 
 ### Tests for User Story 3 (write first, see them fail)
 
-- [ ] T006 [US3] In test/ui/rooms/MarqueeTextTest.kt add failing tests for
+- [X] T006 [US3] In test/ui/rooms/MarqueeTextTest.kt add failing tests for
   `canScroll(stale: Boolean, windowFocused: Boolean, animationScale: Float): Boolean`
   (data-model.md "canScroll"): `(false, true, 1f)` → true; `(false, true, 0.5f)` → true;
   `(true, true, 1f)` → false; `(false, false, 1f)` → false; `(false, true, 0f)` → false.
-- [ ] T007 [US3] In the same file add failing tests for `marqueeStartDelay(index: Int): Int`
+- [X] T007 [US3] In the same file add failing tests for `marqueeStartDelay(index: Int): Int`
   (`1_200 + (index % 4) * 600`): 0 → 1 200, 1 → 1 800, 2 → 2 400, 3 → 3 000, 4 → 1 200.
 
 ### Implementation for User Story 3
 
-- [ ] T008 [US3] In main/ui/rooms/MarqueeText.kt add `internal fun canScroll(...)` and
+- [X] T008 [US3] In main/ui/rooms/MarqueeText.kt add `internal fun canScroll(...)` and
   `internal fun marqueeStartDelay(index)` making T006 and T007 pass (depends on T003, T006, T007).
-- [ ] T009 [US3] In `MarqueeText` (main/ui/rooms/MarqueeText.kt) compute
+- [X] T009 [US3] In `MarqueeText` (main/ui/rooms/MarqueeText.kt) compute
   `canScroll(stale, windowFocused, animationScale)` instead of `!stale` (depends on T008), where
   (research R2, R3):
   - `windowFocused = LocalWindowInfo.current.isWindowFocused`. `basicMarquee` 1.12.1 does not
@@ -151,7 +151,7 @@ on Rooms start at different moments.
     (`androidx.compose.ui.MotionDurationScale`), so a change of the phone's setting applies
     live. `basicMarquee` runs with its own fixed scale of 1 and ignores the setting, so this check
     is what honours "Remove animations". Without a scale in the context, the default 1 applies.
-- [ ] T010 [US3] Staggered starts (depends on T008, T004). In main/ui/rooms/RoomsScreen.kt switch the
+- [X] T010 [US3] Staggered starts (depends on T008, T004). In main/ui/rooms/RoomsScreen.kt switch the
   now-playing `items(content.cards, key = { it.key })` to `itemsIndexed(…, key = { _, card -> card.key })`
   and pass `startDelayMillis = remember(card.sourceName) { marqueeStartDelay(index) }` to
   `NowPlayingCard`. Remembering it inside the keyed item keeps a reorder from changing the delay,
@@ -165,29 +165,29 @@ on Rooms start at different moments.
 
 ## Phase 6: Polish & Cross-Cutting Concerns
 
-- [ ] T011 Run the local checks and read each exit code (`cmd > log; echo $?`):
+- [X] T011 Run the local checks and read each exit code (`cmd > log; echo $?`):
   `./gradlew :androidApp:assembleDebug`, `:composeApp:testAndroidHostTest`, `:composeApp:allTests`,
   `:composeApp:check`. Record the commands, date and test counts in
   specs/007-marquee-source-names/verification.md, created in 006's format: build under test,
   device, status legend, one row per quickstart §2 check, "Issues found".
-- [ ] T012 [P] Add a `## [0.7.0-alpha] - Unreleased` entry to CHANGELOG.md above 0.6.0-alpha
+- [X] T012 [P] Add a `## [0.7.0-alpha] - Unreleased` entry to CHANGELOG.md above 0.6.0-alpha
   (spec folder link, "pull request to follow"). Under Changed: a source name too long for its line
   scrolls by itself on the Rooms card and, when longer than two lines, on the Now Playing title; it
   stands still while the app cannot reach the hub and when the phone's animations are off.
-- [ ] T013 [P] Update AGENTS.md: under Design "Agreed details" add "A source name too long for its
+- [X] T013 [P] Update AGENTS.md: under Design "Agreed details" add "A source name too long for its
   line scrolls as a marquee on the Rooms card and the Now Playing title (two lines first there); it
   stands still when stale, unfocused or with animations off. Everywhere else names end in '…'."
-- [ ] T014 [P] Delete docs/backlog/scrolling-long-source-names.md and its row in
+- [X] T014 [P] Delete docs/backlog/scrolling-long-source-names.md and its row in
   docs/backlog/INDEX.md. Remove or update any links to it (`grep -rn scrolling-long-source-names`),
   except in specs/007-marquee-source-names/.
-- [ ] T015 **Local**: run quickstart §2 rows 1–11 on the POCO against the real hub, following
+- [X] T015 **Local**: run quickstart §2 rows 1–11 on the POCO against the real hub, following
   AGENTS.md "On-device verification". Note the volumes and set them to 1 first; save
   `animator_duration_scale` before row 9. At the end stop the test routes, then restore the volumes,
   both source names (`{"displayName": null}`), the animation setting, the screen timeout and Do Not
   Disturb. Record the evidence in specs/007-marquee-source-names/verification.md, including whether
   the 12 dp left fade makes the first letter look cut (fallback: right edge only, research R6) and
   whether several names scrolling looks too busy.
-- [ ] T016 Update docs/testing/full-app-test.md for this feature. Add rows for quickstart §2 rows 1–9
+- [X] T016 Update docs/testing/full-app-test.md for this feature. Add rows for quickstart §2 rows 1–9
   in their sections (R for Rooms, N for Now Playing, X for the stale row 8). Extend the fixture with
   a long name given to STREAM by `PUT /api/v2/inputs/{id}/display-name`, and restore it with
   `{"displayName": null}` in Teardown (T). Bump the header (covers `0.7.0-alpha`, hub API 0.1.28,
