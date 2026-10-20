@@ -2,6 +2,7 @@ package sonora.multiroom.mobile.ui.rooms
 
 import androidx.compose.foundation.basicMarquee
 import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -18,6 +19,7 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.CompositingStrategy
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.layout.layout
 import androidx.compose.ui.platform.LocalWindowInfo
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.rememberTextMeasurer
@@ -106,6 +108,20 @@ fun MarqueeText(
                     maxLines = 1,
                     softWrap = false,
                     modifier = Modifier
+                        // Reach [EdgeFade] into the gutter on the left; the padding below fills it, so
+                        // the first letter rests where it would as plain text, clear of the fade.
+                        .layout { measurable, constraints ->
+                            val extra = if (constraints.hasBoundedWidth) EdgeFade.roundToPx() else 0
+                            val placeable = measurable.measure(
+                                constraints.copy(
+                                    minWidth = 0,
+                                    maxWidth = if (constraints.hasBoundedWidth) constraints.maxWidth + extra else constraints.maxWidth,
+                                ),
+                            )
+                            layout((placeable.width - extra).coerceAtLeast(0), placeable.height) {
+                                placeable.place(-extra, 0)
+                            }
+                        }
                         .graphicsLayer { compositingStrategy = CompositingStrategy.Offscreen }
                         .drawWithContent {
                             drawContent()
@@ -130,7 +146,8 @@ fun MarqueeText(
                             repeatDelayMillis = 1_200,
                             initialDelayMillis = startDelayMillis,
                             velocity = 30.dp,
-                        ),
+                        )
+                        .padding(start = EdgeFade),
                 )
             }
         }
