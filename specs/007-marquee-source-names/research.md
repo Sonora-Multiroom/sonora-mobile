@@ -111,9 +111,7 @@ so the fade stays fixed while the text moves (the foundation sample `BasicMarque
 **Rationale**: Offscreen compositing applies the fade to the text only, not to the card behind it.
 The fade is not drawn on text that fits. At rest, the left fade lightly touches the first letter;
 12 dp (the sample uses 32 dp on a much wider line) keeps that small. The on-device check confirms
-it. On the device the first letter did look dimmed, so the Scrolling layout now reaches 12 dp into the
-gutter on its left and pads the text by 12 dp: at rest the first letter stands clear of the fade and
-keeps the column's alignment.
+it; the fallback, if the first letter looks cut, is to fade the right edge only.
 
 **Alternatives considered**: no fade (the backlog asked for one); a fade drawn in the card colour
 (wrong over the stale/dimmed card and over the selected-state background).
