@@ -6,6 +6,17 @@ User-facing changes to the Sonora Multiroom mobile app, one entry per feature. T
 the feature's spec folder and pull request. Repository-only changes (documentation, CI, tooling)
 are listed under "Development" when they affect contributors.
 
+## [0.7.0-alpha] - Unreleased
+
+Scrolling long source names ([spec](specs/007-marquee-source-names/), pull request to follow).
+
+### Changed
+
+- A source name too long for its line scrolls by itself: on the Rooms card when it is longer than
+  one line, and on the Now Playing title when it is longer than two. It stands still, ending in
+  "…", while the app cannot reach the hub and when the phone's animations are off. Names that fit
+  look as before.
+
 ## [0.6.0-alpha] - Unreleased
 
 Rooms a playback is really on, and plain refusal messages

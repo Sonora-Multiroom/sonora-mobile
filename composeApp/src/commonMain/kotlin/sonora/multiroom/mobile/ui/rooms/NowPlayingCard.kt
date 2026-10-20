@@ -42,6 +42,7 @@ fun NowPlayingCard(
     onVolumeDrag: (Int) -> Unit,
     onVolumeDragEnd: (Int) -> Unit,
     modifier: Modifier = Modifier,
+    startDelayMillis: Int = 1_200,
 ) {
     val colors = SonoraTheme.colors
     val type = SonoraTheme.type
@@ -88,7 +89,14 @@ fun NowPlayingCard(
                             )
                         }
                     }
-                    Text(card.sourceName, style = type.body14, color = primary, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    MarqueeText(
+                        card.sourceName,
+                        style = type.body14,
+                        color = primary,
+                        maxLines = 1,
+                        stale = stale,
+                        startDelayMillis = startDelayMillis,
+                    )
                     Text(
                         statusLine(card),
                         style = type.body13,

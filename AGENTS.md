@@ -103,6 +103,12 @@ the `quickstart.md` §2 checks itself instead of handing them all to the user.
   messaging app, and the next keystrokes were typed into the user's chat.
 - The Pixel 5 accepts `input tap`; the POCO refuses it unless "USB debugging (Security
   settings)" is on, so on the POCO the user taps.
+- Layout checks need a phone-width screen: on a tablet (the Lenovo TB331FC is ~800 dp wide) a
+  64-character source name fits one Rooms card line and nothing overflows. Use a phone; `wm size`
+  on a tablet gives a screen too short to read (restore with `wm size reset`).
+- The notification shade shows the user's private notifications in a `screencap`. To test what
+  happens while it is down, check `dumpsys window | grep mCurrentFocus` (`NotificationShade`)
+  instead of capturing it, and never keep or quote such a frame.
 - Read the screen with `uiautomator dump` (text, content descriptions, bounds) and
   `exec-out screencap -p`. A dump takes ~2.5 s, so never time anything with it; for timings
   ("Now Playing within ~3 s") capture `screencap` in a loop with timestamps and read the frames.
@@ -133,14 +139,18 @@ the `quickstart.md` §2 checks itself instead of handing them all to the user.
   removes its runtime input); `https://example.com/` is refused at once;
   `http://10.255.255.1/stream.mp3` is refused after ~10 s, which is useful for "answer arrives
   after the screen closed" checks. No link was found that takes the full 30 s timeout.
+- `PUT /api/v2/inputs/{id}/display-name` (API 0.1.28) refuses a name over 64 characters with 400.
+  An em dash or any non-ASCII character typed into a Git Bash `curl -d` also gives 400 ("Invalid
+  UTF-8", the shell passes cp1252): write the JSON with the Write tool and send it with
+  `--data-binary @file`.
 
 Record the build (CI build number and commit), the device and each row's evidence in
 `verification.md`; issues found go under "Issues found", hub-side ones as observations.
 
 ## API
 
-- [api/openapi.json](api/openapi.json) was fetched from the production hub on 2026-10-16
-  (API version **0.1.25**); refresh it with `./gradlew refreshOpenApi` from a local session. It
+- [api/openapi.json](api/openapi.json) was fetched from the production hub on 2026-10-19
+  (API version **0.1.28**); refresh it with `./gradlew refreshOpenApi` from a local session. It
   also contains TTS extension paths (`/api/tts/*`): **use only `/api/v2/**`**. The hub removed
   REST v1 in 0.1.24.
 - 0.1.21 added join modes (`RouteResponse.joinMode`, `InputResponse.defaultJoinMode`) and admission
@@ -152,8 +162,8 @@ Record the build (CI build number and commit), the device and each row's evidenc
   the app maps these four ("<room> is turned off" and so on, then a refresh) besides
   `ROUTE_LIMIT_REACHED` and `INPUT_ALREADY_ON_OUTPUT`, and retries a move refused as
   `ROUTE_CHANGING_OUTPUTS` (0.1.25) once after 1 s.
-  The contract's description of `ErrorResponse.reason` still names only the 0.1.21 reasons (hub
-  backlog `error-reason-schema-description`).
+  Since 0.1.28 the contract's description of `ErrorResponse.reason` lists every reason and says
+  to treat an unknown one as a generic conflict.
 - 0.1.23 (hub 025): master mute is a layer above each output's own mute and no longer changes any
   output's `muted`; turning it off restores each output's own mute.
 - 0.1.25 (hub 027, 028): turning off a source stops every route playing it (paused ones
@@ -162,6 +172,11 @@ Record the build (CI build number and commit), the device and each row's evidenc
   containing it, under the same route id. While that room rejoins, a transfer answers 409
   `ROUTE_CHANGING_OUTPUTS`, which clears by itself within moments. 028 is internal (sound-card
   channel use).
+- 0.1.28: `PUT /api/v2/inputs/{id}/display-name` `{displayName}` renames an input (at most 64
+  characters; null or blank restores the original name; lasts until a restart for a configured
+  input, until removal for a runtime one). `POST /api/v2/play` answers with the input's
+  `displayName`: the name sent, the title the link resolved to, or a generated placeholder.
+  Resolved titles can be long. The app calls neither the rename nor reads the new field yet.
 - Generate a Kotlin multiplatform client (Ktor + kotlinx.serialization) from it at build time,
   e.g. OpenAPI Generator `kotlin` with `library=multiplatform`. Do not commit generated code. Wrap
   it behind a small hand-written repository interface so screens never touch generated types.
@@ -254,6 +269,9 @@ Type: **Sora** for titles (30 sp screen titles, 17 sp card titles), **DM Sans** 
 else (16/15/14/13/12 sp). Radii: cards 22, tiles 12–14, pills fully rounded. Touch targets ≥ 44 dp.
 
 Agreed details — keep them:
+- A source name too long for its line scrolls as a marquee on the Rooms card and the Now Playing
+  title (two lines first there); it stands still when stale, unfocused or with animations off.
+  Everywhere else names end in "…".
 - Volume is a **pill**: a 44 dp rounded bar that fills with `accentContainer`, speaker icon left,
   percentage right. It must never look like a progress bar.
 - Non-pauseable routes show **Stop** only. A live stream = not pauseable + `http(s)` input address
