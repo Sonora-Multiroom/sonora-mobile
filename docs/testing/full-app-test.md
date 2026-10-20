@@ -4,7 +4,7 @@ A regression run of the whole app on a real phone against the real hub. Every fe
 `quickstart.md` checks only what that feature added, at the time it shipped. This script checks
 what the app does **today**, across every shipped feature, in one pass.
 
-**Covers**: `0.6.0-alpha` · **Hub API**: 0.1.25 · **Last updated**: 2026-10-19
+**Covers**: `0.7.0-alpha` · **Hub API**: 0.1.28 · **Last updated**: 2026-10-20
 
 Run it when the user asks for a "full app test", before a release, after a hub upgrade, and after
 a dependency update that touches Compose, Ktor or the generated client.
@@ -60,6 +60,7 @@ into the report. Where the hub lacks a role, mark the rows that need it `n/a`.
 | `SOLO` | a room in no group, or in a group other than `GROUP` | R1, N7, ST5 |
 | `STREAM` | a known-good `http(s)` stream (KissFM) | most rows |
 | `STREAM2` | a second known-good stream (KissFM 2.0 Deep) | S4, N7 |
+| `LONGNAME` | `STREAM` and `STREAM2` renamed to long names with `PUT /inputs/{id}/display-name` (at most 64 characters; ASCII only from Git Bash, body from a file, see AGENTS.md). Needs a phone-width screen: on a tablet these names fit one line | R13–R17, N16, X3 |
 | `PAUSEABLE` | a configured `file:` source (`oceanwavescrushing`); may be off on the hub, then turn it on for the run and off again in teardown. The sample lasts ~2 min, after which the hub removes its route: start it just before each row that needs it | R5, N3, N8, ST10 |
 | `LINEIN` | a line-in source, if the hub has one (Chromecast Audio, `alsa://…`, usually off: turn it on for N2 and off right after) | N2 |
 | `LINK` | `soundcloud.com/forss/flickermood` (plays ~3 min, then the hub removes it) | S7, ST11–ST12 |
@@ -107,6 +108,11 @@ into the report. Where the hub lacks a role, mark the rows that need it `n/a`.
 | R10 | `STREAM` on `GROUP`; then `PUT /outputs/G1/enabled {false}`; `GET /routes` shows `outputs: [G2]` | Rooms | The card lists `G2` only, its pill shows `G2`'s volume; "N of M rooms in use" leaves `G1` out; `G1` under "Off" |
 | R11 | as R10, `G1` and `G2` at volume 1 | Drag the group pill to ~5 % | Only `G2` changes (`GET /outputs`); `G1` keeps 1 |
 | R12 | as R10, then `PUT /outputs/G1/enabled {true}` | Wait one refresh on Rooms, then on Now Playing | Both rooms shown again, in the group's order (not the order they joined), with `G1`'s pill |
+| R13 | `STREAM` renamed by `PUT /inputs/{id}/display-name` to a name of ~60 characters, on a room; a short-named source on another | Rooms | The long name shows its start, stands still ~1.2–3 s, then scrolls right to left, pauses and repeats (`screencap` frames with timestamps); no "…", edges fade, the text never runs under the Stop button. The short name stands still with no "…" |
+| R14 | as R13 | Watch the long name for a minute; then rename it by `curl` | It never jumps back mid-cycle across refreshes and keeps cycling after three cycles. After the rename it starts again from the beginning of the new name |
+| R15 | as R13, with two long names on two rooms | Rooms | Both scroll and start at different moments. Note whether it looks too busy |
+| R16 | as R13 | Pull the notification shade over Rooms and close it; Home and reopen | Stands still while the shade is down, then scrolls again from its beginning; no error or jump after reopening. Do not capture the shade (it shows private notifications): `dumpsys window \| grep mCurrentFocus` names `NotificationShade` while it is down, and a frame taken ~0.5 s after closing shows the name at its start |
+| R17 | as R13; save `settings get global animator_duration_scale` first | `settings put global animator_duration_scale 0`, then restore it | Names stand still ending in "…" (Rooms: one line); after restoring, scrolling resumes without reopening the app |
 
 ## N. Now Playing and Move to room
 
@@ -127,6 +133,7 @@ into the report. Where the hub lacks a role, mark the rows that need it `n/a`.
 | N13 | as N12 | "Move to room…"; then pick "<G2> only" → Move | "<G2> only" reads "Nothing stops" in the plain grey note (not amber); "<G1> only" reads "Turned off"; `G1` is listed once. The move is accepted, the sheet closes, music keeps playing on `G2`, Now Playing reads "on <G2>". Turn `G1` back on |
 | N14 | `STREAM` on `GROUP`, both members on | Settings → Rooms: turn `G1` off ("Turn off"), then on; go straight to Now Playing → "Move to room…" → an idle room → Move. Repeat 3 times | Each move succeeds with no message (a refusal while `G1` rejoins is retried once after ~1 s). If the rejoin is always too fast to hit, record "not reached": the view-model tests cover the retry |
 | N15 | `STREAM` on a room, Move sheet open with an idle room `B` selected; then `PUT /outputs/B/enabled {false}` | Move | "<B> is turned off"; the sheet closes; the next sheet shows `B` "Turned off". Turn `B` back on |
+| N16 | as R13, then a rename to ~64 characters of short words that needs three or more lines (check with animations at 0 and a screenshot) | Open its card; then the shorter long name | A name that fits two lines wraps and stands still; the 64-character one is one scrolling line, readable by waiting |
 
 ## S. Start Playback
 
@@ -183,12 +190,14 @@ recheck failures by hand. ST17 and ST18 stay manual. When a row below changes, c
 |---|---|---|
 | X1 | **User**: cut the phone's Wi-Fi on Rooms, wait 6 s, restore | "Can't reach the hub · showing last known state", controls disabled; live again within ~6 s of restoring. adb may need re-pairing |
 | X2 | **User**: the same on Now Playing with the move sheet open, on Start Playback with selections, and on Settings | Sheet's Move disabled; selections kept and Play disabled; Settings "Not connected", switches and trash disabled, "Test connection" still answers. All re-enable after restoring |
+| X3 | as R13. **User**: cut the phone's Wi-Fi on Rooms | The card dims and the long name stands still at its start ending in "…"; it scrolls again once the network is back |
 
 Never stop the hub for these checks unless the user offers to: it stops every playback in the home.
 
 ## T. Teardown
 
-1. Stop every route the run started (`DELETE /routes/{id}`), **before** touching volumes.
+1. Stop every route the run started (`DELETE /routes/{id}`), **before** touching volumes. Restore
+   renamed inputs with `PUT /inputs/{id}/display-name` `{"displayName": null}`.
 2. Restore every output's volume and mute, master mute, and every output, group and input's on/off
    to the P4 snapshot. Diff a fresh snapshot against it; only runtime inputs the hub has since
    removed may differ.

@@ -103,6 +103,12 @@ the `quickstart.md` §2 checks itself instead of handing them all to the user.
   messaging app, and the next keystrokes were typed into the user's chat.
 - The Pixel 5 accepts `input tap`; the POCO refuses it unless "USB debugging (Security
   settings)" is on, so on the POCO the user taps.
+- Layout checks need a phone-width screen: on a tablet (the Lenovo TB331FC is ~800 dp wide) a
+  64-character source name fits one Rooms card line and nothing overflows. Use a phone; `wm size`
+  on a tablet gives a screen too short to read (restore with `wm size reset`).
+- The notification shade shows the user's private notifications in a `screencap`. To test what
+  happens while it is down, check `dumpsys window | grep mCurrentFocus` (`NotificationShade`)
+  instead of capturing it, and never keep or quote such a frame.
 - Read the screen with `uiautomator dump` (text, content descriptions, bounds) and
   `exec-out screencap -p`. A dump takes ~2.5 s, so never time anything with it; for timings
   ("Now Playing within ~3 s") capture `screencap` in a loop with timestamps and read the frames.
@@ -133,6 +139,10 @@ the `quickstart.md` §2 checks itself instead of handing them all to the user.
   removes its runtime input); `https://example.com/` is refused at once;
   `http://10.255.255.1/stream.mp3` is refused after ~10 s, which is useful for "answer arrives
   after the screen closed" checks. No link was found that takes the full 30 s timeout.
+- `PUT /api/v2/inputs/{id}/display-name` (API 0.1.28) refuses a name over 64 characters with 400.
+  An em dash or any non-ASCII character typed into a Git Bash `curl -d` also gives 400 ("Invalid
+  UTF-8", the shell passes cp1252): write the JSON with the Write tool and send it with
+  `--data-binary @file`.
 
 Record the build (CI build number and commit), the device and each row's evidence in
 `verification.md`; issues found go under "Issues found", hub-side ones as observations.
@@ -259,6 +269,9 @@ Type: **Sora** for titles (30 sp screen titles, 17 sp card titles), **DM Sans** 
 else (16/15/14/13/12 sp). Radii: cards 22, tiles 12–14, pills fully rounded. Touch targets ≥ 44 dp.
 
 Agreed details — keep them:
+- A source name too long for its line scrolls as a marquee on the Rooms card and the Now Playing
+  title (two lines first there); it stands still when stale, unfocused or with animations off.
+  Everywhere else names end in "…".
 - Volume is a **pill**: a 44 dp rounded bar that fills with `accentContainer`, speaker icon left,
   percentage right. It must never look like a progress bar.
 - Non-pauseable routes show **Stop** only. A live stream = not pauseable + `http(s)` input address
