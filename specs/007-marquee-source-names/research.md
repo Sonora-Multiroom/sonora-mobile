@@ -73,7 +73,7 @@ turns the result into one of three layouts:
 |---|---|---|
 | no | any | **Fits**: plain text, `maxLines` lines, no "…", no fade (looks as before, SC-005) |
 | yes | false | **Truncated**: `maxLines` lines ending in "…" (as before this feature) |
-| yes | true | **Scrolling**: one line, `softWrap = false`, faded edges (R6), `basicMarquee` |
+| yes | true | **Scrolling**: one line, `softWrap = false`, faded right edge (R6), `basicMarquee` |
 
 `canScroll = !stale && windowFocused && animationScale > 0` is a second pure function.
 
@@ -102,16 +102,18 @@ The cap keeps the longest initial wait at 3 s.
 harder to reason about); only one card scrolling at a time (needs coordination across cards, more
 state for little gain; can be revisited if the on-device check finds it still too busy).
 
-## R6. Faded edges (FR-004)
+## R6. Faded right edge (FR-004)
 
 **Decision**: Only in the Scrolling layout: `graphicsLayer { compositingStrategy = Offscreen }` +
-`drawWithContent` drawing a 12 dp `DstIn` gradient at each edge, placed **before** `basicMarquee`
+`drawWithContent` drawing a 12 dp `DstIn` gradient at the right edge only, placed **before** `basicMarquee`
 so the fade stays fixed while the text moves (the foundation sample `BasicMarqueeWithFadedEdgesSample`).
 
 **Rationale**: Offscreen compositing applies the fade to the text only, not to the card behind it.
-The fade is not drawn on text that fits. At rest, the left fade lightly touches the first letter;
-12 dp (the sample uses 32 dp on a much wider line) keeps that small. The on-device check confirms
-it; the fallback, if the first letter looks cut, is to fade the right edge only.
+The fade is not drawn on text that fits. The first plan faded both edges at 12 dp (the sample uses
+32 dp on a much wider line), but on the phones the left fade dimmed the first letter of a name
+waiting at its start. Padding the text into the gutter fixed that but did not look right; fading
+the right edge only was chosen and looks better: the left edge is a plain cut, the first letter is
+crisp.
 
 **Alternatives considered**: no fade (the backlog asked for one); a fade drawn in the card colour
 (wrong over the stale/dimmed card and over the selected-state background).

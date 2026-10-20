@@ -59,9 +59,9 @@ still, and the whole long name can be read by waiting.
 4. **Given** a scrolling name, **When** the name changes (another source starts in that room),
    **Then** the new name starts again from its beginning, with the same initial pause, if it does
    not fit, or stands still if it fits.
-5. **Given** a scrolling name, **When** it is cut at the left or right edge of its line, **Then**
-   the edge fades out softly instead of ending in a hard cut, and the text never overlaps the
-   card's buttons.
+5. **Given** a scrolling name, **When** it is cut at the right edge of its line, **Then** the edge
+   fades out softly instead of ending in a hard cut, the first letter of a name waiting at its
+   start is not dimmed, and the text never overlaps the card's buttons.
 
 ---
 
@@ -151,8 +151,9 @@ lockstep.
   and repeat for as long as it is shown.
 - **FR-003**: A name that fits its space MUST stand still and MUST NOT show "…". A name that scrolls
   MUST NOT show "…" either.
-- **FR-004**: Where a scrolling name is cut at the edges of its space, the edges MUST fade out
-  softly instead of cutting hard, and the text MUST stay inside its space (never under the card's
+- **FR-004**: Where a scrolling name is cut at the right edge of its space, the edge MUST fade out
+  softly instead of cutting hard; the left edge stays crisp so the first letter of a name at rest is
+  not dimmed. The text MUST stay inside its space (never under the card's
   buttons, the status chip or other text).
 - **FR-005**: A refresh from the hub that brings the same name MUST NOT restart or disturb a
   scrolling name. It starts again from its beginning, with the initial pause, when the name

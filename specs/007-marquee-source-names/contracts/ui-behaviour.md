@@ -18,7 +18,7 @@ stale `textMuted`.
 | Situation | Rooms card | Now Playing title |
 |---|---|---|
 | Name fits | one line, still, no "…" | one or two lines, still, no "…" |
-| Name too long, fresh, focused, animations on | one line scrolls right to left: still for the start delay, 30 dp/s, 1.2 s pause between cycles, repeats while shown, 12 dp faded edges | same, as one line, only when two lines are not enough |
+| Name too long, fresh, focused, animations on | one line scrolls right to left: still for the start delay, 30 dp/s, 1.2 s pause between cycles, repeats while shown, 12 dp faded right edge | same, as one line, only when two lines are not enough |
 | Name too long, stale | one line, still, ends in "…" | two lines, still, ends in "…" |
 | Window not focused (shade pulled down, another window in front) | as stale, until focus returns; then starts from the beginning with the start delay | same |
 | App in background | the frame clock is paused; nothing moves | same |
@@ -35,7 +35,7 @@ them stops, and starts again from its beginning when they close. This is expecte
 
 - The text node always holds the full name; TalkBack reads it once whatever the layout.
 - No focus stop and no touch handling are added to the name.
-- Contrast is unchanged (same colours). The faded edges only touch text that is moving or about to
+- Contrast is unchanged (same colours). The faded right edge only touches text that is moving or about to
   move, and do not affect the readable middle of the line.
 
 ## Design
