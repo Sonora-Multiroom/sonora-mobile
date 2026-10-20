@@ -40,9 +40,11 @@ one Rooms card line there, so nothing overflows. Status legend: ✅ pass · ❌ 
 | 10 | TalkBack reads the name once | ✅ | User ran it: the whole name was read once |
 | 11 | Move sheet and Settings still end in "…" | ✅ | Settings → Rooms: "Playing · Radio NV - Morning Talk, N…" and "Playing · Up all night to the deep blu…". The Move to room sheet wraps names onto two lines as before (they fit two lines, so no "…" appeared) |
 
-Also noted: the 12 dp left fade dims the first letter of a name at rest on Rooms ("U", "Z", "K" look
-faint). It is visible in every frame at the start position; the plan's fallback (fade the right
-edge only) would remove it. Two scrolling cards at once did not look too busy.
+Also noted: the 12 dp left fade first dimmed the first letter of a name at rest on Rooms ("U", "Z",
+"K" looked faint). Fixed in a follow-up: the marquee reaches 12 dp into the gutter on its left and
+pads its text by the same amount, so the first letter rests clear of the fade and still lines up with
+the room name above it. Checked on the Pixel 5 (Rooms): "KissFM" at rest has a full-strength "K"; a
+scrolling name still fades out in the gutter. Two scrolling cards at once did not look too busy.
 
 Restored afterwards: both test routes stopped (Bedroom untouched), Office 8 and Kitchen 30, both
 inputs renamed back with `{"displayName": null}`, the Pixel's screen timeout 60000, Do Not
@@ -71,4 +73,4 @@ Restored afterwards: both routes stopped, Office 8, Kitchen 30, both names back,
 - Hub: `PUT /inputs/{id}/display-name` answers 400 "Invalid UTF-8" for an em dash sent from Git
   Bash (curl passes the argument as cp1252); send the body from a file with `--data-binary @file`.
   Names over 64 characters are also refused with 400.
-- App (cosmetic): the left fade dims the first letter of a still name; see "Also noted".
+- App (cosmetic, fixed): the left fade dimmed the first letter of a still name; see "Also noted".
