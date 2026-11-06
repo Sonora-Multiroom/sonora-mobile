@@ -75,6 +75,8 @@ screen uses them yet, so nothing user-visible changes.
     `[Rooms, NowPlaying(r2)]`; non-fixed Start Playback over `NowPlaying(r1)` → only the top is
     replaced; fixed Start Playback directly over Rooms → `[Rooms, NowPlaying(r2)]`; top not a
     Start Playback → stack unchanged.
+  - Close without a start: `pop()` on `[Rooms, NowPlaying(r1), StartPlayback(null, Target.Room("k"))]`
+    leaves `[Rooms, NowPlaying(r1)]`, the same entry, so its view model is kept.
 - [ ] T003 In main/ui/nav/Destinations.kt make T002 pass (depends on T002):
   `data class StartPlayback(val targetId: String?, val fixedTarget: Target? = null, val fixedName: String? = null)`
   (KDoc: `fixedTarget` is the addressed `Target.Room` or `Target.Group` of the Now Playing it was
@@ -114,9 +116,11 @@ the same Now Playing; no false "ended" notice.
   move) → 2; unknown target, not pauseable → 1.
 - [ ] T007 [P] [US1] In test/ui/nowplaying/NowPlayingViewModelTest.kt add failing tests (research
   R6): after `onVisible()` then `onHidden()`, a snapshot without the route posts no message to
-  `AppMessages` and sets no `exit`; after `onVisible()` again, the next snapshot without it exits
-  with `Exit.Ended` and posts "Playback on <target> ended" exactly once; the existing "ended
-  elsewhere while visible" test still passes unchanged.
+  `AppMessages` and sets no `exit`; `onVisible()` again while another holder keeps the session
+  loop running (acquire a second holder before `onHidden()`) triggers a fetch without waiting for
+  the poll interval, and that snapshot without the route exits with `Exit.Ended` and posts
+  "Playback on <target> ended" exactly once; the existing "ended elsewhere while visible" test
+  still passes unchanged.
 - [ ] T008 [P] [US1] In test/ui/startplayback/StartPlaybackTextTest.kt add failing tests for
   `fixedTargetStatusText(card)` on rooms (research R5: as the picker tile — `Playing · KissFM`,
   `Paused · …`, `In Downstairs`, `Idle`, `Turned off`, `Not connected` — and `Removed`) and
@@ -156,9 +160,10 @@ the same Now Playing; no false "ended" notice.
   Boolean)` to main/ui/nowplaying/NowPlayingText.kt (depends on T006, T011).
 - [ ] T013 [US1] In main/ui/nowplaying/NowPlayingViewModel.kt add a private `visible` flag, set in
   `onVisible()` and cleared in `onHidden()` beside the existing `session.acquire()` /
-  `release()`; `onGone` returns early while not visible (depends on T007). KDoc: a covered Now
-  Playing (Start Playback on top) must not announce its playback's end; the next refresh after it
-  is visible again decides.
+  `release()`; `onGone` returns early while not visible; `onVisible()` also calls
+  `session.requestRefresh()` (depends on T007). KDoc: a covered Now Playing (Start Playback on
+  top) must not announce its playback's end; the refresh it asks for when visible again decides,
+  since the skipped snapshots are not replayed and the loop may not restart.
 - [ ] T014 [US1] Add `fixedTargetStatusText(card: FixedTargetCard)` and
   `fixedTargetNoteText(unusable: Unusable, name: String)` to
   main/ui/startplayback/StartPlaybackText.kt (depends on T008, T010). Implement every row of
@@ -333,7 +338,8 @@ assumption that the hub replaces a paused playback; record the answer).
   then restore the volumes, rooms turned off, screen timeout and Do Not Disturb. Record the
   evidence in specs/008-change-source-now-playing/verification.md, including whether the
   four-column row wraps "Change source…" cleanly and whether the hub replaced the paused
-  playback (row 13).
+  playback (row 13). If the hub did not replace the paused playback, stop and ask the user before
+  changing anything (the spec assumes it does).
 - [ ] T034 Update docs/testing/full-app-test.md for this feature: add rows for quickstart §2 in
   their sections (N for the action row and Change source, S for the fixed Start Playback and the
   "already playing" gate, X for row 16); rewrite S6 from "Play opens the same playback" to "Play

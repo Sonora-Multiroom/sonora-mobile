@@ -136,8 +136,12 @@ Now Playing.
 
 **Decision**: Now Playing decides "gone" only while it is visible. `onVisible`/`onHidden` already
 exist (the screen calls them under `repeatOnLifecycle(STARTED)`); the view model records a
-`visible` flag and `onGone` returns early while hidden. On becoming visible again, the session
-loop restarts on `acquire()` and the next snapshot decides as today. So:
+`visible` flag and `onGone` returns early while hidden. The snapshots it skipped are not
+replayed (`session.state` is a StateFlow), and `acquire()` restarts the loop only when it was the
+last holder: on Close, Now Playing may acquire before Start Playback releases, so the loop keeps
+its ~2.5 s rhythm and the screen would stay stale, with live controls, until the next tick.
+`onVisible` therefore also calls `session.requestRefresh()`, so the first fresh snapshot decides
+at once. So:
 - while Start Playback covers it, nothing is announced, whatever ended the playback (this start,
   another client, the end of a track), as FR-013 requires;
 - after a successful change the old entry is removed by R2 before it is ever visible again, and
@@ -196,7 +200,7 @@ starter as today (003 research R9), so a start still in flight reports to Rooms.
 | `StartPlaybackBuilderTest` | `GroupPlaying.status` (Playing, Paused, live stream → Playing) |
 | `StartPlaybackViewModelTest` | fixed mode: target selected from the start and never changed by `onSelectTarget`; no source preselected; Play disabled with the note while the target is off, enabled again when it is turned on; a removed target keeps its last name after a restore (`SavedStateHandle`); already playing disables Play in fixed **and** picker mode, another source or a link re-enables it; a group route on a room is not "already playing" for that room |
 | `StartPlaybackTextTest` | `fixedTargetStatusText` and `fixedTargetNoteText` for every row of R5 |
-| `NowPlayingViewModelTest` | gone while hidden posts nothing and does not exit; becoming visible and the next snapshot then exits with "Playback on … ended" once |
+| `NowPlayingViewModelTest` | gone while hidden posts nothing and does not exit; becoming visible requests a refresh, and that snapshot then exits with "Playback on … ended" once |
 | `NowPlayingBuilderTest` | `changeSourceVisible`: true for room and group playbacks (playing, paused, failed), false for an unknown target type |
 | `NowPlayingTextTest` (or `ActionRowTest`) | `actionRowLayout`: counts and compact flag for live stream, pauseable playing, paused, not movable, unknown target (Stop only) |
 

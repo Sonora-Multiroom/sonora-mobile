@@ -27,8 +27,9 @@ Three gaps stand between that and the wish:
 - Start Playback can preselect a room but not a group, and always lets the user pick another
   target.
 - When the chosen source already plays on the chosen target, Start Playback says so ("<source> is
-  already playing in <room>") but still lets the user tap Play. The hub then refuses the start
-  ("already playing"), so the user sees an error for something the screen already told them.
+  already playing in <room>") but still lets the user tap Play. The hub then either refuses the
+  start ("already playing") or answers with the playback that is already there; the full app test
+  (S6) has seen the latter. Either way Play promises a start that does not happen.
 
 Decisions taken on 2026-11-06 while writing the backlog item are carried over: a group playback
 preselects its group; picking the playing source starts nothing; the old Now Playing does not stay
@@ -113,8 +114,8 @@ the fixed target; start another station: it plays on the whole group.
    source…", **Then** Start Playback opens with that group as its fixed target.
 2. **Given** a group playback that currently plays on fewer rooms than the group has (a member
    turned off), **When** the action is used, **Then** the group is still the target, not the
-   rooms it plays on right now, and Start Playback's existing note on rooms that won't play is
-   shown.
+   rooms it plays on right now, and once a source is picked Start Playback's existing note on
+   rooms that won't play is shown.
 3. **Given** the group as target and another source picked, **When** the consequence line
    is shown, **Then** it names every playback the start would stop, as Start Playback already does
    for a group target.
@@ -187,8 +188,10 @@ another source: the new one plays in that room and the paused one is gone.
   it is open): the target line stays, a short note says why ("Kitchen is turned off", "Downstairs
   no longer exists"), and Play is disabled. The user closes the screen; there is no picker to fall
   back to. If the target comes back (turned on again), Play is enabled again.
-- **A group with every member turned off or not connected**: treated like a target that can no
-  longer be used, with Start Playback's existing wording for such a group.
+- **A group with every member turned off or not connected, or with no rooms**: treated like a
+  target that can no longer be used. The note reuses the wording Start Playback already has where
+  one exists ("All rooms in Downstairs are turned off") and follows the same pattern otherwise
+  ("No room in Downstairs is connected", "Downstairs has no rooms"; research R5).
 - **The start fails** (the station does not answer): the hub stops the old playback before it
   tries the new one, so the room falls silent. The app shows Start Playback's existing failure
   message; it neither warns beforehand nor offers to restore the old playback. Closing Start
@@ -237,11 +240,6 @@ another source: the new one plays in that room and the paused one is gone.
 - **FR-009**: Closing Start Playback without a start MUST return to the old Now Playing unchanged.
 - **FR-010**: A failed start MUST show Start Playback's existing failure message; no new warning,
   confirmation or restore offer is added.
-- **FR-013**: While Start Playback opened from a Now Playing is showing, the end of that Now
-  Playing's playback MUST NOT be announced ("Playback on <target> ended"), whether this start
-  replaced it or it ended for another reason. After a successful start no such notice appears at
-  all. If the user closes Start Playback and the playback is gone, the old Now Playing leaves and
-  the usual notice appears, as today.
 - **FR-011**: The fixed target, and that Start Playback was opened from Now Playing, MUST survive
   the app being restored by the system, as the room preselection does today.
 - **FR-012**: The screens MUST follow the design canvas, updated for this feature on 2026-11-06
@@ -256,12 +254,18 @@ another source: the new one plays in that room and the paused one is gone.
     a second line, so the row fits a 360 dp wide phone.
   - Opened from the action, Start Playback is titled "Change source". Its "Play in" section keeps
     its heading and shows one full-width card (no radio button) with the target's name and, below
-    it, what the target is and what plays there ("Group · Playing Radio Paradise"). A target that
+    it, what plays there. A group's line starts with "Group ·" ("Group · Playing Radio Paradise");
+    a room's reads as its picker tile does ("Playing · KissFM"), with no "Room ·". A target that
     cannot be used is drawn dimmed, with the note of FR-005 above Play ("Downstairs is turned
     off").
   - The "already playing" line keeps its muted colour, and a disabled Play keeps the dimmed
     accent Start Playback already uses.
   - The button's spoken label is "Change source"; its touch target is far above 44 dp.
+- **FR-013**: While Start Playback opened from a Now Playing is showing, the end of that Now
+  Playing's playback MUST NOT be announced ("Playback on <target> ended"), whether this start
+  replaced it or it ended for another reason. After a successful start no such notice appears at
+  all. If the user closes Start Playback and the playback is gone, the old Now Playing leaves and
+  the usual notice appears, as today, on the refresh it asks for when it is shown again.
 
 ### Key Entities
 
@@ -282,8 +286,9 @@ another source: the new one plays in that room and the paused one is gone.
 - **SC-002**: In every check on the real hub, the target after the action is the playback's own
   room or group and cannot be changed on that screen; a group playback is never narrowed to one of
   its rooms.
-- **SC-003**: Selecting the source already playing on the selected target never sends a start: no
-  "already playing" refusal from the hub is ever shown after this feature.
+- **SC-003**: Selecting the source already playing on the selected target never sends a start, so
+  the hub's "already playing" refusal (or its answer with the existing playback) can no longer be
+  provoked from that selection.
 - **SC-004**: After a change of source from Now Playing, one Back press reaches the screen below the
   old Now Playing; the old playback's screen is never shown again.
 - **SC-005**: The playback keeps playing, without a gap, from the tap on the action until the user
@@ -294,7 +299,8 @@ another source: the new one plays in that room and the paused one is gone.
 
 - The hub replaces what plays on a target when a source with the default join mode starts there,
   and does so for a paused playback as for a playing one. The latter is checked on device (the
-  quickstart) before the feature is called done.
+  quickstart) before the feature is called done; if the hub does not replace a paused playback,
+  implementation stops and the user decides how to proceed.
 - The hub stops the old playback before trying the new one (AGENTS.md "Known hub behaviour"), so a
   failed start leaves the room silent. Changing that order is a hub-side item for the
   `multiroom-ai` backlog, not part of this feature.

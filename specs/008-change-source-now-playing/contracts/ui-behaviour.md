@@ -20,8 +20,8 @@ caption "Change source…" in `textMuted` 12 sp; spoken label **"Change source"*
 Tapping it sends nothing and opens Start Playback with the fixed target.
 
 While Start Playback opened from it is showing, the covered Now Playing announces no "Playback on
-… ended", whatever the cause; after Close, if the playback is gone, it leaves with the usual
-notice on Rooms (FR-013).
+… ended", whatever the cause; after Close it asks for a refresh at once and, if the playback is
+gone, leaves with the usual notice on Rooms (FR-013).
 
 ## Start Playback opened from Change source
 

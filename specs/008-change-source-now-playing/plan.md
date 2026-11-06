@@ -55,12 +55,13 @@ sent); Now Playing of the new playback within one refresh of the start's answer,
 **Constraints**: one poll loop app-wide (the covered Now Playing must not poll or act); the
 four-button row fits a 360 dp phone; nothing Android-only in `commonMain`.
 
-**Scale/Scope**: 1 new domain file (`FixedTarget.kt`), ~9 edited production files
-(`Destinations.kt`, `AppNavigation.kt`, `AppGraph.kt`, `NowPlayingBuilder.kt`, `StartPlaybackBuilder.kt`,
+**Scale/Scope**: 2 new production files (`domain/FixedTarget.kt`,
+`ui/startplayback/FixedTargetCard.kt`), 13 edited production files (`Destinations.kt`,
+`AppNavigation.kt`, `AppGraph.kt`, `NowPlayingBuilder.kt`, `StartPlaybackBuilder.kt`,
 `StartPlaybackViewModel.kt`, `StartPlaybackUiState.kt`, `StartPlaybackScreen.kt`,
-`StartPlaybackText.kt`, `NowPlayingScreen.kt`, `NowPlayingViewModel.kt`, `Icons.kt`, a small
-`ActionRow` helper), 1 new and ~5 extended test files, `gradle.properties`, AGENTS.md, the backlog
-and the full app test.
+`StartPlaybackText.kt`, `NowPlayingScreen.kt`, `NowPlayingText.kt` (`actionRowLayout`),
+`NowPlayingViewModel.kt`, `Icons.kt`), 1 new and 7 extended test files, `gradle.properties`,
+CHANGELOG.md, AGENTS.md, the backlog and the full app test.
 
 ## Constitution Check
 
@@ -122,18 +123,21 @@ composeApp/src/commonMain/kotlin/sonora/multiroom/mobile/
     │   └── AppNavigation.kt                        # onChangeSource → push; onStarted → showStarted
     ├── nowplaying/
     │   ├── NowPlayingScreen.kt                     # the button, compact four-column row
-    │   ├── NowPlayingText.kt (or ActionRow.kt)     # actionRowLayout
-    │   └── NowPlayingViewModel.kt                  # visible flag; onGone only while visible
+    │   ├── NowPlayingText.kt                       # actionRowLayout
+    │   └── NowPlayingViewModel.kt                  # visible flag; onGone only while visible;
+    │                                               #   onVisible requests a refresh
     ├── startplayback/
     │   ├── StartPlaybackViewModel.kt               # fixed mode, AlreadyPlaying gate
     │   ├── StartPlaybackUiState.kt                 # fixed, changeSource
     │   ├── StartPlaybackScreen.kt                  # title, fixed card, note above Play
+    │   ├── FixedTargetCard.kt                      # new: the fixed target card, beside TargetTile.kt
     │   └── StartPlaybackText.kt                    # fixedTargetStatusText, fixedTargetNoteText
     └── theme/Icons.kt                              # Swap
 composeApp/src/commonTest/kotlin/sonora/multiroom/mobile/
 ├── domain/FixedTargetTest.kt                       # new
 ├── domain/StartPlaybackBuilderTest.kt
 ├── ui/nav/AppBackStackTest.kt
+├── domain/StartConsequenceTest.kt, NowPlayingBuilderTest.kt
 ├── ui/nowplaying/NowPlayingViewModelTest.kt, NowPlayingTextTest.kt
 └── ui/startplayback/StartPlaybackViewModelTest.kt, StartPlaybackTextTest.kt
 AGENTS.md                                           # "Agreed details": the "Change source…" label and fixed target

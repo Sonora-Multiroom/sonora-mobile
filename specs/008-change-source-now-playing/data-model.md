@@ -84,7 +84,7 @@ Saved state keys (view model `SavedStateHandle`): existing `sourceId`, `target`,
 ### `NowPlayingUiState` / Now Playing view model (changed)
 
 - View model: private `visible` flag set by `onVisible` / cleared by `onHidden`; `onGone` does
-  nothing while not visible (R6, FR-013).
+  nothing while not visible; `onVisible` also requests a refresh (R6, FR-013).
 - `NowPlayingContent.Playback` (domain, `NowPlayingBuilder.kt`) gains `changeSourceVisible:
   Boolean` = `route.target !is Target.Unknown`, beside `moveVisible` (FR-002).
 - New pure `actionRowLayout(content: NowPlayingContent.Playback): ActionRowLayout`:
