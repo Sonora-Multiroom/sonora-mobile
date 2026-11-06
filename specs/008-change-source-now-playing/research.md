@@ -136,7 +136,11 @@ Now Playing.
 
 **Decision**: Now Playing decides "gone" only while it is visible. `onVisible`/`onHidden` already
 exist (the screen calls them under `repeatOnLifecycle(STARTED)`); the view model records a
-`visible` flag and `onGone` returns early while hidden. The snapshots it skipped are not
+`visible` flag and `onGone` returns early while hidden. This relies on the covered screen leaving
+composition: `AppNavigation` has no lifecycle entry decorator, so the covered entry's lifecycle
+owner stays STARTED, and it is the cancelled `LaunchedEffect` (its `finally` calls `onHidden`)
+that marks it hidden. The unit tests cover the view model only; quickstart row 12 proves the
+screen side on the device. The snapshots it skipped are not
 replayed (`session.state` is a StateFlow), and `acquire()` restarts the loop only when it was the
 last holder: on Close, Now Playing may acquire before Start Playback releases, so the loop keeps
 its ~2.5 s rhythm and the screen would stay stale, with live controls, until the next tick.

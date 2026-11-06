@@ -60,7 +60,7 @@ four-button row fits a 360 dp phone; nothing Android-only in `commonMain`.
 `AppNavigation.kt`, `AppGraph.kt`, `NowPlayingBuilder.kt`, `StartPlaybackBuilder.kt`,
 `StartPlaybackViewModel.kt`, `StartPlaybackUiState.kt`, `StartPlaybackScreen.kt`,
 `StartPlaybackText.kt`, `NowPlayingScreen.kt`, `NowPlayingText.kt` (`actionRowLayout`),
-`NowPlayingViewModel.kt`, `Icons.kt`), 1 new and 7 extended test files, `gradle.properties`,
+`NowPlayingViewModel.kt`, `Icons.kt`), 1 new and 8 extended test files, `gradle.properties`,
 CHANGELOG.md, AGENTS.md, the backlog and the full app test.
 
 ## Constitution Check

@@ -216,7 +216,8 @@ another source: the new one plays in that room and the paused one is gone.
 - **FR-002**: The action MUST be offered for every live playback Now Playing shows, playing or
   paused, whether or not it can be moved or paused, except one addressed to a kind of target the
   app does not recognise (a newer hub's): there it is hidden, as "Move to room…" is. It MUST be
-  disabled while Now Playing's other controls are (hub unreachable).
+  disabled while Now Playing's other controls are (hub unreachable) and while a Stop or a Move to
+  room is in flight.
 - **FR-003**: Start Playback opened from the action MUST target what the playback was addressed
   to: its room for a single-room playback, its group for a group playback. It MUST NOT target the
   rooms the playback happens to play on right now. No source and no link is preselected.

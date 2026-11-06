@@ -151,8 +151,10 @@ the same Now Playing; no false "ended" notice.
   Get `status` from `StartPlaybackBuilder`: factor its per-room and per-group status computation
   out of `build` into internal functions both use, so the picker and the card cannot drift. Add
   `data object Removed : TargetStatus` in main/domain/StartPlaybackBuilder.kt (not selectable;
-  never in `StartPlaybackContent.targets`). Room rows only need to pass here; group rows come in
-  US2, but implement the whole table now.
+  never in `StartPlaybackContent.targets`). Implement the **room rows only**: group rows (and the
+  group `status`, which needs T024) are written test-first in US2 (T021, T025). Until then `of`
+  throws `NotImplementedError` for a `Target.Group`; US1 and US2 ship in the same pull request, so
+  no build with a reachable group button is released.
 - [ ] T011 [US1] In main/domain/NowPlayingBuilder.kt add `changeSourceVisible: Boolean` to
   `NowPlayingContent.Playback`, set to `route.target !is Target.Unknown` beside `moveVisible`
   (depends on T005).
@@ -167,8 +169,9 @@ the same Now Playing; no false "ended" notice.
 - [ ] T014 [US1] Add `fixedTargetStatusText(card: FixedTargetCard)` and
   `fixedTargetNoteText(unusable: Unusable, name: String)` to
   main/ui/startplayback/StartPlaybackText.kt (depends on T008, T010). Implement every row of
-  research R5 now (groups: "Group · …"; notes "All rooms in Downstairs are turned off", "No room
-  in Downstairs is connected", "Downstairs has no rooms"); US2 adds their tests.
+  research R5 for **rooms** (status texts and the room notes, including `Removed`). The group
+  wording ("Group · …"; notes "All rooms in Downstairs are turned off", "No room in Downstairs is
+  connected", "Downstairs has no rooms") is written after its tests, in T025.
 - [ ] T015 [US1] Fixed mode in main/ui/startplayback/StartPlaybackViewModel.kt and
   main/ui/startplayback/StartPlaybackUiState.kt (depends on T009, T010; research R3):
   - constructor gains `fixedTarget: Target?`, `fixedName: String?` after `initialTargetId`;
@@ -260,9 +263,11 @@ card says "Group · Playing …", and the start plays on the whole group.
   `GroupPlaying(status: CardStatus, sources: List<String>)`, `status` = `cardStatus(...)` of the
   group's first non-announcement route, with `CardStatus.LiveStream` mapped to `Playing`
   (depends on T020). Update every `GroupPlaying` use (`targetStatusText` ignores the status).
-- [ ] T025 [US2] Make T021–T023 pass in main/domain/FixedTarget.kt and
-  main/ui/startplayback/StartPlaybackText.kt (depends on T010, T014, T024); fix only what the
-  group tests reveal.
+- [ ] T025 [US2] Make T021–T023 pass (depends on T021–T024, T010, T014): implement the group rows
+  of `FixedTarget.of` (data-model.md table, in order, with `status` from the T024
+  `GroupPlaying.status`) in main/domain/FixedTarget.kt, replacing the `NotImplementedError`, and
+  the group branches of `fixedTargetStatusText` / `fixedTargetNoteText` in
+  main/ui/startplayback/StartPlaybackText.kt. Confirm T021 and T022 failed before this task.
 
 **Checkpoint**: build and all tests green; quickstart §2 rows 9, 10, 12 pass.
 
@@ -303,7 +308,8 @@ one.
 
 **Independent Test**: quickstart §2 rows 13, 14.
 
-- [ ] T028 [US4] In test/domain/StartConsequenceTest.kt add a test (expected to pass already; if it
+- [ ] T028 [US4] In test/domain/StartConsequenceTest.kt add a characterization test (it documents
+  existing behaviour, so it is expected to pass at once, the one exception to "seen failing"; if it
   fails, fix `StartConsequence` minimally): a paused route on the target gives `WillStop` with the
   same `AffectedPlayback` as a playing one. In test/ui/nowplaying/NowPlayingTextTest.kt confirm
   the paused row of T006 (Stop · Resume · Change source…, count 3) covers this story.
@@ -337,8 +343,9 @@ assumption that the hub replaces a paused playback; record the answer).
   and tell the user the run replaces what plays in `A`, `B`, `G`. At the end stop the test routes,
   then restore the volumes, rooms turned off, screen timeout and Do Not Disturb. Record the
   evidence in specs/008-change-source-now-playing/verification.md, including whether the
-  four-column row wraps "Change source…" cleanly and whether the hub replaced the paused
-  playback (row 13). If the hub did not replace the paused playback, stop and ask the user before
+  four-column row wraps "Change source…" cleanly, whether the hub replaced the paused
+  playback (row 13), and, from row 12, that the covered Now Playing really stopped announcing
+  (the view model relies on the screen leaving composition while Start Playback is on top). If the hub did not replace the paused playback, stop and ask the user before
   changing anything (the spec assumes it does).
 - [ ] T034 Update docs/testing/full-app-test.md for this feature: add rows for quickstart §2 in
   their sections (N for the action row and Change source, S for the fixed Start Playback and the
@@ -355,8 +362,9 @@ assumption that the hub replaces a paused playback; record the answer).
 - **Setup (T001)**: first.
 - **Foundational (T002–T003)**: after T001; blocks US1 (T019) and everything that navigates.
 - **US1 (T004–T019)**: after T003. The MVP.
-- **US2 (T020–T025)**: needs T010 and T014 (US1's `FixedTarget` and texts); T024 also changes the
-  picker's model, so run it after T010 to avoid conflicts in StartPlaybackBuilder.kt.
+- **US2 (T020–T025)**: needs T010 and T014 (US1's room-only `FixedTarget` and texts); T024 also
+  changes the picker's model, so run it after T010 to avoid conflicts in StartPlaybackBuilder.kt.
+  T025 comes after T021–T024 and holds all group logic. Ship US1 and US2 together.
 - **US3 (T026–T027)**: independent of US1/US2 for the Rooms case; its fixed-mode tests need T015.
 - **US4 (T028)**: after T012 (US1's action row).
 - **Polish (T029–T034)**: after the stories. T033 needs an installed build. T034 is last.
