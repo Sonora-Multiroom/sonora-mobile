@@ -12,12 +12,16 @@ Start Playback's existing `POST /api/v2/routes` or `POST /api/v2/play`.
 | not pauseable, not movable (e.g. failed) | Stop · Change source… | as above |
 | pauseable, playing, movable | Stop · Pause · Change source… · Move to room… | 4 equal columns over the full width, 4 dp apart; 64 dp buttons, 24 dp icons; captions centred, may wrap to 2 lines |
 | pauseable, paused (not movable) | Stop · Resume · Change source… | 76 dp row |
-| unknown target type | as its row above, Change source… disabled | |
+| unknown target type (newer hub) | Stop (plus Pause/Resume when pauseable); Change source… and Move to room… hidden | 76 dp row |
 
 "Change source…": surface background, text-colour icon of two opposite arrows (`SonoraIcons.Swap`),
 caption "Change source…" in `textMuted` 12 sp; spoken label **"Change source"**. Disabled (opacity
-0.5, announced disabled) while the hub is unreachable, while a Stop or Move is in flight, or for an
-unknown target type. Tapping it sends nothing and opens Start Playback with the fixed target.
+0.5, announced disabled) while the hub is unreachable or while a Stop or Move is in flight.
+Tapping it sends nothing and opens Start Playback with the fixed target.
+
+While Start Playback opened from it is showing, the covered Now Playing announces no "Playback on
+… ended", whatever the cause; after Close, if the playback is gone, it leaves with the usual
+notice on Rooms (FR-013).
 
 ## Start Playback opened from Change source
 

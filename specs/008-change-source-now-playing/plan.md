@@ -27,7 +27,7 @@ Technically:
   `AlreadyPlaying` ([R4](research.md#r4-already-playing-disables-play-everywhere-fr-007-user-story-3)).
 - **Now Playing**: the button, a fourth-column compact layout, and "gone" decided only while the
   screen is visible, so a covered Now Playing does not post a false "ended"
-  ([R6](research.md#r6-the-old-now-playing-must-not-announce-ended-while-covered),
+  ([R6](research.md#r6-the-old-now-playing-must-not-announce-ended-while-covered-fr-013),
   [R7](research.md#r7-now-playings-action-row-fr-001-fr-002-fr-012)).
 - **No** hub call, repository, generated-client or dependency change.
 
@@ -56,7 +56,7 @@ sent); Now Playing of the new playback within one refresh of the start's answer,
 four-button row fits a 360 dp phone; nothing Android-only in `commonMain`.
 
 **Scale/Scope**: 1 new domain file (`FixedTarget.kt`), ~9 edited production files
-(`Destinations.kt`, `AppNavigation.kt`, `AppGraph.kt`, `StartPlaybackBuilder.kt`,
+(`Destinations.kt`, `AppNavigation.kt`, `AppGraph.kt`, `NowPlayingBuilder.kt`, `StartPlaybackBuilder.kt`,
 `StartPlaybackViewModel.kt`, `StartPlaybackUiState.kt`, `StartPlaybackScreen.kt`,
 `StartPlaybackText.kt`, `NowPlayingScreen.kt`, `NowPlayingViewModel.kt`, `Icons.kt`, a small
 `ActionRow` helper), 1 new and ~5 extended test files, `gradle.properties`, AGENTS.md, the backlog
@@ -71,7 +71,7 @@ and the full app test.
 | I. API Contract Fidelity | ✅ | No new call or field: the start is Start Playback's existing `POST /api/v2/routes` / `POST /api/v2/play`, the target comes from `RouteResponse.targetId/targetType` already mapped. Screens keep using domain types only. No hub change; the "hub stops first on a failed start" order stays a hub-side observation |
 | II. Truthful UI | ✅ | Every outcome is confirmed by hub state: the new Now Playing follows the returned route, the "will stop" line follows each refresh. Play is no longer offered for a start the hub would refuse (FR-007). A paused group playback reads "Paused", not "Playing" (R5). The target note says plainly why a start cannot be sent (FR-005). Pause and Move rules unchanged |
 | III. Shared-First | ✅ | All in `commonMain` / `commonTest`; no `expect`/`actual` |
-| IV. Test-First | ✅ | `FixedTarget.of`, `GroupPlaying.status`, the `AlreadyPlaying` gate, fixed-mode view model, `showStarted`, destination encoding, "gone while hidden" and `actionRowLayout` get failing tests first ([R9](research.md#r9-testing)). Build and all tests gate the change |
+| IV. Test-First | ✅ | `FixedTarget.of`, `GroupPlaying.status`, `changeSourceVisible`, the `AlreadyPlaying` gate, fixed-mode view model, `showStarted`, destination encoding, "gone while hidden" and `actionRowLayout` get failing tests first ([R9](research.md#r9-testing)). Build and all tests gate the change |
 | V. Resilient LAN Networking | ✅ | Stale state disables the new button and Play as it does the other controls; recovery unchanged. A covered Now Playing no longer reacts to snapshots (R6), so an outage while Start Playback is open cannot pop it |
 | VI. Design Fidelity & Accessibility | ✅ | The canvas was updated first (commit `adbe26e`, `NowPlaying*.dc.html`, `StartPlaybackFixed.dc.html`); colours and type from tokens. Buttons 64/76 dp, content description "Change source", disabled controls announced disabled; "Move to room…" label and the "will stop" notice kept |
 | VII. Minimal Dependencies | ✅ | None added |
@@ -84,9 +84,10 @@ one domain function and view-state fields ([data-model.md](data-model.md)); the 
 existing styles and wording ([contracts/ui-behaviour.md](contracts/ui-behaviour.md)).
 
 **Decisions made in this plan that the spec does not spell out** (flag for review before
-`/speckit-tasks`): the status-line wording of the fixed card and the FR-005 notes (R5); "Change
-source…" shown disabled for a target type the app does not know (R7); the three-button gap of
-24 dp taken from the updated canvas (R7).
+`/speckit-tasks`): the status-line wording of the fixed card and the FR-005 notes (R5); the
+three-button gap of 24 dp taken from the updated canvas (R7). The two earlier open points, the
+silent end under Start Playback and the unknown target type, are now FR-013 and FR-002 in the spec
+(commit `7c6a657`) and are planned as R6 and R7.
 
 ## Project Structure
 
@@ -112,6 +113,7 @@ composeApp/src/commonMain/kotlin/sonora/multiroom/mobile/
 ├── AppGraph.kt                                     # startPlaybackViewModel(targetId, fixedTarget, fixedName, …)
 ├── domain/
 │   ├── FixedTarget.kt                              # new: FixedTargetCard, Unusable, FixedTarget.of
+│   ├── NowPlayingBuilder.kt                        # changeSourceVisible (hidden for an unknown target type)
 │   └── StartPlaybackBuilder.kt                     # GroupPlaying.status, Removed; status per target shared
 └── ui/
     ├── nav/

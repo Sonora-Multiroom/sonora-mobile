@@ -84,14 +84,18 @@ Saved state keys (view model `SavedStateHandle`): existing `sourceId`, `target`,
 ### `NowPlayingUiState` / Now Playing view model (changed)
 
 - View model: private `visible` flag set by `onVisible` / cleared by `onHidden`; `onGone` does
-  nothing while not visible (R6).
+  nothing while not visible (R6, FR-013).
+- `NowPlayingContent.Playback` (domain, `NowPlayingBuilder.kt`) gains `changeSourceVisible:
+  Boolean` = `route.target !is Target.Unknown`, beside `moveVisible` (FR-002).
 - New pure `actionRowLayout(content: NowPlayingContent.Playback): ActionRowLayout`:
 
 | Field | Meaning |
 |---|---|
-| `changeSourceEnabledByTarget` | false only for `Target.Unknown` (combined with `controlsEnabled` and in-flight Stop/Move in the screen) |
-| `count` | 2 + `pauseVisible` + `moveVisible` (Stop and Change source are always there) |
+| `count` | 1 (Stop) + `pauseVisible` + `changeSourceVisible` + `moveVisible` |
 | `compact` | `count == 4`: four equal columns, 64 dp buttons |
+
+Enabled state is not part of it: the screen combines `controlsEnabled` with in-flight Stop/Move,
+as for the other buttons.
 
 `NowPlayingActions` gains `onChangeSource: () -> Unit`; `NowPlayingScreen` gains a matching
 parameter that navigation wires to `push(StartPlayback(null, target, name))`.

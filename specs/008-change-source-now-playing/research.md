@@ -125,9 +125,9 @@ status in `GroupPlaying`.
 **Alternatives considered**: reusing `targetStatusText` unchanged (`Group · Radio Paradise` does
 not say it plays, and the room/group distinction the spec asks for is missing for an off group).
 
-## R6. The old Now Playing must not announce "ended" while covered
+## R6. The old Now Playing must not announce "ended" while covered (FR-013)
 
-**Finding**: `NowPlayingViewModel` collects `session.state` for as long as its entry lives, also
+**Finding** (found while planning; the spec adopted it as FR-013): `NowPlayingViewModel` collects `session.state` for as long as its entry lives, also
 while Start Playback covers it. When a change of source replaces the old route, the first snapshot
 without it reaches the covered view model, which calls `end()` and posts "Playback on Kitchen
 ended" to `AppMessages`. That message would appear on Rooms later, after a successful change,
@@ -138,6 +138,8 @@ Now Playing.
 exist (the screen calls them under `repeatOnLifecycle(STARTED)`); the view model records a
 `visible` flag and `onGone` returns early while hidden. On becoming visible again, the session
 loop restarts on `acquire()` and the next snapshot decides as today. So:
+- while Start Playback covers it, nothing is announced, whatever ended the playback (this start,
+  another client, the end of a track), as FR-013 requires;
 - after a successful change the old entry is removed by R2 before it is ever visible again, and
   posts nothing;
 - after a failed start, Close returns to the old Now Playing, the next refresh finds the playback
@@ -156,11 +158,13 @@ two view models); letting `replaceTopTwo` clear `AppMessages` (would drop unrela
 - "Change source…" is a `RoundAction` with a new `SonoraIcons.Swap`
   (`M4 8h14M15 5l3 3-3 3M20 16H6M9 13l-3 3 3 3`, the canvas path), surface background, text tint,
   spoken label "Change source", placed after Stop and Pause/Resume and before "Move to room…".
-- Visible for every playback Now Playing shows (playing, paused, failed, pauseable or not).
-  Enabled when `controlsEnabled` and no Stop or Move is in flight, and the target is a room or a
-  group: a `Target.Unknown` (a target type from a newer hub) cannot be a Start Playback target, so
-  there it is shown disabled. Whether to show it, and the row layout, are one pure function
-  (`actionRowLayout(content)` in `NowPlayingText.kt` or a new `ActionRow.kt`), tested.
+- Visible for every playback Now Playing shows (playing, paused, failed, pauseable or not),
+  except one addressed to a `Target.Unknown` (a target type from a newer hub), which cannot be a
+  Start Playback target: there it is hidden (FR-002), as "Move to room…" is. The rule goes where
+  `moveVisible` is decided: `NowPlayingContent.Playback.changeSourceVisible =
+  route.target !is Target.Unknown` in `NowPlayingBuilder`. Enabled when `controlsEnabled` and no
+  Stop or Move is in flight. The row layout is one pure function (`actionRowLayout(content)` in
+  `NowPlayingText.kt` or a new `ActionRow.kt`), tested.
 - Layout: with three buttons or fewer the row keeps 76 dp buttons, 28 dp icons, captions on one
   line, gap 24 dp (the canvas changed 40 → 24 so Stop, Change source…, Move to room… fit a 360 dp
   phone: 76 + ~88 + ~80 + 2 × 24 ≈ 292 dp of 320). With four (Stop, Pause, Change source…, Move to
@@ -193,7 +197,8 @@ starter as today (003 research R9), so a start still in flight reports to Rooms.
 | `StartPlaybackViewModelTest` | fixed mode: target selected from the start and never changed by `onSelectTarget`; no source preselected; Play disabled with the note while the target is off, enabled again when it is turned on; a removed target keeps its last name after a restore (`SavedStateHandle`); already playing disables Play in fixed **and** picker mode, another source or a link re-enables it; a group route on a room is not "already playing" for that room |
 | `StartPlaybackTextTest` | `fixedTargetStatusText` and `fixedTargetNoteText` for every row of R5 |
 | `NowPlayingViewModelTest` | gone while hidden posts nothing and does not exit; becoming visible and the next snapshot then exits with "Playback on … ended" once |
-| `NowPlayingTextTest` (or `ActionRowTest`) | `actionRowLayout`: counts and compact flag for live stream, pauseable playing, paused, not movable, unknown target (Change source disabled) |
+| `NowPlayingBuilderTest` | `changeSourceVisible`: true for room and group playbacks (playing, paused, failed), false for an unknown target type |
+| `NowPlayingTextTest` (or `ActionRowTest`) | `actionRowLayout`: counts and compact flag for live stream, pauseable playing, paused, not movable, unknown target (Stop only) |
 
 All in `commonTest`, test-first (Principle IV). Compose UI tests stay optional; the layout at
 360 dp, the card and TalkBack are checked on the device (quickstart §2).
