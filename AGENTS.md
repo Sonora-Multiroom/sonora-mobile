@@ -149,8 +149,9 @@ Record the build (CI build number and commit), the device and each row's evidenc
 
 ## API
 
-- [api/openapi.json](api/openapi.json) was fetched from the production hub on 2026-10-19
-  (API version **0.1.28**); refresh it with `./gradlew refreshOpenApi` from a local session. It
+- [api/openapi.json](api/openapi.json) was fetched from the production hub on 2026-11-06
+  (API version **0.1.33**, the hub's live version that day; the app builds green against it);
+  refresh it with `./gradlew refreshOpenApi` from a local session. It
   also contains TTS extension paths (`/api/tts/*`): **use only `/api/v2/**`**. The hub removed
   REST v1 in 0.1.24.
 - 0.1.21 added join modes (`RouteResponse.joinMode`, `InputResponse.defaultJoinMode`) and admission
