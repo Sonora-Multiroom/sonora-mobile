@@ -338,7 +338,7 @@ assumption that the hub replaces a paused playback; record the answer).
   docs/backlog/INDEX.md; update links to it (`grep -rn change-source-from-now-playing`), except in
   specs/008-change-source-now-playing/. If the file is still untracked in the working tree, ask
   the user before deleting it.
-- [ ] T033 **Local**: run quickstart §2 rows 1–18 on the POCO against the real hub, following
+- [X] T033 **Local**: run quickstart §2 rows 1–18 on the POCO against the real hub, following
   AGENTS.md "On-device verification". Before the first start, note the volumes and set them to 1,
   and tell the user the run replaces what plays in `A`, `B`, `G`. At the end stop the test routes,
   then restore the volumes, rooms turned off, screen timeout and Do Not Disturb. Record the
