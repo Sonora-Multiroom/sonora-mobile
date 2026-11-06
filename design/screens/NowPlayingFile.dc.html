@@ -1,0 +1,146 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Now playing · file</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Sora:wght@500;600;700&amp;family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600&amp;display=swap">
+<style>
+body{margin:0;background:#0E0F12}
+a{color:inherit;text-decoration:none}a:hover{color:inherit}
+button{font:inherit;border:0;padding:0;cursor:pointer}
+a:focus-visible,button:focus-visible,input:focus-visible{outline:2px solid #F2A541;outline-offset:2px}
+.i{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;flex-shrink:0}
+.f{fill:currentColor;stroke:none}
+.pill:focus-within{box-shadow:0 0 0 2px #F2A541}
+</style>
+</helmet>
+<div style="width: 390px; height: 844px; box-sizing: border-box; background: #0E0F12; color: #F2F1EE; font-family: 'DM Sans', sans-serif; display: flex; flex-direction: column; overflow: hidden">
+
+<div style="padding: 16px 12px 0; display: flex; align-items: center">
+<a href="Main.dc.html" style="height: 44px; padding: 0 8px; display: flex; align-items: center; gap: 4px; font-size: 15px; color: #C9CBD1">
+<svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M15 6l-6 6 6 6"></path></svg>
+Rooms
+</a>
+</div>
+
+<div style="margin: 8px 20px 0; height: 248px; border-radius: 28px; background: #261F3A; position: relative; overflow: hidden; display: flex; align-items: center; justify-content: center">
+<div style="position: absolute; width: 380px; height: 380px; border-radius: 50%; border: 1px solid rgba(180, 156, 255, 0.14)"></div>
+<div style="position: absolute; width: 276px; height: 276px; border-radius: 50%; border: 1px solid rgba(180, 156, 255, 0.24)"></div>
+<div style="position: absolute; width: 176px; height: 176px; border-radius: 50%; border: 1px solid rgba(180, 156, 255, 0.38)"></div>
+<div style="position: relative; width: 92px; height: 92px; border-radius: 50%; background: #B49CFF; color: #0E0F12; display: flex; align-items: center; justify-content: center">
+<svg class="i" style="width: 42px; height: 42px" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 18V5l11-2v13"></path><circle cx="6" cy="18" r="3"></circle><circle cx="17" cy="16" r="3"></circle></svg>
+</div>
+</div>
+
+<div style="padding: 20px 20px 0; display: flex; flex-direction: column; gap: 6px">
+<h1 style="margin: 0; font-family: Sora, sans-serif; font-size: 26px; font-weight: 600; letter-spacing: -0.02em">Morning playlist</h1>
+<p style="margin: 0; font-size: 14px; color: #9A9DA6">File · /music/morning</p>
+<div style="margin-top: 6px; display: flex; align-items: center; gap: 8px; font-size: 13px">
+<sc-if value="{{playing}}" hint-placeholder-val="{{ true }}">
+<span style="display: flex; align-items: center; gap: 6px; font-weight: 600; color: #F2A541; background: #2A1F10; border-radius: 999px; padding: 4px 10px">
+<span style="width: 6px; height: 6px; border-radius: 50%; background: #F2A541"></span>
+Playing
+</span>
+</sc-if>
+<sc-if value="{{paused}}" hint-placeholder-val="{{ false }}">
+<span style="display: flex; align-items: center; gap: 6px; font-weight: 600; color: #C9CBD1; background: #22252B; border-radius: 999px; padding: 4px 10px">
+<span style="width: 6px; height: 6px; border-radius: 50%; background: #C9CBD1"></span>
+Paused
+</span>
+</sc-if>
+<span style="color: #9A9DA6">in Office</span>
+</div>
+</div>
+
+<div style="padding: 24px 20px 0; display: flex; flex-direction: column; align-items: center; gap: 14px">
+<sc-if value="{{playing}}" hint-placeholder-val="{{ true }}">
+<div style="width: 100%; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 4px; align-items: start">
+<div style="display: flex; flex-direction: column; align-items: center; gap: 8px">
+<button aria-label="Stop" style="width: 64px; height: 64px; border-radius: 32px; background: #F2A541; color: #1A1206; display: flex; align-items: center; justify-content: center">
+<svg class="i f" style="width: 24px; height: 24px" viewBox="0 0 24 24" aria-hidden="true"><rect x="6" y="6" width="12" height="12" rx="2"></rect></svg>
+</button>
+<span style="font-size: 12px; color: #9A9DA6; text-align: center">Stop</span>
+</div>
+<div style="display: flex; flex-direction: column; align-items: center; gap: 8px">
+<button aria-label="Pause Office" onClick="{{toggle}}" style="width: 64px; height: 64px; border-radius: 32px; background: #17191E; color: #F2F1EE; display: flex; align-items: center; justify-content: center">
+<svg class="i f" style="width: 24px; height: 24px" viewBox="0 0 24 24" aria-hidden="true"><rect x="6" y="5" width="4" height="14" rx="1"></rect><rect x="14" y="5" width="4" height="14" rx="1"></rect></svg>
+</button>
+<span style="font-size: 12px; color: #9A9DA6; text-align: center">Pause</span>
+</div>
+<div style="display: flex; flex-direction: column; align-items: center; gap: 8px">
+<a href="StartPlaybackFixed.dc.html" aria-label="Change source" style="width: 64px; height: 64px; border-radius: 32px; background: #17191E; color: #F2F1EE; display: flex; align-items: center; justify-content: center">
+<svg class="i" style="width: 24px; height: 24px" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 8h14M15 5l3 3-3 3M20 16H6M9 13l-3 3 3 3"></path></svg>
+</a>
+<span style="font-size: 12px; color: #9A9DA6; text-align: center">Change source…</span>
+</div>
+<div style="display: flex; flex-direction: column; align-items: center; gap: 8px">
+<a href="Transfer.dc.html" aria-label="Move to room" style="width: 64px; height: 64px; border-radius: 32px; background: #17191E; color: #F2F1EE; display: flex; align-items: center; justify-content: center">
+<svg class="i" style="width: 24px; height: 24px" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12h14M13 6l6 6-6 6"></path></svg>
+</a>
+<span style="font-size: 12px; color: #9A9DA6; text-align: center">Move to room…</span>
+</div>
+</div>
+</sc-if>
+<sc-if value="{{paused}}" hint-placeholder-val="{{ false }}">
+<div style="display: flex; justify-content: center; align-items: flex-start; gap: 24px">
+<div style="display: flex; flex-direction: column; align-items: center; gap: 8px; width: 76px">
+<button aria-label="Stop" style="width: 76px; height: 76px; border-radius: 38px; background: #F2A541; color: #1A1206; display: flex; align-items: center; justify-content: center">
+<svg class="i f" style="width: 28px; height: 28px" viewBox="0 0 24 24" aria-hidden="true"><rect x="6" y="6" width="12" height="12" rx="2"></rect></svg>
+</button>
+<span style="font-size: 12px; color: #9A9DA6">Stop</span>
+</div>
+<div style="display: flex; flex-direction: column; align-items: center; gap: 8px; width: 104px">
+<button aria-label="Resume Office" onClick="{{toggle}}" style="width: 76px; height: 76px; border-radius: 38px; background: #17191E; color: #F2F1EE; display: flex; align-items: center; justify-content: center">
+<svg class="i f" style="width: 28px; height: 28px" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5l11 7-11 7z"></path></svg>
+</button>
+<span style="font-size: 12px; color: #9A9DA6">Resume</span>
+</div>
+<div style="display: flex; flex-direction: column; align-items: center; gap: 8px; width: 104px">
+<a href="StartPlaybackFixed.dc.html" aria-label="Change source" style="width: 76px; height: 76px; border-radius: 38px; background: #17191E; color: #F2F1EE; display: flex; align-items: center; justify-content: center">
+<svg class="i" style="width: 28px; height: 28px" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 8h14M15 5l3 3-3 3M20 16H6M9 13l-3 3 3 3"></path></svg>
+</a>
+<span style="font-size: 12px; color: #9A9DA6; white-space: nowrap">Change source…</span>
+</div>
+</div>
+</sc-if>
+</div>
+
+<section style="margin: 24px 20px 0">
+<div class="pill" style="position: relative; height: 52px; margin: 0; border-radius: 26px; background: #22252B; overflow: hidden">
+<div style="position: absolute; left: 0; top: 0; bottom: 0; width: {{volV}}; background: #4A3412"></div>
+<div style="position: absolute; inset: 0; padding: 0 14px; display: flex; align-items: center; justify-content: space-between; gap: 8px; pointer-events: none">
+<span style="display: flex; align-items: center; gap: 8px; font-size: 14px; font-weight: 600"><svg class="i" style="color: #F2A541" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9h4l5-4v14l-5-4H4z"></path><path d="M17 9a4 4 0 0 1 0 6"></path></svg>Office</span>
+<span style="font-size: 13px; font-weight: 600; font-variant-numeric: tabular-nums">{{vol}}%</span>
+</div>
+<input type="range" aria-label="Office volume" min="0" max="100" value="{{vol}}" onChange="{{setVol}}" style="position: absolute; inset: 0; width: 100%; height: 100%; margin: 0; opacity: 0; cursor: ew-resize">
+</div>
+</section>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    // A pauseable source that is playing shows four actions: Stop, Pause, Change source…, Move to
+    // room…. Paused, Move to room… is not offered, so the row falls back to three 76 px buttons.
+    this.state = { paused: false, vol: 40 };
+  }
+  renderVals() {
+    const s = this.state;
+    return {
+      playing: !s.paused,
+      paused: s.paused,
+      toggle: () => this.setState({ paused: !s.paused }),
+      vol: s.vol, volV: s.vol + '%',
+      setVol: (e) => this.setState({ vol: +e.target.value })
+    };
+  }
+}
+</script>
+</body>
+</html>

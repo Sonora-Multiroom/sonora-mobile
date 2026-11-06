@@ -24,7 +24,8 @@ hub change is needed.
 Three gaps stand between that and the wish:
 
 - Now Playing has no way to open Start Playback.
-- Start Playback can preselect a room but not a group.
+- Start Playback can preselect a room but not a group, and always lets the user pick another
+  target.
 - When the chosen source already plays on the chosen target, Start Playback says so ("<source> is
   already playing in <room>") but still lets the user tap Play. The hub then refuses the start
   ("already playing"), so the user sees an error for something the screen already told them.
@@ -34,12 +35,29 @@ preselects its group; picking the playing source starts nothing; the old Now Pla
 on the back stack; a failed start gets no special warning or undo; a paused playback is replaced
 like a playing one.
 
+## Clarifications
+
+### Session 2026-11-06
+
+- Q: Start Playback opened from Now Playing preselects the playback's room or group; may the user
+  still pick another target there? → A: No. Opened from Now Playing, Start Playback shows the
+  target as a fixed line ("In Kitchen", "On Downstairs") instead of the room and group picker, so
+  "Change source…" always replaces what plays where the user came from. To start elsewhere the
+  user goes through Rooms; to move the playback, "Move to room…". Start Playback opened from Rooms
+  keeps its picker (User Story 1, FR-003, FR-005).
+- Q: Where does the action go on Now Playing? → A: A round button in the action row, like "Move
+  to room…". A playing pauseable playback then has four buttons, drawn as four equal columns of
+  64 dp buttons (FR-012).
+- Q: How does Start Playback show the fixed target? → A: Title "Change source", and the "Play in"
+  section shows one card for the target in place of the picker (FR-012).
+
 ## User Scenarios & Testing *(mandatory)*
 
 ### User Story 1 - Switch the station in the room I'm listening to (Priority: P1)
 
 The user is on Now Playing for the Kitchen, where KissFM plays. They tap "Change source…". Start
-Playback opens with the Kitchen already selected and the line "KissFM will stop in Kitchen". KissFM
+Playback opens for the Kitchen: instead of the list of rooms it shows the fixed line "In Kitchen".
+Picking a source shows the line "KissFM will stop in Kitchen". KissFM
 keeps playing while they look. They pick Radio NV and tap Play. Radio NV starts in the Kitchen and
 the screen becomes Now Playing for Radio NV. Back leads to Rooms, not to the old KissFM screen.
 
@@ -52,8 +70,8 @@ Back goes to Rooms.
 **Acceptance Scenarios**:
 
 1. **Given** Now Playing for a playback in a single room, **When** the user taps "Change source…",
-   **Then** Start Playback opens with that room selected and no source selected, and the playback
-   goes on unchanged.
+   **Then** Start Playback opens for that room, shown as a fixed target line in place of the room
+   and group picker, with no source selected, and the playback goes on unchanged.
 2. **Given** Start Playback opened this way and the user picks another source, **When** the
    selection is shown, **Then** the line "<current source> will stop in <room>" is shown above Play,
    as for any busy target.
@@ -63,33 +81,35 @@ Back goes to Rooms.
    **Then** Now Playing for the new playback is shown, and Back from it leads to the screen below
    the old Now Playing (Rooms), not to the old Now Playing.
 5. **Given** Start Playback opened this way, **When** the user pastes a link instead of picking a
-   source and taps Play, **Then** the link starts on the preselected room, as it would from Rooms.
-6. **Given** Start Playback opened this way, **When** the user selects another room, **Then** that
-   room becomes the target; the preselection does not lock the choice.
+   source and taps Play, **Then** the link starts on that room, as it would from Rooms.
+6. **Given** Start Playback opened this way, **When** the screen is shown, **Then** no other room
+   or group can be chosen on it; Start Playback opened from Rooms ("Play in room", "Play
+   something") still shows the picker.
 
 ---
 
 ### User Story 2 - Change what a group plays (Priority: P1)
 
 The user is on Now Playing for the "Downstairs" group (Kitchen and Living room), where Kraina FM
-plays. They tap "Change source…". Start Playback opens with the Downstairs group selected, not one
-of its rooms, and the "will stop" line names the group playback. They pick another station and it
+plays. They tap "Change source…". Start Playback opens for the Downstairs group ("On Downstairs"), not
+one of its rooms, and the "will stop" line names the group playback. They pick another station and it
 starts on the group.
 
 **Why this priority**: Groups are a main way the app is used; preselecting one of the group's
 rooms would silently turn a group playback into a single-room one.
 
 **Independent Test**: Start a station on a group, open its Now Playing, tap the action: the group is
-selected; start another station: it plays on the whole group.
+the fixed target; start another station: it plays on the whole group.
 
 **Acceptance Scenarios**:
 
 1. **Given** Now Playing for a playback addressed to a group, **When** the user taps "Change
-   source…", **Then** Start Playback opens with that group selected.
+   source…", **Then** Start Playback opens with that group as its fixed target.
 2. **Given** a group playback that currently plays on fewer rooms than the group has (a member
-   turned off), **When** the action is used, **Then** the group is still the one selected, not the
-   rooms it plays on right now.
-3. **Given** the group selected this way and another source picked, **When** the consequence line
+   turned off), **When** the action is used, **Then** the group is still the target, not the
+   rooms it plays on right now, and Start Playback's existing note on rooms that won't play is
+   shown.
+3. **Given** the group as target and another source picked, **When** the consequence line
    is shown, **Then** it names every playback the start would stop, as Start Playback already does
    for a group target.
 
@@ -113,7 +133,8 @@ pick another source: Play is enabled again.
 
 1. **Given** a source that plays on the selected target, **When** the user selects that source,
    **Then** the line "<source> is already playing in <target>" is shown and Play is disabled.
-2. **Given** that state, **When** the user selects another source, another target, or pastes a link,
+2. **Given** that state, **When** the user selects another source, another target (where the
+   picker is shown), or pastes a link,
    **Then** Play becomes enabled again (if nothing else prevents it) and the line changes to what
    the new choice would do.
 3. **Given** Play disabled for this reason, **When** a screen reader reaches Play, **Then** it is
@@ -127,7 +148,7 @@ pick another source: Play is enabled again.
 ### User Story 4 - Change a paused playback (Priority: P3)
 
 The user paused a file playing in the Bedroom. On its Now Playing they tap "Change source…". Start
-Playback opens with the Bedroom selected; the "will stop" line reads as for a playing one. Starting
+Playback opens for the Bedroom; the "will stop" line reads as for a playing one. Starting
 another source replaces the paused playback, which can no longer be resumed.
 
 **Why this priority**: Paused playbacks are less common (only pauseable sources can be paused), but
@@ -151,14 +172,14 @@ another source: the new one plays in that room and the paused one is gone.
 - **The hub is unreachable** (Now Playing is dimmed as stale): the action is disabled, like Stop and
   the other controls.
 - **The old playback ends while Start Playback is open** (stopped from another client, a track
-  ends): the target stays selected; the "will stop" line disappears on the next refresh; Play
-  starts on the now idle target. After the start the old Now Playing is still not kept below.
-- **The preselected target can no longer be chosen** when Start Playback opens (turned off or
-  removed in between): nothing is preselected, as when "Play in room" opens for a room that turned
-  off, and the user picks a target.
-- **The user picks another room** in Start Playback and starts there: the old playback keeps
-  playing in its room. After the start the stack is still Rooms → Now Playing (new), the same as
-  for a replaced playback; the old one stays reachable from Rooms.
+  ends): the target stays; the "will stop" line disappears on the next refresh; Play starts on the
+  now idle target. After the start the old Now Playing is still not kept below.
+- **The target can no longer be used** (turned off or removed, when Start Playback opens or while
+  it is open): the target line stays, a short note says why ("Kitchen is turned off", "Downstairs
+  no longer exists"), and Play is disabled. The user closes the screen; there is no picker to fall
+  back to. If the target comes back (turned on again), Play is enabled again.
+- **A group with every member turned off or not connected**: treated like a target that can no
+  longer be used, with Start Playback's existing wording for such a group.
 - **The start fails** (the station does not answer): the hub stops the old playback before it
   tries the new one, so the room falls silent. The app shows Start Playback's existing failure
   message; it neither warns beforehand nor offers to restore the old playback. Closing Start
@@ -172,25 +193,27 @@ another source: the new one plays in that room and the paused one is gone.
   in or to announce), Start Playback shows "plays alongside" or "will be lowered" as today; the old
   playback goes on after the start, and the old Now Playing is still replaced on the stack.
 - **The app is restored after being killed** while Start Playback, opened from Now Playing, was
-  showing: the room or group is still the preselected target.
+  showing: it still shows the same fixed target, without the picker.
 
 ## Requirements *(mandatory)*
 
 ### Functional Requirements
 
-- **FR-001**: Now Playing MUST offer an action, labelled "Change source…" unless the design pass
-  settles on another label, that opens Start Playback. The action itself MUST NOT stop, pause or
-  change anything.
+- **FR-001**: Now Playing MUST offer an action labelled "Change source…" that opens Start
+  Playback. The action itself MUST NOT stop, pause or change anything.
 - **FR-002**: The action MUST be offered for every live playback Now Playing shows, playing or
   paused, whether or not it can be moved or paused. It MUST be disabled while Now Playing's other
   controls are (hub unreachable).
-- **FR-003**: Start Playback opened from the action MUST preselect what the playback was addressed
-  to: its room for a single-room playback, its group for a group playback. It MUST NOT preselect
-  the rooms the playback happens to play on right now. No source and no link is preselected.
-- **FR-004**: Start Playback MUST be able to preselect a group, as it already can a room. Opening
-  for a room from Rooms behaves as before.
-- **FR-005**: The preselected target MUST remain changeable, and if it cannot be chosen when the
-  screen opens (turned off, removed), nothing is preselected.
+- **FR-003**: Start Playback opened from the action MUST target what the playback was addressed
+  to: its room for a single-room playback, its group for a group playback. It MUST NOT target the
+  rooms the playback happens to play on right now. No source and no link is preselected.
+- **FR-004**: Opened from the action, Start Playback MUST show the target as a fixed line naming
+  the room or group, in place of the room and group picker; the user cannot choose another
+  target there. Opened from Rooms, Start Playback keeps its picker and its room preselection as
+  before.
+- **FR-005**: When the fixed target cannot be used (turned off, removed, a group with no member
+  that can play), Start Playback MUST keep the target line, say in plain words why it cannot be
+  used, and disable Play until it can be used again.
 - **FR-006**: The app MUST send only the start; it MUST NOT stop the old playback itself. The
   "will stop", "plays alongside" and "will be lowered" lines MUST read as they do today, with no
   special wording for a paused playback.
@@ -204,12 +227,26 @@ another source: the new one plays in that room and the paused one is gone.
 - **FR-009**: Closing Start Playback without a start MUST return to the old Now Playing unchanged.
 - **FR-010**: A failed start MUST show Start Playback's existing failure message; no new warning,
   confirmation or restore offer is added.
-- **FR-011**: The preselected target MUST survive the app being restored by the system, as the
-  room preselection does today.
-- **FR-012**: The action's place and look on Now Playing MUST come from the design canvas, updated
-  before the screen is built (Constitution VI): a third button in the action row, an overflow
-  entry or a row under the title. Its touch target is at least 44 dp and, if icon-only, it carries
-  a content description.
+- **FR-011**: The fixed target, and that Start Playback was opened from Now Playing, MUST survive
+  the app being restored by the system, as the room preselection does today.
+- **FR-012**: The screens MUST follow the design canvas, updated for this feature on 2026-11-06
+  (Constitution VI; offline copies `design/screens/NowPlaying.dc.html`, `NowPlayingFile.dc.html`,
+  `StartPlaybackFixed.dc.html`):
+  - "Change source…" is a round button in Now Playing's action row, drawn like "Move to room…"
+    (surface colour, an icon of two opposite arrows, the caption below), placed after Stop and
+    Pause/Resume and before "Move to room…".
+  - With three buttons or fewer the row keeps the 76 dp buttons. With four (a pauseable playback
+    that is playing and can be moved: Stop, Pause, Change source…, Move to room…) the row spans
+    the full content width as four equal columns with 64 dp buttons, and a caption may wrap onto
+    a second line, so the row fits a 360 dp wide phone.
+  - Opened from the action, Start Playback is titled "Change source". Its "Play in" section keeps
+    its heading and shows one full-width card (no radio button) with the target's name and, below
+    it, what the target is and what plays there ("Group · Playing Radio Paradise"). A target that
+    cannot be used is drawn dimmed, with the note of FR-005 above Play ("Downstairs is turned
+    off").
+  - The "already playing" line keeps its muted colour, and a disabled Play keeps the dimmed
+    accent Start Playback already uses.
+  - The button's spoken label is "Change source"; its touch target is far above 44 dp.
 
 ### Key Entities
 
@@ -227,8 +264,9 @@ another source: the new one plays in that room and the paused one is gone.
 - **SC-001**: From Now Playing, the user can replace what plays in that room or group with another
   configured source in three taps (the action, a source, Play), without passing through Rooms and
   without stopping the playback first.
-- **SC-002**: In every check on the real hub, the target preselected after the action is the
-  playback's own room or group; a group playback is never narrowed to one of its rooms.
+- **SC-002**: In every check on the real hub, the target after the action is the playback's own
+  room or group and cannot be changed on that screen; a group playback is never narrowed to one of
+  its rooms.
 - **SC-003**: Selecting the source already playing on the selected target never sends a start: no
   "already playing" refusal from the hub is ever shown after this feature.
 - **SC-004**: After a change of source from Now Playing, one Back press reaches the screen below the
@@ -247,10 +285,10 @@ another source: the new one plays in that room and the paused one is gone.
   `multiroom-ai` backlog, not part of this feature.
 - Now Playing knows each playback's target (room or group) from the hub data it already reads; no
   new hub data is needed.
-- The label "Change source…" matches "Move to room…" and the app's "Sources" wording; the design
-  pass may change it without reopening this spec.
+- The label "Change source…" matches "Move to room…" and the app's "Sources" wording.
 - Rooms still shows one playback per room (see
   `docs/backlog/rooms-with-several-playbacks.md`); once a room can show several, the action will
   have to say which playback it replaces.
 - Out of scope: one-tap shortcuts that start a fixed source (`docs/backlog/playback-shortcuts.md`),
-  restoring the old playback after a failed start, and any change to "Move to room…".
+  restoring the old playback after a failed start, choosing another target from the "Change
+  source…" entry (Rooms covers that), and any change to "Move to room…".
