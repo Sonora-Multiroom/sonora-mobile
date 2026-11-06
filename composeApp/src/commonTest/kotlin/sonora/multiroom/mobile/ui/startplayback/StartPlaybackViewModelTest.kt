@@ -5,6 +5,8 @@ import sonora.multiroom.mobile.data.HubResult
 import sonora.multiroom.mobile.data.InMemoryHubAddressStore
 import sonora.multiroom.mobile.domain.ConsequenceLine
 import sonora.multiroom.mobile.domain.Group
+import sonora.multiroom.mobile.domain.TargetStatus
+import sonora.multiroom.mobile.domain.Unusable
 import sonora.multiroom.mobile.domain.HubAddress
 import sonora.multiroom.mobile.domain.HubSnapshot
 import sonora.multiroom.mobile.domain.Room
@@ -66,6 +68,8 @@ class StartPlaybackViewModelTest {
 
     private fun TestScope.live(
         initialTargetId: String? = null,
+        fixedTarget: Target? = null,
+        fixedName: String? = null,
         snapshot: HubSnapshot = snapshot(),
         handle: SavedStateHandle = SavedStateHandle(),
         visible: Boolean = true,
@@ -78,7 +82,7 @@ class StartPlaybackViewModelTest {
         runCurrent()
         factory.last.snapshotResult = { HubResult.Ok(snapshot) }
         val starter = PlaybackStarter(backgroundScope, session, messages)
-        val vm = StartPlaybackViewModel(initialTargetId, handle, session, starter)
+        val vm = StartPlaybackViewModel(initialTargetId, fixedTarget, fixedName, handle, session, starter)
         if (visible) vm.onVisible()
         runCurrent()
         return Setup(vm, session, factory, starter, posted, handle)
@@ -522,5 +526,181 @@ class StartPlaybackViewModelTest {
         val restored = live(handle = handle)
         assertEquals("soundcloud.com/a/b", restored.ui.linkText)
         restored.vm.onHidden()
+    }
+
+    // ---- Change source: a fixed target (MOB-008) ----------------------------------------------------
+
+    private val kitchen = Target.Room("kitchen")
+    private val downstairs = Target.Group("down")
+    private val kitchenJazz = Route("r1", "jazz", kitchen, RouteStatus.Active, false, false, true)
+
+    private fun TestScope.fixed(
+        target: Target = kitchen,
+        name: String? = "Kitchen",
+        snapshot: HubSnapshot = snapshot(),
+        handle: SavedStateHandle = SavedStateHandle(),
+    ) = live(fixedTarget = target, fixedName = name, snapshot = snapshot, handle = handle)
+
+    @Test
+    fun fixedModeIsOnBeforeTheFirstSnapshotAndSelectsOnlyTheFixedTarget() = runViewModelTest {
+        val s = live(fixedTarget = kitchen, fixedName = "Kitchen", visible = false)
+        assertTrue(s.ui.changeSource)
+        assertNull(s.ui.fixed)
+        s.vm.onVisible(); runCurrent()
+        assertEquals(kitchen, s.ui.selectedTarget)
+        assertEquals("Kitchen", s.ui.fixed?.name)
+        assertNull(s.ui.selectedSourceId)
+        assertFalse(s.ui.playEnabled)
+        assertFalse(live().ui.changeSource)
+        s.vm.onHidden()
+    }
+
+    @Test
+    fun anotherTargetCannotBeSelectedInFixedMode() = runViewModelTest {
+        val s = fixed()
+        s.vm.onSelectTarget(bedroom)
+        s.vm.onSelectTarget(downstairs)
+        assertEquals(kitchen, s.ui.selectedTarget)
+        s.vm.onHidden()
+    }
+
+    @Test
+    fun aSavedTargetKeyDoesNotOverrideTheFixedTarget() = runViewModelTest {
+        val handle = SavedStateHandle(mapOf("target" to "room:bedroom"))
+        val s = fixed(handle = handle)
+        assertEquals(kitchen, s.ui.selectedTarget)
+        s.vm.onHidden()
+    }
+
+    @Test
+    fun pickingASourceOnABusyRoomWarnsAndEnablesPlayWithTheCardsName() = runViewModelTest {
+        val s = fixed(snapshot = snapshot(routes = listOf(kitchenJazz)))
+        s.vm.onSelectSource("news")
+        assertIs<ConsequenceLine.WillStop>(s.ui.consequence?.line)
+        assertTrue(s.ui.playEnabled)
+        assertEquals(PlayLabel.PlaySource("News", "Kitchen"), s.ui.playLabel)
+        s.vm.onHidden()
+    }
+
+    @Test
+    fun aRoomTurnedOffDisablesPlayAndComesBackWithTheSameSource() = runViewModelTest {
+        val s = fixed()
+        s.vm.onSelectSource("news")
+        s.refresh(snapshot(rooms = listOf(room("kitchen", "Kitchen", enabled = false), room("office", "Office")))); runCurrent()
+        assertEquals(Unusable.TurnedOff, s.ui.fixed?.unusable)
+        assertNull(s.ui.consequence)
+        assertFalse(s.ui.playEnabled)
+        s.refresh(snapshot()); runCurrent()
+        assertNull(s.ui.fixed?.unusable)
+        assertEquals("news", s.ui.selectedSourceId)
+        assertTrue(s.ui.playEnabled)
+        s.vm.onHidden()
+    }
+
+    @Test
+    fun aRemovedRoomKeepsTheCardWithItsLastKnownNameAndDisablesPlay() = runViewModelTest {
+        val s = fixed()
+        s.vm.onSelectSource("news")
+        s.refresh(snapshot(rooms = listOf(room("office", "Office")))); runCurrent()
+        assertEquals(Unusable.Removed, s.ui.fixed?.unusable)
+        assertEquals(TargetStatus.Removed, s.ui.fixed?.status)
+        assertEquals("Kitchen", s.ui.fixed?.name)
+        assertFalse(s.ui.playEnabled)
+        s.vm.onHidden()
+    }
+
+    @Test
+    fun theLastKnownNameSurvivesARestoreWithoutTheNameArgument() = runViewModelTest {
+        val handle = SavedStateHandle()
+        val first = fixed(handle = handle)
+        first.vm.onHidden()
+        val restored = live(
+            fixedTarget = kitchen, fixedName = null, handle = handle,
+            snapshot = snapshot(rooms = listOf(room("office", "Office"))),
+        )
+        assertEquals("Kitchen", restored.ui.fixed?.name)
+        restored.vm.onHidden()
+    }
+
+    @Test
+    fun aFixedStartSendsToTheFixedTargetAndExitsStarted() = runViewModelTest {
+        val s = fixed()
+        s.vm.onSelectSource("jazz")
+        s.repo.startResults += HubResult.Ok(Route("r9", "jazz", kitchen, RouteStatus.Starting, false, false, true))
+        val seq = s.session.startedSeq
+        s.vm.onPlay(); runCurrent()
+        assertEquals(listOf<Any>("jazz", kitchen), s.repo.calls.single { it.name == "startSource" }.args)
+        assertEquals(StartExit.Started("r9", seq, "Kitchen"), s.ui.exit)
+        s.vm.onHidden()
+    }
+
+    @Test
+    fun aGroupPlayingOnFewerRoomsKeepsTheGroupAndNamesWhatWontPlay() = runViewModelTest {
+        val groupRoute = Route("r1", "jazz", downstairs, RouteStatus.Active, false, false, true, outputs = listOf("kitchen"))
+        val s = fixed(
+            target = downstairs, name = "Downstairs",
+            snapshot = snapshot(
+                rooms = listOf(room("kitchen", "Kitchen"), room("office", "Office", enabled = false)),
+                routes = listOf(groupRoute),
+            ),
+        )
+        s.vm.onSelectSource("news")
+        assertEquals(downstairs, s.ui.selectedTarget)
+        val line = s.ui.consequence?.line as ConsequenceLine.WillStop
+        assertEquals("Jazz24", line.items.single().source)
+        assertEquals(listOf("Office"), s.ui.consequence?.wontPlay?.turnedOff)
+        s.repo.startResults += HubResult.Ok(Route("r9", "news", downstairs, RouteStatus.Starting, false, false, true))
+        s.vm.onPlay(); runCurrent()
+        assertEquals(listOf<Any>("news", downstairs), s.repo.calls.single { it.name == "startSource" }.args)
+        s.vm.onHidden()
+    }
+
+    // ---- "already playing" blocks Play (MOB-008) ---------------------------------------------------
+
+    @Test
+    fun theSourceAlreadyPlayingOnTheSelectedRoomDisablesPlayAndSendsNothing() = runViewModelTest {
+        val s = live(snapshot = snapshot(routes = listOf(kitchenJazz)))
+        s.vm.onSelectSource("jazz")
+        s.vm.onSelectTarget(kitchen)
+        assertIs<ConsequenceLine.AlreadyPlaying>(s.ui.consequence?.line)
+        assertFalse(s.ui.playEnabled)
+        s.vm.onPlay(); runCurrent()
+        assertEquals(0, s.repo.calls.count { it.name == "startSource" })
+        s.vm.onSelectSource("news")
+        assertTrue(s.ui.playEnabled)
+        s.vm.onSelectSource("jazz")
+        s.vm.onSelectTarget(bedroom)
+        assertTrue(s.ui.playEnabled)
+        s.vm.onSelectTarget(kitchen)
+        s.vm.onLinkChange("soundcloud.com/a/b")
+        assertTrue(s.ui.playEnabled)
+        s.vm.onHidden()
+    }
+
+    @Test
+    fun aSourcePlayingOnAGroupContainingTheRoomStillWillStopAndPlays() = runViewModelTest {
+        val viaGroup = Route("r1", "jazz", downstairs, RouteStatus.Active, false, false, true)
+        val s = live(snapshot = snapshot(routes = listOf(viaGroup)))
+        s.vm.onSelectSource("jazz")
+        s.vm.onSelectTarget(kitchen)
+        assertIs<ConsequenceLine.WillStop>(s.ui.consequence?.line)
+        assertTrue(s.ui.playEnabled)
+        s.vm.onHidden()
+    }
+
+    @Test
+    fun alreadyPlayingAlsoBlocksPlayInFixedModeForRoomsAndGroups() = runViewModelTest {
+        val room = fixed(snapshot = snapshot(routes = listOf(kitchenJazz)))
+        room.vm.onSelectSource("jazz")
+        assertIs<ConsequenceLine.AlreadyPlaying>(room.ui.consequence?.line)
+        assertFalse(room.ui.playEnabled)
+        room.vm.onHidden()
+
+        val groupRoute = Route("r2", "jazz", downstairs, RouteStatus.Active, false, false, true)
+        val group = fixed(target = downstairs, name = "Downstairs", snapshot = snapshot(routes = listOf(groupRoute)))
+        group.vm.onSelectSource("jazz")
+        assertIs<ConsequenceLine.AlreadyPlaying>(group.ui.consequence?.line)
+        assertFalse(group.ui.playEnabled)
+        group.vm.onHidden()
     }
 }

@@ -1,6 +1,7 @@
 package sonora.multiroom.mobile.ui.startplayback
 
 import sonora.multiroom.mobile.domain.Consequence
+import sonora.multiroom.mobile.domain.FixedTargetCard
 import sonora.multiroom.mobile.domain.HubAddress
 import sonora.multiroom.mobile.domain.StartPlaybackContent
 import sonora.multiroom.mobile.domain.Target
@@ -32,7 +33,15 @@ data class StartPlaybackUiState(
     /** "Enter a web address (https://…)" is showing (FR-006). */
     val linkMessageShown: Boolean = false,
     val selectedSourceId: String? = null,
+    /** In Change source mode always the fixed target. */
     val selectedTarget: Target? = null,
+    /**
+     * Change source: opened with a fixed target, even before the first snapshot, so the title and
+     * layout do not jump. The screen then draws [fixed] in place of the target picker.
+     */
+    val changeSource: Boolean = false,
+    /** Change source only; null until the first snapshot. */
+    val fixed: FixedTargetCard? = null,
     /** Only while something to play and a target are both selected. */
     val consequence: Consequence? = null,
     val starting: Boolean = false,

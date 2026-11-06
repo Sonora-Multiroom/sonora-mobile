@@ -202,7 +202,7 @@ class StartPlaybackBuilderTest {
     @Test
     fun aGroupWithItsOwnRouteReadsGroupPlaying() {
         val t = groupStatus(routes = arrayOf(route("r", "jazz", Target.Group("down"))))
-        assertEquals(TargetStatus.GroupPlaying(listOf("Jazz24")), t.status)
+        assertEquals(TargetStatus.GroupPlaying(CardStatus.Playing, listOf("Jazz24")), t.status)
         assertTrue(t.selectable)
     }
 
@@ -268,5 +268,16 @@ class StartPlaybackBuilderTest {
         )
         assertEquals(TargetStatus.InGroup("Downstairs"), content.targets.single { it.target == Target.Room("living") }.status)
         assertEquals(TargetStatus.Idle, content.targets.single { it.target == Target.Room("patio") }.status)
+    }
+
+    @Test
+    fun aGroupPlaybackCarriesItsStatusAndALiveStreamReadsPlaying() {
+        val g = group("down", "Downstairs", "a", "b")
+        val rooms = listOf(room("a"), room("b"))
+        fun status(vararg routes: Route, sources: List<Source>) = statusOf(snapshot(rooms, listOf(g), routes.toList(), sources), Target.Group("down"))
+        val paused = status(route("r1", "pl", Target.Group("down"), paused = true, pauseable = true), sources = listOf(source("pl", "Playlist", pauseable = true)))
+        assertEquals(TargetStatus.GroupPlaying(CardStatus.Paused, listOf("Playlist")), paused)
+        val live = status(route("r1", "jazz", Target.Group("down")), sources = listOf(source("jazz", "Jazz24")))
+        assertEquals(TargetStatus.GroupPlaying(CardStatus.Playing, listOf("Jazz24")), live)
     }
 }

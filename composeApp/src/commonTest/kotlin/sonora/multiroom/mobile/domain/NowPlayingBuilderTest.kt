@@ -301,4 +301,18 @@ class NowPlayingBuilderTest {
         val v = playback(snapshot(routes = listOf(route("r1", "radio", Target.Group("down"), outputs = listOf("ghost"))))).volume!!
         assertEquals(mapOf("living" to 70, "kitchen" to 35), v.main.roomVolumes)
     }
+
+    @Test
+    fun changeSourceIsOfferedForEveryKnownTargetWhateverTheStatus() {
+        val room = Target.Room("living")
+        assertTrue(playback(snapshot(routes = listOf(route("r1", "radio", room)))).changeSourceVisible)
+        assertTrue(playback(snapshot(routes = listOf(route("r1", "playlist", room, paused = true, pauseable = true)))).changeSourceVisible)
+        assertTrue(playback(snapshot(routes = listOf(route("r1", "playlist", room, RouteStatus.Failed)))).changeSourceVisible)
+        assertTrue(playback(snapshot(routes = listOf(route("r1", "radio", Target.Group("down"))))).changeSourceVisible)
+    }
+
+    @Test
+    fun changeSourceIsHiddenForAnUnknownTargetType() {
+        assertFalse(playback(snapshot(routes = listOf(route("r1", "radio", Target.Unknown("weird"))))).changeSourceVisible)
+    }
 }

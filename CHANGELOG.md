@@ -6,6 +6,22 @@ User-facing changes to the Sonora Multiroom mobile app, one entry per feature. T
 the feature's spec folder and pull request. Repository-only changes (documentation, CI, tooling)
 are listed under "Development" when they affect contributors.
 
+## [0.8.0-alpha] - Unreleased
+
+Change what plays from Now Playing ([spec](specs/008-change-source-now-playing/), pull request to
+follow).
+
+### Added
+
+- "Change source…" on Now Playing opens Start Playback for that room or group, with no target
+  picker, and replaces what plays there. Back from the new Now Playing leads to Rooms. The old
+  playback keeps playing until Play is tapped, and closing the screen leaves it untouched.
+
+### Changed
+
+- Play is disabled when the chosen source already plays on the chosen room or group, wherever
+  Start Playback was opened from.
+
 ## [0.7.0-alpha] - Unreleased
 
 Scrolling long source names ([spec](specs/007-marquee-source-names/), pull request to follow).

@@ -201,6 +201,8 @@ Record the build (CI build number and commit), the device and each row's evidenc
 
 ### Domain rules the UI depends on
 
+- Start Playback never sends a start for a source that already plays on the chosen target (the
+  addressed room or group): Play is disabled with "<source> is already playing in <target>".
 - Since 0.1.21 an output may carry **several routes** (mixed sources, announcements). Rooms and Now
   Playing still show one per room, see
   [docs/backlog/rooms-with-several-playbacks.md](docs/backlog/rooms-with-several-playbacks.md); only
@@ -280,6 +282,8 @@ Agreed details — keep them:
   Rooms cards show the status "Live stream". Non-stream sources (e.g. line-in) are never labelled
   live.
 - The transfer action is labelled **"Move to room…"**.
+- The change-source action is labelled **"Change source…"**; it opens Start Playback for the
+  playback's own room or group, with no target picker.
 - Starting playback on a busy target shows what will stop ("Radio Paradise will stop in Bedroom").
 
 ## Workflow

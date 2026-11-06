@@ -118,6 +118,8 @@ class NowPlayingViewModel(
     }
 
     private fun onGone(refreshSeq: Long) {
+        // Covered by Start Playback (Change source): the refresh asked for on showing again decides.
+        if (!visible) return
         val current = _state.value
         // The answer to a Stop or a Move decides, never a refresh that merely lacks the route.
         if (NowPlayingAction.Stop in current.inFlight || NowPlayingAction.Move in current.inFlight) return
@@ -133,10 +135,27 @@ class NowPlayingViewModel(
         _state.update { it.copy(exit = Exit.Ended(targetName), sheet = null) }
     }
 
-    /** Foreground only: the screen calls this while it is visible (FR-003). */
-    fun onVisible() = session.acquire()
+    /**
+     * True while the screen is in composition. A covered Now Playing (Start Playback on top, MOB-008)
+     * must not announce its playback's end: the snapshots it skipped are not replayed and the loop
+     * may not restart, so [onVisible] asks for a refresh that decides.
+     */
+    private var visible = false
+    private var shownBefore = false
 
-    fun onHidden() = session.release()
+    /** Foreground only: the screen calls this while it is visible (FR-003). */
+    fun onVisible() {
+        visible = true
+        session.acquire()
+        // Showing again (Start Playback closed): the first show already starts the loop's refresh.
+        if (shownBefore) session.requestRefresh()
+        shownBefore = true
+    }
+
+    fun onHidden() {
+        visible = false
+        session.release()
+    }
 
     fun consumeMessage() = _state.update { it.copy(message = null) }
 

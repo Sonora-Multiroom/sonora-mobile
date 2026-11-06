@@ -47,6 +47,8 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.Lifecycle
@@ -63,6 +65,7 @@ class NowPlayingActions(
     val onVolumeDragStart: (String) -> Unit = {},
     val onVolumeDrag: (String, Int) -> Unit = { _, _ -> },
     val onVolumeDragEnd: (String, Int) -> Unit = { _, _ -> },
+    val onChangeSource: () -> Unit = {},
     val onOpenMove: () -> Unit = {},
     val onSelect: (Target) -> Unit = {},
     val onDismissMove: () -> Unit = {},
@@ -74,6 +77,8 @@ fun NowPlayingScreen(
     viewModel: NowPlayingViewModel,
     onBack: () -> Unit,
     onExit: () -> Unit,
+    /** Opens Start Playback for the playback's addressed [Target] (and the name shown for it). */
+    onChangeSource: (target: Target, name: String) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val state by viewModel.state.collectAsState()
@@ -120,6 +125,9 @@ fun NowPlayingScreen(
                 onVolumeDragStart = viewModel::onVolumeDragStart,
                 onVolumeDrag = viewModel::onVolumeDrag,
                 onVolumeDragEnd = viewModel::onVolumeDragEnd,
+                onChangeSource = {
+                    (state.content as? NowPlayingContent.Playback)?.let { onChangeSource(it.target.target, it.target.name) }
+                },
                 onOpenMove = viewModel::onOpenMove,
                 onSelect = viewModel::onSelect,
                 onDismissMove = viewModel::onDismissMove,
@@ -267,7 +275,16 @@ private fun PlaybackView(content: NowPlayingContent.Playback, state: NowPlayingU
 private fun ActionsRow(content: NowPlayingContent.Playback, state: NowPlayingUiState, actions: NowPlayingActions) {
     val colors = SonoraTheme.colors
     val enabled = state.controlsEnabled
-    Row(horizontalArrangement = Arrangement.spacedBy(40.dp), verticalAlignment = Alignment.Top) {
+    // Four buttons share the full width; fewer keep the 76 dp row (MOB-008).
+    val compact = actionRowLayout(content).compact
+    val size = if (compact) 64.dp else 76.dp
+    val iconSize = if (compact) 24.dp else 28.dp
+    Row(
+        modifier = if (compact) Modifier.fillMaxWidth() else Modifier,
+        horizontalArrangement = Arrangement.spacedBy(if (compact) 4.dp else 24.dp),
+        verticalAlignment = Alignment.Top,
+    ) {
+        val cell = if (compact) Modifier.weight(1f) else Modifier.widthIn(min = 76.dp)
         RoundAction(
             icon = SonoraIcons.Stop,
             caption = "Stop",
@@ -276,6 +293,7 @@ private fun ActionsRow(content: NowPlayingContent.Playback, state: NowPlayingUiS
             tint = colors.onAccent,
             enabled = enabled && NowPlayingAction.Stop !in state.inFlight,
             onClick = actions.onStop,
+            size = size, iconSize = iconSize, wrapCaption = compact, modifier = cell,
         )
         if (content.pauseVisible) {
             RoundAction(
@@ -286,6 +304,19 @@ private fun ActionsRow(content: NowPlayingContent.Playback, state: NowPlayingUiS
                 tint = colors.text,
                 enabled = enabled && content.pauseEnabled && NowPlayingAction.PauseResume !in state.inFlight,
                 onClick = actions.onPauseResume,
+                size = size, iconSize = iconSize, wrapCaption = compact, modifier = cell,
+            )
+        }
+        if (content.changeSourceVisible) {
+            RoundAction(
+                icon = SonoraIcons.Swap,
+                caption = "Change source…",
+                label = "Change source",
+                background = colors.surface,
+                tint = colors.text,
+                enabled = enabled && NowPlayingAction.Stop !in state.inFlight && NowPlayingAction.Move !in state.inFlight,
+                onClick = actions.onChangeSource,
+                size = size, iconSize = iconSize, wrapCaption = compact, modifier = cell,
             )
         }
         if (content.moveVisible) {
@@ -297,12 +328,16 @@ private fun ActionsRow(content: NowPlayingContent.Playback, state: NowPlayingUiS
                 tint = colors.text,
                 enabled = enabled && NowPlayingAction.Move !in state.inFlight,
                 onClick = actions.onOpenMove,
+                size = size, iconSize = iconSize, wrapCaption = compact, modifier = cell,
             )
         }
     }
 }
 
-/** A 76 dp round button with a caption below. The caption is decoration: [label] is what is announced. */
+/**
+ * A round button with a caption below (76 dp, or 64 dp when four share the row). The caption is
+ * decoration: [label] is what is announced.
+ */
 @Composable
 private fun RoundAction(
     icon: ImageVector,
@@ -312,28 +347,34 @@ private fun RoundAction(
     tint: Color,
     enabled: Boolean,
     onClick: () -> Unit,
+    size: Dp,
+    iconSize: Dp,
+    wrapCaption: Boolean,
+    modifier: Modifier = Modifier,
 ) {
     Column(
-        modifier = Modifier.widthIn(min = 76.dp).alpha(if (enabled) 1f else 0.5f),
+        modifier = modifier.alpha(if (enabled) 1f else 0.5f),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
         Box(
             modifier = Modifier
-                .size(76.dp)
+                .size(size)
                 .clip(CircleShape)
                 .background(background)
                 .clickable(enabled = enabled, role = Role.Button, onClick = onClick)
                 .semantics { contentDescription = label },
             contentAlignment = Alignment.Center,
         ) {
-            Icon(icon, contentDescription = null, tint = tint, modifier = Modifier.size(28.dp))
+            Icon(icon, contentDescription = null, tint = tint, modifier = Modifier.size(iconSize))
         }
         Text(
             caption,
             style = SonoraTheme.type.label12.copy(fontWeight = FontWeight.Normal),
             color = SonoraTheme.colors.textMuted,
-            softWrap = false,
+            softWrap = wrapCaption,
+            maxLines = if (wrapCaption) 2 else Int.MAX_VALUE,
+            textAlign = if (wrapCaption) TextAlign.Center else null,
             modifier = Modifier.clearAndSetSemantics { },
         )
     }

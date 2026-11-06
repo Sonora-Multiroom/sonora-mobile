@@ -21,6 +21,8 @@ sealed interface NowPlayingContent {
         /** The button reads Resume. */
         val paused: Boolean,
         val moveVisible: Boolean,
+        /** "Change source…" is offered: the playback's addressed target is a room or a group. */
+        val changeSourceVisible: Boolean,
         /** Null when the target is unknown or has no known rooms: no pills, no mute. */
         val volume: VolumeSection?,
     ) : NowPlayingContent
@@ -87,6 +89,7 @@ object NowPlayingBuilder {
             pauseEnabled = status == CardStatus.Playing || status == CardStatus.Paused,
             paused = status == CardStatus.Paused,
             moveVisible = route.transferable && status == CardStatus.Playing && route.target !is Target.Unknown,
+            changeSourceVisible = route.target !is Target.Unknown,
             volume = volumeSection(route, rooms, groups, master),
         )
     }

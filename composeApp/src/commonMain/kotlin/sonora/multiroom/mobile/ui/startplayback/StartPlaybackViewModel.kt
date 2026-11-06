@@ -1,5 +1,7 @@
 package sonora.multiroom.mobile.ui.startplayback
 
+import sonora.multiroom.mobile.domain.ConsequenceLine
+import sonora.multiroom.mobile.domain.FixedTarget
 import sonora.multiroom.mobile.domain.HubSnapshot
 import sonora.multiroom.mobile.domain.LinkCheck
 import sonora.multiroom.mobile.domain.checkLink
@@ -31,6 +33,9 @@ import kotlinx.coroutines.launch
  */
 class StartPlaybackViewModel(
     private val initialTargetId: String?,
+    /** Change source (MOB-008): the addressed room or group; there is no picker then. */
+    private val fixedTarget: Target?,
+    fixedName: String?,
     private val savedState: SavedStateHandle,
     private val session: HubSession,
     private val starter: PlaybackStarter,
@@ -50,11 +55,15 @@ class StartPlaybackViewModel(
     private var started = false
 
     init {
+        if (fixedTarget != null && savedState.get<String>(FIXED_NAME_KEY) == null && fixedName != null) {
+            savedState[FIXED_NAME_KEY] = fixedName
+        }
         _state.update {
             it.copy(
                 linkText = savedState.get<String>(LINK_KEY).orEmpty(),
                 selectedSourceId = savedState.get<String>(SOURCE_KEY),
-                selectedTarget = savedState.get<String>(TARGET_KEY)?.let(::decodeTarget),
+                selectedTarget = fixedTarget ?: savedState.get<String>(TARGET_KEY)?.let(::decodeTarget),
+                changeSource = fixedTarget != null,
             )
         }
         viewModelScope.launch { session.state.collect(::onSession) }
@@ -81,17 +90,22 @@ class StartPlaybackViewModel(
 
     /** New content: prune what vanished, apply the opening preselection once, refresh derived fields. */
     private fun rebuild(content: StartPlaybackContent) {
+        val fixed = fixedTarget?.let { t ->
+            snapshot?.let { FixedTarget.of(it, t, savedState.get<String>(FIXED_NAME_KEY)) }
+                ?.also { savedState[FIXED_NAME_KEY] = it.name }
+        }
         _state.update { current ->
             var sourceId = current.selectedSourceId?.takeIf { id -> content.sources.any { it.id == id } }
-            var target = current.selectedTarget?.takeIf { t -> content.targets.any { it.target == t && it.selectable } }
-            if (!savedState.get<Boolean>(PRESELECTED_KEY).let { it == true }) {
+            var target = if (fixedTarget != null) fixedTarget
+            else current.selectedTarget?.takeIf { t -> content.targets.any { it.target == t && it.selectable } }
+            if (fixedTarget == null && !savedState.get<Boolean>(PRESELECTED_KEY).let { it == true }) {
                 savedState[PRESELECTED_KEY] = true
                 if (target == null && initialTargetId != null) {
                     target = content.targets.firstOrNull { it.target == Target.Room(initialTargetId) && it.selectable }?.target
                 }
             }
             if (sourceId != current.selectedSourceId || target != current.selectedTarget) save(sourceId, target, current.linkText)
-            derive(current.copy(content = content, selectedSourceId = sourceId, selectedTarget = target))
+            derive(current.copy(content = content, selectedSourceId = sourceId, selectedTarget = target, fixed = fixed))
         }
     }
 
@@ -106,7 +120,8 @@ class StartPlaybackViewModel(
         val content = s.content
         val what = whatOf(s)
         val sourceName = content?.sources?.firstOrNull { it.id == s.selectedSourceId }?.name
-        val targetName = content?.targets?.firstOrNull { it.target == s.selectedTarget }?.name
+        val targetName = if (fixedTarget != null) s.fixed?.takeIf { it.unusable == null }?.name
+        else content?.targets?.firstOrNull { it.target == s.selectedTarget }?.name
         val hasWhat = if (what is StartWhat.Source) sourceName != null else what != null
         val ready = hasWhat && targetName != null
         val label = when {
@@ -118,7 +133,9 @@ class StartPlaybackViewModel(
         val consequence = snapshot?.takeIf { ready }?.let { StartConsequence.of(it, what!!, s.selectedTarget!!) }
         return s.copy(
             playLabel = label,
-            playEnabled = ready && !s.starting && s.connection == Connection.Live,
+            // A start the hub would refuse as "already playing" is not offered.
+            playEnabled = ready && !s.starting && s.connection == Connection.Live &&
+                consequence?.line !is ConsequenceLine.AlreadyPlaying,
             consequence = consequence,
         )
     }
@@ -141,6 +158,7 @@ class StartPlaybackViewModel(
     }
 
     fun onSelectTarget(target: Target) {
+        if (fixedTarget != null) return
         _state.update { current ->
             if (current.starting || current.content?.targets?.any { it.target == target && it.selectable } != true) {
                 return@update current
@@ -184,11 +202,15 @@ class StartPlaybackViewModel(
         if (!s.playEnabled) return
         val content = s.content ?: return
         val what = whatOf(s) ?: return
-        val target = content.targets.firstOrNull { it.target == s.selectedTarget } ?: return
+        val (target, targetName) = if (fixedTarget != null) {
+            fixedTarget to (s.fixed?.name ?: return)
+        } else {
+            content.targets.firstOrNull { it.target == s.selectedTarget }?.let { it.target to it.name } ?: return
+        }
         val sourceName = (what as? StartWhat.Source)?.let { w -> content.sources.firstOrNull { it.id == w.id }?.name ?: return }
-        val names = StartNames(sourceName, target.name)
+        val names = StartNames(sourceName, targetName)
         pendingNames = names
-        starter.start(what, target.target, names)
+        starter.start(what, target, names)
     }
 
     private fun onAttempt(attempt: StartAttempt?) {
@@ -235,6 +257,7 @@ class StartPlaybackViewModel(
         const val TARGET_KEY = "target"
         const val LINK_KEY = "link"
         const val PRESELECTED_KEY = "preselected"
+        const val FIXED_NAME_KEY = "fixedName"
 
         fun encodeTarget(t: Target): String = when (t) {
             is Target.Room -> "room:${t.id}"

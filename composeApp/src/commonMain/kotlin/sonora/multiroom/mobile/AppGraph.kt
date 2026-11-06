@@ -5,6 +5,7 @@ import sonora.multiroom.mobile.data.HubAddressStore
 import sonora.multiroom.mobile.data.HubRepositoryFactory
 import sonora.multiroom.mobile.data.KtorHubRepositoryFactory
 import sonora.multiroom.mobile.data.createHubHttpClient
+import sonora.multiroom.mobile.domain.Target
 import sonora.multiroom.mobile.data.httpEngine
 import sonora.multiroom.mobile.ui.nowplaying.NowPlayingViewModel
 import sonora.multiroom.mobile.ui.rooms.RoomsViewModel
@@ -50,8 +51,8 @@ class AppGraph(
     fun nowPlayingViewModel(routeId: String, savedState: SavedStateHandle, startedAfterSeq: Long? = null, targetName: String? = null) =
         NowPlayingViewModel(routeId, savedState, session, messages, startedAfterSeq, targetName)
 
-    fun startPlaybackViewModel(targetId: String?, savedState: SavedStateHandle) =
-        StartPlaybackViewModel(targetId, savedState, session, starter)
+    fun startPlaybackViewModel(targetId: String?, fixedTarget: Target?, fixedName: String?, savedState: SavedStateHandle) =
+        StartPlaybackViewModel(targetId, fixedTarget, fixedName, savedState, session, starter)
 
     fun roomsViewModel() = RoomsViewModel(session, messages)
 }

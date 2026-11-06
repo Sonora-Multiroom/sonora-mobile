@@ -229,6 +229,34 @@ class NowPlayingViewModelTest {
     }
 
     @Test
+    fun aCoveredScreenNeverAnnouncesTheEndOfItsPlayback() = runViewModelTest {
+        val s = live()
+        s.vm.onHidden()
+        s.refresh(snapshot(r1 = false)); runCurrent()
+        assertNull(s.ui.exit)
+        assertEquals(emptyList(), s.posted)
+    }
+
+    @Test
+    fun showingAgainAsksForARefreshWhoseSnapshotDecidesWhetherItEnded() = runViewModelTest {
+        val s = live()
+        s.session.acquire() // the covering screen keeps the loop running
+        runCurrent()
+        s.vm.onHidden()
+        s.repo.snapshotResult = { HubResult.Ok(snapshot(r1 = false)) }
+        advanceTimeBy(3_000); runCurrent() // a poll lacking the route arrives while covered
+        assertNull(s.ui.exit)
+        assertEquals(emptyList(), s.posted)
+        val before = s.repo.snapshotCalls
+        s.vm.onVisible(); runCurrent()
+        assertEquals(before + 1, s.repo.snapshotCalls)
+        assertEquals(Exit.Ended("Downstairs"), s.ui.exit)
+        assertEquals(listOf("Playback on Downstairs ended"), s.posted)
+        s.session.release()
+        s.vm.onHidden()
+    }
+
+    @Test
     fun theRouteDisappearingFromARefreshEndsTheScreenWithAMessage() = runViewModelTest {
         val s = live()
         s.refresh(snapshot(r1 = false)); runCurrent()
@@ -725,6 +753,7 @@ class NowPlayingViewModelTest {
         session.requestRefresh(); runCurrent()
         val handle = SavedStateHandle()
         val vm = NowPlayingViewModel("r9", handle, session, messages, startedAfterSeq = session.startedSeq, targetName = "Bedroom")
+        vm.onVisible() // a Now Playing that decides "ended" is on screen
         runCurrent()
         return Setup(vm, session, factory, messages, posted, handle)
     }

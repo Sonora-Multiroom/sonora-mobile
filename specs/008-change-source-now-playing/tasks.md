@@ -52,7 +52,7 @@ device (quickstart §2); no Compose UI test setup is added.
 
 ## Phase 1: Setup
 
-- [ ] T001 Set `sonora.versionName=0.8.0-alpha` and `sonora.versionCode=8` in gradle.properties as
+- [X] T001 Set `sonora.versionName=0.8.0-alpha` and `sonora.versionCode=8` in gradle.properties as
   the first implementation commit (AGENTS.md "Bump the app version first").
 
 ---
@@ -62,7 +62,7 @@ device (quickstart §2); no Compose UI test setup is added.
 **Purpose**: the navigation key and back-stack rule every story depends on (research R1, R2). No
 screen uses them yet, so nothing user-visible changes.
 
-- [ ] T002 In test/ui/nav/AppBackStackTest.kt add failing tests (data-model.md "Navigation"):
+- [X] T002 In test/ui/nav/AppBackStackTest.kt add failing tests (data-model.md "Navigation"):
   - `encodeDestination(StartPlayback(null, Target.Room("k"), "Kitchen"))` == `"change:room:k"`;
     `Target.Group("g")` → `"change:group:g"`; decoding gives back the same `fixedTarget` with
     `fixedName = null`; an id containing `:` (`"a:b"`) round-trips; `"change:"`,
@@ -77,7 +77,7 @@ screen uses them yet, so nothing user-visible changes.
     Start Playback → stack unchanged.
   - Close without a start: `pop()` on `[Rooms, NowPlaying(r1), StartPlayback(null, Target.Room("k"))]`
     leaves `[Rooms, NowPlaying(r1)]`, the same entry, so its view model is kept.
-- [ ] T003 In main/ui/nav/Destinations.kt make T002 pass (depends on T002):
+- [X] T003 In main/ui/nav/Destinations.kt make T002 pass (depends on T002):
   `data class StartPlayback(val targetId: String?, val fixedTarget: Target? = null, val fixedName: String? = null)`
   (KDoc: `fixedTarget` is the addressed `Target.Room` or `Target.Group` of the Now Playing it was
   opened from; `fixedName` is not saved); `encodeDestination` writes `change:room:<id>` /
@@ -100,33 +100,33 @@ the same Now Playing; no false "ended" notice.
 
 ### Tests for User Story 1 (write first, see them fail)
 
-- [ ] T004 [P] [US1] Create test/domain/FixedTargetTest.kt with failing tests for
+- [X] T004 [P] [US1] Create test/domain/FixedTargetTest.kt with failing tests for
   `FixedTarget.of(snapshot, target, knownName)` on a **room** (data-model.md "FixedTargetCard",
   table in order): idle → status `Idle`, `unusable` null; own playback → `Playing(…)`; paused →
   `Playing(Paused, …)`; playing via a group → `InGroup(group)`; `enabled = false` → `TurnedOff`;
   `available = false` → `NotConnected`; not in `snapshot.rooms` → status `Removed`, `unusable =
   Removed`. Name: from the snapshot when present, else `knownName`, else the id.
-- [ ] T005 [P] [US1] In test/domain/NowPlayingBuilderTest.kt add failing tests:
+- [X] T005 [P] [US1] In test/domain/NowPlayingBuilderTest.kt add failing tests:
   `changeSourceVisible` true for a room playback that is playing, paused or failed, and for a group
   playback; false for a route whose target is `Target.Unknown`.
-- [ ] T006 [P] [US1] In test/ui/nowplaying/NowPlayingTextTest.kt add failing tests for
+- [X] T006 [P] [US1] In test/ui/nowplaying/NowPlayingTextTest.kt add failing tests for
   `actionRowLayout(content)` (data-model.md: "`count` 1 (Stop) + `pauseVisible` +
   `changeSourceVisible` + `moveVisible`", "`compact` `count == 4`"): live stream movable → 3, not
   compact; pauseable playing movable → 4, compact; paused (not movable) → 3; failed (no pause, no
   move) → 2; unknown target, not pauseable → 1.
-- [ ] T007 [P] [US1] In test/ui/nowplaying/NowPlayingViewModelTest.kt add failing tests (research
+- [X] T007 [P] [US1] In test/ui/nowplaying/NowPlayingViewModelTest.kt add failing tests (research
   R6): after `onVisible()` then `onHidden()`, a snapshot without the route posts no message to
   `AppMessages` and sets no `exit`; `onVisible()` again while another holder keeps the session
   loop running (acquire a second holder before `onHidden()`) triggers a fetch without waiting for
   the poll interval, and that snapshot without the route exits with `Exit.Ended` and posts
   "Playback on <target> ended" exactly once; the existing "ended elsewhere while visible" test
   still passes unchanged.
-- [ ] T008 [P] [US1] In test/ui/startplayback/StartPlaybackTextTest.kt add failing tests for
+- [X] T008 [P] [US1] In test/ui/startplayback/StartPlaybackTextTest.kt add failing tests for
   `fixedTargetStatusText(card)` on rooms (research R5: as the picker tile — `Playing · KissFM`,
   `Paused · …`, `In Downstairs`, `Idle`, `Turned off`, `Not connected` — and `Removed`) and
   `fixedTargetNoteText(unusable, name)`: `TurnedOff` → "Kitchen is turned off", `NotConnected`
   (room) → "Kitchen is not connected", `Removed` → "Kitchen no longer exists".
-- [ ] T009 [US1] In test/ui/startplayback/StartPlaybackViewModelTest.kt add failing tests for
+- [X] T009 [US1] In test/ui/startplayback/StartPlaybackViewModelTest.kt add failing tests for
   fixed mode, constructing the view model with `fixedTarget = Target.Room(…)`, `fixedName`:
   - `changeSource` is true before the first snapshot; after it `fixed` is set, `selectedTarget`
     is the fixed target, no source and no link selected, Play disabled until a source is picked.
@@ -143,7 +143,7 @@ the same Now Playing; no false "ended" notice.
 
 ### Implementation for User Story 1
 
-- [ ] T010 [US1] Create main/domain/FixedTarget.kt (depends on T004): `data class
+- [X] T010 [US1] Create main/domain/FixedTarget.kt (depends on T004): `data class
   FixedTargetCard(val target: Target, val name: String, val status: TargetStatus, val unusable:
   Unusable?)`, `enum class Unusable { TurnedOff, AllRoomsTurnedOff, NotConnected, NoRooms,
   Removed }`, and `object FixedTarget { fun of(snapshot: HubSnapshot, target: Target, knownName:
@@ -155,24 +155,24 @@ the same Now Playing; no false "ended" notice.
   group `status`, which needs T024) are written test-first in US2 (T021, T025). Until then `of`
   throws `NotImplementedError` for a `Target.Group`; US1 and US2 ship in the same pull request, so
   no build with a reachable group button is released.
-- [ ] T011 [US1] In main/domain/NowPlayingBuilder.kt add `changeSourceVisible: Boolean` to
+- [X] T011 [US1] In main/domain/NowPlayingBuilder.kt add `changeSourceVisible: Boolean` to
   `NowPlayingContent.Playback`, set to `route.target !is Target.Unknown` beside `moveVisible`
   (depends on T005).
-- [ ] T012 [US1] Add `actionRowLayout(content)` returning `ActionRowLayout(count: Int, compact:
+- [X] T012 [US1] Add `actionRowLayout(content)` returning `ActionRowLayout(count: Int, compact:
   Boolean)` to main/ui/nowplaying/NowPlayingText.kt (depends on T006, T011).
-- [ ] T013 [US1] In main/ui/nowplaying/NowPlayingViewModel.kt add a private `visible` flag, set in
+- [X] T013 [US1] In main/ui/nowplaying/NowPlayingViewModel.kt add a private `visible` flag, set in
   `onVisible()` and cleared in `onHidden()` beside the existing `session.acquire()` /
   `release()`; `onGone` returns early while not visible; `onVisible()` also calls
   `session.requestRefresh()` (depends on T007). KDoc: a covered Now Playing (Start Playback on
   top) must not announce its playback's end; the refresh it asks for when visible again decides,
   since the skipped snapshots are not replayed and the loop may not restart.
-- [ ] T014 [US1] Add `fixedTargetStatusText(card: FixedTargetCard)` and
+- [X] T014 [US1] Add `fixedTargetStatusText(card: FixedTargetCard)` and
   `fixedTargetNoteText(unusable: Unusable, name: String)` to
   main/ui/startplayback/StartPlaybackText.kt (depends on T008, T010). Implement every row of
   research R5 for **rooms** (status texts and the room notes, including `Removed`). The group
   wording ("Group · …"; notes "All rooms in Downstairs are turned off", "No room in Downstairs is
   connected", "Downstairs has no rooms") is written after its tests, in T025.
-- [ ] T015 [US1] Fixed mode in main/ui/startplayback/StartPlaybackViewModel.kt and
+- [X] T015 [US1] Fixed mode in main/ui/startplayback/StartPlaybackViewModel.kt and
   main/ui/startplayback/StartPlaybackUiState.kt (depends on T009, T010; research R3):
   - constructor gains `fixedTarget: Target?`, `fixedName: String?` after `initialTargetId`;
     update `startPlaybackViewModel(targetId, fixedTarget, fixedName, savedState)` in
@@ -187,7 +187,7 @@ the same Now Playing; no false "ended" notice.
   - `derive`: in fixed mode the target name is `fixed.name` and the target is ready only when
     `fixed != null && fixed.unusable == null`; no consequence while unusable. `onPlay` uses the
     same name for `StartNames` and passes the fixed target to `starter.start`.
-- [ ] T016 [US1] In main/ui/startplayback/StartPlaybackScreen.kt (depends on T014, T015;
+- [X] T016 [US1] In main/ui/startplayback/StartPlaybackScreen.kt (depends on T014, T015;
   contracts/ui-behaviour.md "Start Playback opened from Change source"):
   - `Header` title "Change source" when `state.changeSource`, else "Play something".
   - In `Lists`, when `state.changeSource`, keep the "Play in" legend and draw one `FixedTargetCard`
@@ -199,9 +199,9 @@ the same Now Playing; no false "ended" notice.
     Put it in a new file main/ui/startplayback/FixedTargetCard.kt next to `TargetTile.kt`.
   - In `Footer`, when `fixed?.unusable != null`, show `fixedTargetNoteText(...)` in
     `type.body13` `colors.textMuted` above Play.
-- [ ] T017 [US1] Add `val Swap = icon("swap", paths = arrayOf("M4 8h14M15 5l3 3-3 3M20 16H6M9 13l-3 3 3 3"))`
+- [X] T017 [US1] Add `val Swap = icon("swap", paths = arrayOf("M4 8h14M15 5l3 3-3 3M20 16H6M9 13l-3 3 3 3"))`
   to main/ui/theme/Icons.kt (stroked, like `Arrow`).
-- [ ] T018 [US1] Now Playing's action row in main/ui/nowplaying/NowPlayingScreen.kt (depends on
+- [X] T018 [US1] Now Playing's action row in main/ui/nowplaying/NowPlayingScreen.kt (depends on
   T011, T012, T017; research R7, contracts/ui-behaviour.md "Now Playing: the action row"):
   - `NowPlayingActions` gains `onChangeSource: () -> Unit = {}`; `NowPlayingScreen` gains a
     parameter `onChangeSource: (target: Target, name: String) -> Unit`, called with
@@ -215,7 +215,7 @@ the same Now Playing; no false "ended" notice.
     horizontalArrangement = spacedBy(4.dp))`, each action in `Modifier.weight(1f)`, 64 dp circle,
     24 dp icon, caption `textAlign = Center`, `softWrap = true`, `maxLines = 2`. Give `RoundAction`
     `size`/`iconSize`/`wrapCaption` parameters rather than a second composable.
-- [ ] T019 [US1] Wire it in main/ui/nav/AppNavigation.kt (depends on T003, T015, T018): Now Playing's
+- [X] T019 [US1] Wire it in main/ui/nav/AppNavigation.kt (depends on T003, T015, T018): Now Playing's
   `onChangeSource = { target, name -> backStack.push(Destination.StartPlayback(null, target, name)) }`;
   Start Playback's view model gets `key.fixedTarget`, `key.fixedName`; `onStarted` calls
   `backStack.showStarted(Destination.NowPlaying(started.routeId, started.startedAfterSeq, started.targetName))`
@@ -235,35 +235,35 @@ card says "Group · Playing …", and the start plays on the whole group.
 
 ### Tests for User Story 2 (write first, see them fail)
 
-- [ ] T020 [P] [US2] In test/domain/StartPlaybackBuilderTest.kt add failing tests:
+- [X] T020 [P] [US2] In test/domain/StartPlaybackBuilderTest.kt add failing tests:
   `TargetStatus.GroupPlaying(status, sources)` carries `Playing` for a playing group route,
   `Paused` for a paused one, `Playing` for a live stream (not `LiveStream`); the picker tile text
   stays "Group · Radio Paradise" (`targetStatusText`).
-- [ ] T021 [P] [US2] In test/domain/FixedTargetTest.kt add failing group tests, using the member-off
+- [X] T021 [P] [US2] In test/domain/FixedTargetTest.kt add failing group tests, using the member-off
   fixture in test/domain/MemberOffFixture.kt where it fits: playing → `GroupPlaying(Playing, …)`;
   paused; idle with playable members → `GroupMembers`; `enabled = false` → `TurnedOff`; no known
   members → `NoRooms`; every member off → `AllRoomsTurnedOff`; members on but none available →
   `NotConnected`; one member off, others fine → `unusable` null; not in `snapshot.groups` →
   `Removed`.
-- [ ] T022 [P] [US2] In test/ui/startplayback/StartPlaybackTextTest.kt add failing tests:
+- [X] T022 [P] [US2] In test/ui/startplayback/StartPlaybackTextTest.kt add failing tests:
   `fixedTargetStatusText` for groups ("Group · Playing Radio Paradise", "Group · Paused Morning
   playlist", "Group · Kitchen + Living room", "Group · Turned off", "Group · Not connected",
   "Group · No rooms", "Group · Removed") and `fixedTargetNoteText` for `TurnedOff` ("Downstairs is
   turned off"), `AllRoomsTurnedOff` ("All rooms in Downstairs are turned off"), `NotConnected`
   on a group ("No room in Downstairs is connected"), `NoRooms` ("Downstairs has no rooms"),
   `Removed` ("Downstairs no longer exists").
-- [ ] T023 [US2] In test/ui/startplayback/StartPlaybackViewModelTest.kt add failing tests with
+- [X] T023 [US2] In test/ui/startplayback/StartPlaybackViewModelTest.kt add failing tests with
   `fixedTarget = Target.Group(…)`: a group playback playing on fewer rooms (a member off) keeps the
   group as `selectedTarget`; picking another source gives `WillStop` naming the group playback and
   `wontPlay` naming the member that is off; `onPlay` passes `Target.Group` to the starter.
 
 ### Implementation for User Story 2
 
-- [ ] T024 [US2] In main/domain/StartPlaybackBuilder.kt change `GroupPlaying(sources)` to
+- [X] T024 [US2] In main/domain/StartPlaybackBuilder.kt change `GroupPlaying(sources)` to
   `GroupPlaying(status: CardStatus, sources: List<String>)`, `status` = `cardStatus(...)` of the
   group's first non-announcement route, with `CardStatus.LiveStream` mapped to `Playing`
   (depends on T020). Update every `GroupPlaying` use (`targetStatusText` ignores the status).
-- [ ] T025 [US2] Make T021–T023 pass (depends on T021–T024, T010, T014): implement the group rows
+- [X] T025 [US2] Make T021–T023 pass (depends on T021–T024, T010, T014): implement the group rows
   of `FixedTarget.of` (data-model.md table, in order, with `status` from the T024
   `GroupPlaying.status`) in main/domain/FixedTarget.kt, replacing the `NotImplementedError`, and
   the group branches of `fixedTargetStatusText` / `fixedTargetNoteText` in
@@ -282,7 +282,7 @@ selected (addressed) target shows "… is already playing in …" and disables P
 
 ### Tests for User Story 3 (write first, see them fail)
 
-- [ ] T026 [US3] In test/ui/startplayback/StartPlaybackViewModelTest.kt add failing tests
+- [X] T026 [US3] In test/ui/startplayback/StartPlaybackViewModelTest.kt add failing tests
   (research R4): opened from Rooms, a source playing on the selected room → `consequence.line is
   AlreadyPlaying`, `playEnabled` false, `onPlay()` sends nothing to the starter; selecting another
   source, another target, or typing a valid link → Play enabled again; a source playing on a group
@@ -291,7 +291,7 @@ selected (addressed) target shows "… is already playing in …" and disables P
 
 ### Implementation for User Story 3
 
-- [ ] T027 [US3] In `derive` in main/ui/startplayback/StartPlaybackViewModel.kt add
+- [X] T027 [US3] In `derive` in main/ui/startplayback/StartPlaybackViewModel.kt add
   `&& consequence?.line !is ConsequenceLine.AlreadyPlaying` to `playEnabled` (depends on T026).
   `StartConsequence` stays unchanged. Check in main/ui/startplayback/StartPlaybackScreen.kt that a
   disabled Play keeps `clickable(enabled = false)` (announced disabled) and the dimmed accent
@@ -308,7 +308,7 @@ one.
 
 **Independent Test**: quickstart §2 rows 13, 14.
 
-- [ ] T028 [US4] In test/domain/StartConsequenceTest.kt add a characterization test (it documents
+- [X] T028 [US4] In test/domain/StartConsequenceTest.kt add a characterization test (it documents
   existing behaviour, so it is expected to pass at once, the one exception to "seen failing"; if it
   fails, fix `StartConsequence` minimally): a paused route on the target gives `WillStop` with the
   same `AffectedPlayback` as a playing one. In test/ui/nowplaying/NowPlayingTextTest.kt confirm
@@ -321,20 +321,20 @@ assumption that the hub replaces a paused playback; record the answer).
 
 ## Phase 7: Polish & Cross-Cutting Concerns
 
-- [ ] T029 Run the local checks and read each exit code (`cmd > log; echo $?`):
+- [X] T029 Run the local checks and read each exit code (`cmd > log; echo $?`):
   `./gradlew :androidApp:assembleDebug`, `:composeApp:testAndroidHostTest`, `:composeApp:allTests`,
   `:composeApp:check`. Record the commands, date and test counts in
   specs/008-change-source-now-playing/verification.md, created in 007's format: build under test,
   device, status legend, one row per quickstart §2 check, "Issues found".
-- [ ] T030 [P] Add a `## [0.8.0-alpha] - Unreleased` entry to CHANGELOG.md above 0.7.0-alpha (spec
+- [X] T030 [P] Add a `## [0.8.0-alpha] - Unreleased` entry to CHANGELOG.md above 0.7.0-alpha (spec
   folder link, "pull request to follow"). Added: "Change source…" on Now Playing opens Start
   Playback for that room or group and replaces what plays there. Changed: Play is disabled when
   the chosen source already plays on the chosen room or group.
-- [ ] T031 [P] Update AGENTS.md: under Design "Agreed details", after the "Move to room…" line,
+- [X] T031 [P] Update AGENTS.md: under Design "Agreed details", after the "Move to room…" line,
   add "The change-source action is labelled **"Change source…"**; it opens Start Playback for the
   playback's own room or group, with no target picker." Under "Domain rules", note that Start
   Playback never sends a start for a source already playing on the chosen target.
-- [ ] T032 [P] Delete docs/backlog/change-source-from-now-playing.md and its row in
+- [X] T032 [P] Delete docs/backlog/change-source-from-now-playing.md and its row in
   docs/backlog/INDEX.md; update links to it (`grep -rn change-source-from-now-playing`), except in
   specs/008-change-source-now-playing/. If the file is still untracked in the working tree, ask
   the user before deleting it.
@@ -347,7 +347,7 @@ assumption that the hub replaces a paused playback; record the answer).
   playback (row 13), and, from row 12, that the covered Now Playing really stopped announcing
   (the view model relies on the screen leaving composition while Start Playback is on top). If the hub did not replace the paused playback, stop and ask the user before
   changing anything (the spec assumes it does).
-- [ ] T034 Update docs/testing/full-app-test.md for this feature: add rows for quickstart §2 in
+- [X] T034 Update docs/testing/full-app-test.md for this feature: add rows for quickstart §2 in
   their sections (N for the action row and Change source, S for the fixed Start Playback and the
   "already playing" gate, X for row 16); rewrite S6 from "Play opens the same playback" to "Play
   disabled, nothing sent"; extend the fixture with a group `G` and a pauseable source if a row

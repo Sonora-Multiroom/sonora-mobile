@@ -3,8 +3,11 @@ package sonora.multiroom.mobile.ui.startplayback
 import sonora.multiroom.mobile.domain.AffectedPlayback
 import sonora.multiroom.mobile.domain.CardStatus
 import sonora.multiroom.mobile.domain.ConsequenceLine
+import sonora.multiroom.mobile.domain.FixedTargetCard
 import sonora.multiroom.mobile.domain.MuteNote
+import sonora.multiroom.mobile.domain.Target
 import sonora.multiroom.mobile.domain.TargetStatus
+import sonora.multiroom.mobile.domain.Unusable
 import sonora.multiroom.mobile.domain.WontPlay
 import sonora.multiroom.mobile.domain.joinNames
 import sonora.multiroom.mobile.ui.rooms.statusWord
@@ -25,6 +28,30 @@ internal fun targetStatusText(status: TargetStatus): String = when (status) {
     TargetStatus.TurnedOff -> "Turned off"
     TargetStatus.NotConnected -> "Not connected"
     TargetStatus.NoRooms -> "No rooms"
+    TargetStatus.Removed -> "Removed"
+}
+
+/**
+ * The fixed target card's second line (Change source): a room reads as its picker tile does, a
+ * group always says "Group · …" and, when playing, whether it is playing or paused.
+ */
+internal fun fixedTargetStatusText(card: FixedTargetCard): String {
+    val status = card.status
+    if (card.target !is Target.Group) return targetStatusText(status)
+    return when (status) {
+        is TargetStatus.GroupPlaying -> "Group · ${statusWord(status.status)} ${status.sources.joinToString(" + ")}"
+        is TargetStatus.GroupMembers -> targetStatusText(status)
+        else -> "Group · ${targetStatusText(status)}"
+    }
+}
+
+/** The note above Play while the fixed target cannot take a start. [isGroup] only matters for "not connected". */
+internal fun fixedTargetNoteText(unusable: Unusable, name: String, isGroup: Boolean = false): String = when (unusable) {
+    Unusable.TurnedOff -> "$name is turned off"
+    Unusable.AllRoomsTurnedOff -> "All rooms in $name are turned off"
+    Unusable.NotConnected -> if (isGroup) "No room in $name is connected" else "$name is not connected"
+    Unusable.NoRooms -> "$name has no rooms"
+    Unusable.Removed -> "$name no longer exists"
 }
 
 internal fun playLabelText(label: PlayLabel): String = when (label) {

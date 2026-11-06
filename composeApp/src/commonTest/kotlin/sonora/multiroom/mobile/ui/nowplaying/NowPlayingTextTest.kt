@@ -13,12 +13,25 @@ class NowPlayingTextTest {
         routeId = "r1", sourceName = "Radio", kind = SourceKind.Stream, kindLabel = "Stream", addressDetail = detail,
         status = CardStatus.Playing, live = true, target = TargetLine(Target.Room("a"), "A", emptyList(), false),
         pauseVisible = false, pauseEnabled = true, paused = false, moveVisible = true, volume = null,
+        changeSourceVisible = true,
     )
+
+    private fun layout(pause: Boolean, change: Boolean, move: Boolean) =
+        actionRowLayout(content(null).copy(pauseVisible = pause, changeSourceVisible = change, moveVisible = move))
 
     @Test
     fun theSubtitleJoinsKindAndDetailOrIsJustTheKind() {
         assertEquals("Stream · stream.radioparadise.com", subtitle(content("stream.radioparadise.com")))
         assertEquals("Stream", subtitle(content(null)))
+    }
+
+    @Test
+    fun theActionRowCountsStopAndWhatIsVisibleAndGoesCompactAtFour() {
+        assertEquals(ActionRowLayout(3, false), layout(pause = false, change = true, move = true)) // live stream
+        assertEquals(ActionRowLayout(4, true), layout(pause = true, change = true, move = true))
+        assertEquals(ActionRowLayout(3, false), layout(pause = true, change = true, move = false)) // paused
+        assertEquals(ActionRowLayout(2, false), layout(pause = false, change = true, move = false)) // failed
+        assertEquals(ActionRowLayout(1, false), layout(pause = false, change = false, move = false)) // unknown target
     }
 
     @Test

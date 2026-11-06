@@ -12,3 +12,12 @@ internal fun targetText(line: TargetLine): String {
     val base = if (line.memberNames.isEmpty()) "on ${line.name}" else "on ${line.name} · ${line.memberNames.joinToString(" + ")}"
     return if (line.notConnected) "$base · Not connected" else base
 }
+
+/** How many buttons the action row holds and whether it switches to four equal columns. */
+internal data class ActionRowLayout(val count: Int, val compact: Boolean)
+
+/** Stop, plus Pause/Resume, Change source… and Move to room… when each is shown. */
+internal fun actionRowLayout(content: NowPlayingContent.Playback): ActionRowLayout {
+    val count = 1 + listOf(content.pauseVisible, content.changeSourceVisible, content.moveVisible).count { it }
+    return ActionRowLayout(count, compact = count == 4)
+}
