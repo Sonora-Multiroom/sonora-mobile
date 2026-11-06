@@ -50,6 +50,12 @@ like a playing one.
   64 dp buttons (FR-012).
 - Q: How does Start Playback show the fixed target? → A: Title "Change source", and the "Play in"
   section shows one card for the target in place of the picker (FR-012).
+- Q: When "Change source…" replaces a playback, should the app stay silent about the old playback
+  ending? → A: Yes. While Start Playback opened from a Now Playing is showing, that playback's end
+  is not announced, whatever the cause; if the user closes Start Playback and the playback is gone,
+  the usual notice appears then (FR-013).
+- Q: Should "Change source…" be hidden when the hub reports a playback addressed to a kind of
+  target the app doesn't recognise? → A: Yes, hidden, as "Move to room…" already is (FR-002).
 
 ## User Scenarios & Testing *(mandatory)*
 
@@ -171,9 +177,12 @@ another source: the new one plays in that room and the paused one is gone.
 
 - **The hub is unreachable** (Now Playing is dimmed as stale): the action is disabled, like Stop and
   the other controls.
+- **A target type the app does not know** (added by a newer hub): the action is hidden; Stop still
+  works.
 - **The old playback ends while Start Playback is open** (stopped from another client, a track
   ends): the target stays; the "will stop" line disappears on the next refresh; Play starts on the
-  now idle target. After the start the old Now Playing is still not kept below.
+  now idle target. No "ended" notice appears over Start Playback (FR-013). After the start the old
+  Now Playing is still not kept below.
 - **The target can no longer be used** (turned off or removed, when Start Playback opens or while
   it is open): the target line stays, a short note says why ("Kitchen is turned off", "Downstairs
   no longer exists"), and Play is disabled. The user closes the screen; there is no picker to fall
@@ -184,7 +193,7 @@ another source: the new one plays in that room and the paused one is gone.
   tries the new one, so the room falls silent. The app shows Start Playback's existing failure
   message; it neither warns beforehand nor offers to restore the old playback. Closing Start
   Playback then returns to the old Now Playing, which finds its playback gone and leaves as it does
-  today.
+  today, with the usual "ended" notice on Rooms.
 - **A start is still in flight when the user leaves Start Playback**: handled as today (the outcome
   is reported on Rooms).
 - **A link that points to what already plays**: links always start a new source, so there is no
@@ -202,8 +211,9 @@ another source: the new one plays in that room and the paused one is gone.
 - **FR-001**: Now Playing MUST offer an action labelled "Change source…" that opens Start
   Playback. The action itself MUST NOT stop, pause or change anything.
 - **FR-002**: The action MUST be offered for every live playback Now Playing shows, playing or
-  paused, whether or not it can be moved or paused. It MUST be disabled while Now Playing's other
-  controls are (hub unreachable).
+  paused, whether or not it can be moved or paused, except one addressed to a kind of target the
+  app does not recognise (a newer hub's): there it is hidden, as "Move to room…" is. It MUST be
+  disabled while Now Playing's other controls are (hub unreachable).
 - **FR-003**: Start Playback opened from the action MUST target what the playback was addressed
   to: its room for a single-room playback, its group for a group playback. It MUST NOT target the
   rooms the playback happens to play on right now. No source and no link is preselected.
@@ -227,6 +237,11 @@ another source: the new one plays in that room and the paused one is gone.
 - **FR-009**: Closing Start Playback without a start MUST return to the old Now Playing unchanged.
 - **FR-010**: A failed start MUST show Start Playback's existing failure message; no new warning,
   confirmation or restore offer is added.
+- **FR-013**: While Start Playback opened from a Now Playing is showing, the end of that Now
+  Playing's playback MUST NOT be announced ("Playback on <target> ended"), whether this start
+  replaced it or it ended for another reason. After a successful start no such notice appears at
+  all. If the user closes Start Playback and the playback is gone, the old Now Playing leaves and
+  the usual notice appears, as today.
 - **FR-011**: The fixed target, and that Start Playback was opened from Now Playing, MUST survive
   the app being restored by the system, as the room preselection does today.
 - **FR-012**: The screens MUST follow the design canvas, updated for this feature on 2026-11-06
