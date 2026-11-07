@@ -2,7 +2,7 @@
 
 **Branch**: `tiny/change-source-replace-only`
 **Date**: 2026-11-07
-**Status**: draft
+**Status**: done
 **Complexity**: small
 **Version**: `0.8.1-alpha` (versionCode 8)
 
@@ -57,10 +57,23 @@ from a mixed-in playback it also stops the room's main playback, which the user 
 - [X] T5 `docs/testing/full-app-test.md`: row for a `MIX` route (started by `curl` with
       `joinMode`) without "Change source…"; header to `0.8.1-alpha`
 - [X] T6 `assembleDebug`, `testAndroidHostTest`, `allTests`, `check` all exit 0
-- [ ] T7 On-device check, recorded below
+- [X] T7 On-device check, recorded below
 
 ## On-device check
 
-Not run yet.
+2026-11-07, local debug APK `0.8.1-alpha` (commit `e42a10e`) on the POCO (25078PC3EG), taps by the
+user, screen read with `uiautomator dump` and `screencap`; hub API 0.1.33.
+
+Setup: nothing was playing. Office Speaker set from 30 to 1; `POST /routes` `kissfm` on `office`
+(`joinMode` `REPLACE` in the answer), then `kissfmdeep` on `office` with `joinMode: "MIX"`. Rooms
+showed two Office Speaker cards ("1 of 4 rooms in use").
+
+| Check | Result |
+|---|---|
+| Now Playing of `kissfmdeep` (MIX) | ✅ Buttons: Stop, Move to room… only, centred, nothing clipped; "Live streams can't be paused" |
+| Now Playing of `kissfm` (REPLACE) | ✅ Buttons: Stop, Change source, Move to room |
+
+Restored: both routes deleted (204, `GET /routes` empty), Office back to 30, Do Not Disturb off.
+The POCO refused `settings put system screen_off_timeout` (WRITE_SETTINGS), so it stayed at 5 min.
 
 Gate (T6), 2026-11-07, local: `assembleDebug :composeApp:testAndroidHostTest :composeApp:allTests :composeApp:check` exit 0; host tests 705, 0 failed. T2 seen failing first ("Mix playing").
