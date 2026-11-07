@@ -149,8 +149,9 @@ Record the build (CI build number and commit), the device and each row's evidenc
 
 ## API
 
-- [api/openapi.json](api/openapi.json) was fetched from the production hub on 2026-10-19
-  (API version **0.1.28**); refresh it with `./gradlew refreshOpenApi` from a local session. It
+- [api/openapi.json](api/openapi.json) was fetched from the production hub on 2026-11-06
+  (API version **0.1.33**, the hub's live version that day; the app builds green against it);
+  refresh it with `./gradlew refreshOpenApi` from a local session. It
   also contains TTS extension paths (`/api/tts/*`): **use only `/api/v2/**`**. The hub removed
   REST v1 in 0.1.24.
 - 0.1.21 added join modes (`RouteResponse.joinMode`, `InputResponse.defaultJoinMode`) and admission
@@ -164,13 +165,13 @@ Record the build (CI build number and commit), the device and each row's evidenc
   `ROUTE_CHANGING_OUTPUTS` (0.1.25) once after 1 s.
   Since 0.1.28 the contract's description of `ErrorResponse.reason` lists every reason and says
   to treat an unknown one as a generic conflict.
-- 0.1.23 (hub 025): master mute is a layer above each output's own mute and no longer changes any
+- 0.1.23 (HUB-025): master mute is a layer above each output's own mute and no longer changes any
   output's `muted`; turning it off restores each output's own mute.
-- 0.1.25 (hub 027, 028): turning off a source stops every route playing it (paused ones
+- 0.1.25 (HUB-027, HUB-028): turning off a source stops every route playing it (paused ones
   too), and an auto-remove source is then removed; turning off a group stops the routes addressed
   to it; turning a room back on puts it back into every live group route of an enabled group
   containing it, under the same route id. While that room rejoins, a transfer answers 409
-  `ROUTE_CHANGING_OUTPUTS`, which clears by itself within moments. 028 is internal (sound-card
+  `ROUTE_CHANGING_OUTPUTS`, which clears by itself within moments. HUB-028 is internal (sound-card
   channel use).
 - 0.1.28: `PUT /api/v2/inputs/{id}/display-name` `{displayName}` renames an input (at most 64
   characters; null or blank restores the original name; lasts until a restart for a configured
@@ -200,6 +201,8 @@ Record the build (CI build number and commit), the device and each row's evidenc
 
 ### Domain rules the UI depends on
 
+- Start Playback never sends a start for a source that already plays on the chosen target (the
+  addressed room or group): Play is disabled with "<source> is already playing in <target>".
 - Since 0.1.21 an output may carry **several routes** (mixed sources, announcements). Rooms and Now
   Playing still show one per room, see
   [docs/backlog/rooms-with-several-playbacks.md](docs/backlog/rooms-with-several-playbacks.md); only
@@ -232,7 +235,7 @@ Record the build (CI build number and commit), the device and each row's evidenc
   set to the new value.
 - No rooms in a playback's answer: `RouteResponse` names only the group it was addressed to, so a
   group route playing on fewer rooms than its group has (a member turned off) is still counted on
-  every member (feature 004). **Closed in API 0.1.22** by `RouteResponse.outputs`, which the app
+  every member (MOB-004). **Closed in API 0.1.22** by `RouteResponse.outputs`, which the app
   uses since 0.6.0-alpha; a route without it falls back to the group's known members.
 
 ## Design
@@ -279,6 +282,8 @@ Agreed details — keep them:
   Rooms cards show the status "Live stream". Non-stream sources (e.g. line-in) are never labelled
   live.
 - The transfer action is labelled **"Move to room…"**.
+- The change-source action is labelled **"Change source…"**; it opens Start Playback for the
+  playback's own room or group, with no target picker.
 - Starting playback on a busy target shows what will stop ("Radio Paradise will stop in Bedroom").
 
 ## Workflow
@@ -352,3 +357,17 @@ The default place for proposed features, deferred work and ideas that are not ye
 
 Sequential feature numbering. Active feature specs live in `specs/NNN-*/`; read the one for the
 current branch before writing code.
+
+Refer to features with a repository prefix and the three-digit number: `MOB-007` for this
+repository, `HUB-034` for the hub (`sonora-multiroom`), `CLI-011`, `MCP-002`, `TTS-002` for
+`sonora-cli`, `sonora-mcp` and `sonora-tts`. These are feature numbers, not tickets in a tracker.
+(This copies a rule from the parent `D:\projects-sonora\AGENTS.md`, which cloud sessions cannot read.)
+- Use them in docs, backlog items, specs, commit messages, pull requests and code comments
+  (`// HUB-034: a route volume replaces the output's`). Unlike `FR-` numbers they are stable across
+  repositories.
+- Spec folders and branches keep Spec Kit's names (`specs/007-marquee-source-names/`, branch
+  `007-…`). Never rename them.
+- Add the API version where the release matters: "HUB-034 (API 0.1.29)".
+- Tinyspecs, archived bugs and backlog items have no number: name them by file. Don't invent an ID.
+- Write new text this way, and convert old references in a file when you edit it anyway. Don't
+  rewrite archived specs.

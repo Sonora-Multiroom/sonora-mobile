@@ -135,7 +135,7 @@ internal fun StartPlaybackContentView(
     val colors = SonoraTheme.colors
     val type = SonoraTheme.type
     Column(modifier = modifier.fillMaxSize()) {
-        Header(onClose)
+        Header(state.changeSource, onClose)
         val address = state.address
         val content = state.content
         val connection = state.connection
@@ -188,7 +188,7 @@ internal fun StartPlaybackContentView(
 }
 
 @Composable
-private fun Header(onClose: () -> Unit) {
+private fun Header(changeSource: Boolean, onClose: () -> Unit) {
     val colors = SonoraTheme.colors
     Row(
         modifier = Modifier.fillMaxWidth().padding(start = 12.dp, end = 12.dp, top = 16.dp),
@@ -203,7 +203,7 @@ private fun Header(onClose: () -> Unit) {
             size = 44.dp,
             onClick = onClose,
         )
-        Text("Play something", style = SonoraTheme.type.cardTitle.copy(fontSize = 20.sp), color = colors.text)
+        Text(if (changeSource) "Change source" else "Play something", style = SonoraTheme.type.cardTitle.copy(fontSize = 20.sp), color = colors.text)
     }
 }
 
@@ -244,6 +244,11 @@ private fun Lists(
     }
 
     SectionLegend("Play in", Modifier.padding(top = 6.dp))
+    if (state.changeSource) {
+        // The playback's own room or group, not a choice (MOB-008).
+        state.fixed?.let { FixedTargetCard(it) }
+        return
+    }
     Column(modifier = Modifier.selectableGroup(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
         for (pair in content.targets.chunked(2)) {
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
@@ -282,6 +287,13 @@ private fun Footer(state: StartPlaybackUiState, onPlay: () -> Unit) {
             }
             c.wontPlay?.let { Text(wontPlayText(it), style = SonoraTheme.type.body13, color = colors.textMuted) }
             c.mute?.let { Text(muteNoteText(it), style = SonoraTheme.type.body13, color = colors.textMuted) }
+        }
+        state.fixed?.unusable?.let { why ->
+            Text(
+                fixedTargetNoteText(why, state.fixed.name, isGroup = state.fixed.target is Target.Group),
+                style = SonoraTheme.type.body13,
+                color = colors.textMuted,
+            )
         }
         val look = if (state.playEnabled || state.starting) colors.accent else colors.accent.copy(alpha = 0.38f)
         Row(

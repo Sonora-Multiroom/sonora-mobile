@@ -20,11 +20,62 @@ sealed interface TargetStatus {
     data object Idle : TargetStatus
     data class Playing(val status: CardStatus, val sources: List<String>) : TargetStatus
     data class InGroup(val group: String) : TargetStatus
-    data class GroupPlaying(val sources: List<String>) : TargetStatus
+    /** [status] is the group playback's state; a live stream reads [CardStatus.Playing] as for rooms. */
+    data class GroupPlaying(val status: CardStatus, val sources: List<String>) : TargetStatus
     data class GroupMembers(val rooms: List<String>) : TargetStatus
     data object TurnedOff : TargetStatus
     data object NotConnected : TargetStatus
     data object NoRooms : TargetStatus
+
+    /** Only for a fixed target (Change source) that is not in the snapshot any more; never in the picker. */
+    data object Removed : TargetStatus
+}
+
+/** The one status per room or group, shared by the picker's tiles and the fixed target card. */
+internal class TargetStatuses(snapshot: HubSnapshot) {
+    private val rooms = snapshot.rooms.associateBy { it.id }
+    private val groupsById = snapshot.groups.associateBy { it.id }
+    private val sourcesById = snapshot.sources.associateBy { it.id }
+    private val byRoom = routesByRoom(snapshot)
+    private val live = liveRoutes(snapshot).filterNot { it.isAnnouncement }
+
+    private fun sourceName(route: Route) = sourcesById[route.inputId]?.name ?: route.inputId
+
+    fun of(room: Room): TargetStatus {
+        val own = byRoom[room.id].orEmpty().filter { !it.isAnnouncement && it.target is Target.Room }
+        val viaGroup = byRoom[room.id].orEmpty().filter { !it.isAnnouncement && it.target is Target.Group }
+        return when {
+            !room.enabled -> TargetStatus.TurnedOff
+            !room.available -> TargetStatus.NotConnected
+            own.isNotEmpty() -> TargetStatus.Playing(
+                cardStatus(own.first(), sourcesById[own.first().inputId]?.uri),
+                own.map(::sourceName),
+            )
+            viaGroup.isNotEmpty() -> {
+                val id = (viaGroup.first().target as Target.Group).id
+                TargetStatus.InGroup(groupsById[id]?.name ?: id)
+            }
+            else -> TargetStatus.Idle
+        }
+    }
+
+    fun of(group: Group): TargetStatus {
+        val members = group.memberIds.mapNotNull { rooms[it] }
+        val playable = members.filter { it.enabled && it.available }
+        val own = live.filter { (it.target as? Target.Group)?.id == group.id }
+        return when {
+            !group.enabled -> TargetStatus.TurnedOff
+            members.isEmpty() -> TargetStatus.NoRooms
+            playable.isEmpty() ->
+                if (members.all { !it.enabled }) TargetStatus.TurnedOff else TargetStatus.NotConnected
+            own.isNotEmpty() -> {
+                val first = own.first()
+                val state = cardStatus(first, sourcesById[first.inputId]?.uri)
+                TargetStatus.GroupPlaying(if (state == CardStatus.LiveStream) CardStatus.Playing else state, own.map(::sourceName))
+            }
+            else -> TargetStatus.GroupMembers(playable.map { it.name })
+        }
+    }
 }
 
 /**
@@ -38,45 +89,13 @@ object StartPlaybackBuilder {
             .map { SourceOption(it.id, it.name, it.kind) }
             .sortedWith(compareBy({ it.name.lowercase() }, { it.id }))
 
-        val rooms = snapshot.rooms.associateBy { it.id }
-        val groupsById = snapshot.groups.associateBy { it.id }
-        val sourcesById = snapshot.sources.associateBy { it.id }
-        val byRoom = routesByRoom(snapshot)
-        val live = liveRoutes(snapshot).filterNot { it.isAnnouncement }
-
-        fun sourceName(route: Route) = sourcesById[route.inputId]?.name ?: route.inputId
-
+        val statuses = TargetStatuses(snapshot)
         val roomOptions = snapshot.rooms.map { room ->
-            val own = byRoom[room.id].orEmpty().filter { !it.isAnnouncement && it.target is Target.Room }
-            val viaGroup = byRoom[room.id].orEmpty().filter { !it.isAnnouncement && it.target is Target.Group }
-            val status = when {
-                !room.enabled -> TargetStatus.TurnedOff
-                !room.available -> TargetStatus.NotConnected
-                own.isNotEmpty() -> TargetStatus.Playing(
-                    cardStatus(own.first(), sourcesById[own.first().inputId]?.uri),
-                    own.map(::sourceName),
-                )
-                viaGroup.isNotEmpty() -> {
-                    val id = (viaGroup.first().target as Target.Group).id
-                    TargetStatus.InGroup(groupsById[id]?.name ?: id)
-                }
-                else -> TargetStatus.Idle
-            }
+            val status = statuses.of(room)
             TargetOption(Target.Room(room.id), room.name, status, status.selectable)
         }
-
         val groupOptions = snapshot.groups.map { group ->
-            val members = group.memberIds.mapNotNull { rooms[it] }
-            val playable = members.filter { it.enabled && it.available }
-            val own = live.filter { (it.target as? Target.Group)?.id == group.id }
-            val status = when {
-                !group.enabled -> TargetStatus.TurnedOff
-                members.isEmpty() -> TargetStatus.NoRooms
-                playable.isEmpty() ->
-                    if (members.all { !it.enabled }) TargetStatus.TurnedOff else TargetStatus.NotConnected
-                own.isNotEmpty() -> TargetStatus.GroupPlaying(own.map(::sourceName))
-                else -> TargetStatus.GroupMembers(playable.map { it.name })
-            }
+            val status = statuses.of(group)
             TargetOption(Target.Group(group.id), group.name, status, status.selectable)
         }
 
@@ -99,7 +118,7 @@ object StartPlaybackBuilder {
 
     private val TargetStatus.selectable: Boolean
         get() = when (this) {
-            TargetStatus.TurnedOff, TargetStatus.NotConnected, TargetStatus.NoRooms -> false
+            TargetStatus.TurnedOff, TargetStatus.NotConnected, TargetStatus.NoRooms, TargetStatus.Removed -> false
             else -> true
         }
 }

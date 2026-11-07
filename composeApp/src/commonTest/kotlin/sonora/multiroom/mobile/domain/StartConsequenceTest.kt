@@ -222,4 +222,12 @@ class StartConsequenceTest {
             line(withOutputs(null), "jazz", bedroom),
         )
     }
+
+    @Test
+    fun aPausedPlaybackWillStopLikeAPlayingOne() {
+        fun route(paused: Boolean) = Route("r", "playlist", bedroom, RouteStatus.Active, paused, true, true)
+        val expected = ConsequenceLine.WillStop(listOf(AffectedPlayback("Morning playlist", "Bedroom")))
+        assertEquals(expected, line(snapshot(listOf(route(paused = false))), "jazz", bedroom))
+        assertEquals(expected, line(snapshot(listOf(route(paused = true))), "jazz", bedroom))
+    }
 }

@@ -96,6 +96,7 @@ object SonoraIcons {
         paths = arrayOf(rect(6f, 3f, 12f, 18f, 2f), circle(12f, 14f, 3f), "M3 3l18 18"),
     )
     val Arrow = icon("arrow", paths = arrayOf("M4 12h14M13 6l6 6-6 6"))
+    val Swap = icon("swap", paths = arrayOf("M4 8h14M15 5l3 3-3 3M20 16H6M9 13l-3 3 3 3"))
     val Check = icon("check", paths = arrayOf("M5 12l5 5 9-10"))
 
     /** Two speaker cabinets: a group of rooms. */

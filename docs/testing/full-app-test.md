@@ -4,7 +4,7 @@ A regression run of the whole app on a real phone against the real hub. Every fe
 `quickstart.md` checks only what that feature added, at the time it shipped. This script checks
 what the app does **today**, across every shipped feature, in one pass.
 
-**Covers**: `0.7.0-alpha` · **Hub API**: 0.1.28 · **Last updated**: 2026-10-20
+**Covers**: `0.8.0-alpha` · **Hub API**: 0.1.33 · **Last updated**: 2026-11-06
 
 Run it when the user asks for a "full app test", before a release, after a hub upgrade, and after
 a dependency update that touches Compose, Ktor or the generated client.
@@ -56,12 +56,12 @@ into the report. Where the hub lacks a role, mark the rows that need it `n/a`.
 
 | Role | Needs | Used by |
 |---|---|---|
-| `GROUP` | a group of two rooms, `G1` and `G2` | R4, R10–R12, N5–N7, N12–N14, S5, S14, ST6–ST7, ST18 |
+| `GROUP` | a group of two rooms, `G1` and `G2` | R4, R10–R12, N5–N7, N12–N14, N19, S5, S14, S17, ST6–ST7, ST18 |
 | `SOLO` | a room in no group, or in a group other than `GROUP` | R1, N7, ST5 |
 | `STREAM` | a known-good `http(s)` stream (KissFM) | most rows |
 | `STREAM2` | a second known-good stream (KissFM 2.0 Deep) | S4, N7 |
 | `LONGNAME` | `STREAM` and `STREAM2` renamed to long names with `PUT /inputs/{id}/display-name` (at most 64 characters; ASCII only from Git Bash, body from a file, see AGENTS.md). Needs a phone-width screen: on a tablet these names fit one line | R13–R17, N16, X3 |
-| `PAUSEABLE` | a configured `file:` source (`oceanwavescrushing`); may be off on the hub, then turn it on for the run and off again in teardown. The sample lasts ~2 min, after which the hub removes its route: start it just before each row that needs it | R5, N3, N8, ST10 |
+| `PAUSEABLE` | a configured `file:` source (`oceanwavescrushing`); may be off on the hub, then turn it on for the run and off again in teardown. The sample lasts ~2 min, after which the hub removes its route: start it just before each row that needs it | R5, N3, N8, N18, ST10 |
 | `LINEIN` | a line-in source, if the hub has one (Chromecast Audio, `alsa://…`, usually off: turn it on for N2 and off right after) | N2 |
 | `LINK` | `soundcloud.com/forss/flickermood` (plays ~3 min, then the hub removes it) | S7, ST11–ST12 |
 | `SLOWLINK` | `http://10.255.255.1/stream.mp3` (refused after ~10 s) | S8, S12 |
@@ -134,6 +134,9 @@ into the report. Where the hub lacks a role, mark the rows that need it `n/a`.
 | N14 | `STREAM` on `GROUP`, both members on | Settings → Rooms: turn `G1` off ("Turn off"), then on; go straight to Now Playing → "Move to room…" → an idle room → Move. Repeat 3 times | Each move succeeds with no message (a refusal while `G1` rejoins is retried once after ~1 s). If the rejoin is always too fast to hit, record "not reached": the view-model tests cover the retry |
 | N15 | `STREAM` on a room, Move sheet open with an idle room `B` selected; then `PUT /outputs/B/enabled {false}` | Move | "<B> is turned off"; the sheet closes; the next sheet shows `B` "Turned off". Turn `B` back on |
 | N16 | as R13, then a rename to ~64 characters of short words that needs three or more lines (check with animations at 0 and a screenshot) | Open its card; then the shorter long name | A name that fits two lines wraps and stands still; the 64-character one is one scrolling line, readable by waiting |
+| N17 | `STREAM` on `SOLO` | Open its card; "Change source…"; Close; again, then system Back | Row: Stop · Change source… · Move to room…, 76 dp, 24 dp apart, nothing clipped. Start Playback titled "Change source" with one "Play in" card `SOLO` ("Playing · <STREAM>"), no radio, no other target, nothing selected, <STREAM> still audible. Close and Back both return to the same Now Playing; `GET /routes` unchanged |
+| N18 | `PAUSEABLE` playing on a room, movable; then paused with `PUT /routes/{id}/pause` | Open the card; then pause and look again | Playing: four equal columns, 64 dp buttons, "Change source…" and "Move to room…" may wrap to two lines, nothing clipped. Paused: Stop · Resume · Change source… |
+| N19 | `STREAM` on `GROUP`, `G2` off | Open the card → "Change source…" | The fixed card is `GROUP` ("Group · Playing <STREAM>"), not `G1`; with a source picked the footer says "<STREAM> will stop in <GROUP>" and "Won't play in <G2> (turned off)". Turn `G2` back on |
 
 ## S. Start Playback
 
@@ -144,7 +147,7 @@ into the report. Where the hub lacks a role, mark the rows that need it `n/a`.
 | S3 | — | `STREAM` + an idle room → Play | Now Playing within ~3 s; Back → Rooms shows it |
 | S4 | as S3 | Pick `STREAM2` + the same room | "<STREAM> will stop in <room>" before Play; after Play only that stops |
 | S5 | `STREAM` on `GROUP` | Select `G1` with another source | Warning names the group; after Play the whole group playback stops |
-| S6 | `STREAM` on `SOLO` | Select `STREAM` + `SOLO` | "<STREAM> is already playing in <SOLO>"; Play opens the same playback |
+| S6 | `STREAM` on `SOLO` | Select `STREAM` + `SOLO` (from "Play in room" on `SOLO`, then again from "Play something") | "<STREAM> is already playing in <SOLO>"; Play is dimmed, announced disabled and sends nothing; another source or a link on `SOLO` enables it again |
 | S7 | — | Paste `LINK` → a room → Play | "Starting…", then Now Playing |
 | S8 | — | Paste `https://example.com/` → Play; then `SLOWLINK` | Screen stays, link and target kept, a plain message each time |
 | S9 | — | Type `hello world`, leave the field | No message while typing; then "Enter a web address (https://…)"; Play disabled |
@@ -154,6 +157,11 @@ into the report. Where the hub lacks a role, mark the rows that need it `n/a`.
 | S13 | Start Playback open with an idle room `R` selected; then `PUT /outputs/R/enabled {false}` | Play `STREAM` | "<R> is turned off"; `R` shows as off right after. Turn `R` back on |
 | S14 | Start Playback open on `GROUP`; then `PUT /groups/GROUP/enabled {false}`. Then the same with the group on and both members off | Play | "<GROUP> is turned off"; afterwards `GROUP` is off in the list. With both members off: "All rooms in <GROUP> are turned off". Turn everything back on |
 | S15 | Start Playback open with `STREAM` selected; then `PUT /inputs/STREAM/enabled {false}` | Play | "<STREAM> is turned off"; `STREAM` leaves the source list. Turn it back on |
+| S16 | `STREAM` on `SOLO` | Open its card → "Change source…" → pick `STREAM2` → Play | "<STREAM> will stop in <SOLO>" and "Play <STREAM2> in <SOLO>" before Play; Now Playing for `STREAM2` within ~3 s; one Back → Rooms, no "Playback on … ended" notice there |
+| S17 | `STREAM` on `GROUP` | Open its card → "Change source…" → pick `STREAM2` → Play | Card `GROUP`; Play starts `STREAM2` on the whole group (`GET /routes`: target `GROUP`); Back → Rooms |
+| S18 | Change source… open on `SOLO` with a source picked; then `PUT /outputs/SOLO/enabled {false}` | Look at the screen; turn `SOLO` back on | Within ~3 s the card dims, "<SOLO> is turned off" shows above Play and Play is disabled; after turning it on Play is enabled again with the same source. Close |
+| S19 | `STREAM` on `SOLO` | Change source… open; `DELETE` the route by `curl` | The "will stop" line goes on the next refresh and no "Playback on … ended" notice appears; Play starts on the idle room; Back → Rooms, still no notice |
+| S20 | `STREAM` on `SOLO` | Change source… → paste `SLOWLINK` → Play | Existing failure message, screen stays; `SOLO` falls silent (the hub stops first); Close → the old Now Playing leaves with "Playback on <SOLO> ended" on Rooms |
 
 ## ST. Settings
 
@@ -191,6 +199,7 @@ recheck failures by hand. ST17 and ST18 stay manual. When a row below changes, c
 | X1 | **User**: cut the phone's Wi-Fi on Rooms, wait 6 s, restore | "Can't reach the hub · showing last known state", controls disabled; live again within ~6 s of restoring. adb may need re-pairing |
 | X2 | **User**: the same on Now Playing with the move sheet open, on Start Playback with selections, and on Settings | Sheet's Move disabled; selections kept and Play disabled; Settings "Not connected", switches and trash disabled, "Test connection" still answers. All re-enable after restoring |
 | X3 | as R13. **User**: cut the phone's Wi-Fi on Rooms | The card dims and the long name stands still at its start ending in "…"; it scrolls again once the network is back |
+| X4 | `STREAM` on `SOLO`. **User**: open Change source… on it, then cut the phone's Wi-Fi | Stale banner, Play disabled, the card and selection kept; on Now Playing every button, Change source… included, is disabled. All re-enable after restoring |
 
 Never stop the hub for these checks unless the user offers to: it stops every playback in the home.
 

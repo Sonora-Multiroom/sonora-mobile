@@ -58,15 +58,16 @@ fun AppNavigation(graph: AppGraph, backStack: AppBackStack, onExit: () -> Unit) 
                         viewModel = viewModel { graph.nowPlayingViewModel(key.routeId, createSavedStateHandle(), key.startedAfterSeq, key.targetName) },
                         onBack = { backStack.pop() },
                         onExit = { backStack.pop() },
+                        onChangeSource = { target, name -> backStack.push(Destination.StartPlayback(null, target, name)) },
                     )
                 }
                 entry<Destination.StartPlayback> { key ->
                     StartPlaybackScreen(
-                        viewModel = viewModel { graph.startPlaybackViewModel(key.targetId, createSavedStateHandle()) },
+                        viewModel = viewModel { graph.startPlaybackViewModel(key.targetId, key.fixedTarget, key.fixedName, createSavedStateHandle()) },
                         onClose = { backStack.pop() },
                         // Back from Now Playing returns to where Start Playback was opened (FR-015).
                         onStarted = { started ->
-                            if (backStack.top is Destination.StartPlayback) backStack.replaceTop(Destination.NowPlaying(started.routeId, started.startedAfterSeq, started.targetName))
+                            backStack.showStarted(Destination.NowPlaying(started.routeId, started.startedAfterSeq, started.targetName))
                         },
                         onOpenSettings = {
                             graph.settingsNavigator.openSheet()

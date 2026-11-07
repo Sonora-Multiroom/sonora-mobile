@@ -4,6 +4,7 @@ import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.saveable.Saver
 import androidx.compose.runtime.saveable.listSaver
 import androidx.compose.runtime.snapshots.SnapshotStateList
+import sonora.multiroom.mobile.domain.Target
 
 sealed interface Destination {
     data object Rooms : Destination
@@ -20,8 +21,17 @@ sealed interface Destination {
         val targetName: String? = null,
     ) : Destination
 
-    /** Placeholder in this feature; [targetId] is the room to play in, if any. */
-    data class StartPlayback(val targetId: String?) : Destination
+    /**
+     * [targetId] is the room to preselect (Rooms' "Play in room"); null for "Play something".
+     * [fixedTarget] is the addressed `Target.Room` or `Target.Group` of the Now Playing it was
+     * opened from ("Change source…", MOB-008): there is no picker then. [fixedName] is the name
+     * Now Playing showed; it is not saved, the view model keeps it.
+     */
+    data class StartPlayback(
+        val targetId: String?,
+        val fixedTarget: Target? = null,
+        val fixedName: String? = null,
+    ) : Destination
 }
 
 /**
@@ -49,6 +59,23 @@ class AppBackStack(initial: List<Destination> = listOf(Destination.Rooms)) {
     /** Swaps the top destination, e.g. Start Playback for the Now Playing it started. */
     fun replaceTop(destination: Destination) {
         stack[stack.lastIndex] = destination
+    }
+
+    /** Removes the top two entries and pushes [destination]; the root is never removed. */
+    fun replaceTopTwo(destination: Destination) {
+        if (stack.size >= 3) stack.removeAt(stack.lastIndex)
+        replaceTop(destination)
+    }
+
+    /**
+     * Shows the playback a Start Playback started. A fixed (Change source) Start Playback over a
+     * Now Playing replaces both, so Back leads to where that Now Playing came from; any other
+     * Start Playback is replaced alone. Nothing changes when it already left.
+     */
+    fun showStarted(started: Destination.NowPlaying) {
+        val top = stack.last() as? Destination.StartPlayback ?: return
+        val below = stack.getOrNull(stack.lastIndex - 1)
+        if (top.fixedTarget != null && below is Destination.NowPlaying) replaceTopTwo(started) else replaceTop(started)
     }
 
     /** Pops one destination; false when the root is already showing (the app should exit). */
@@ -81,7 +108,11 @@ internal fun encodeDestination(d: Destination): String = when (d) {
     Destination.Rooms -> "rooms"
     Destination.Settings -> "settings"
     is Destination.NowPlaying -> "now:${d.routeId}"
-    is Destination.StartPlayback -> if (d.targetId == null) "play" else "play:${d.targetId}"
+    is Destination.StartPlayback -> when (val t = d.fixedTarget) {
+        is Target.Room -> "change:room:${t.id}"
+        is Target.Group -> "change:group:${t.id}"
+        else -> if (d.targetId == null) "play" else "play:${d.targetId}"
+    }
 }
 
 internal fun decodeDestination(s: String): Destination? = when {
@@ -89,6 +120,8 @@ internal fun decodeDestination(s: String): Destination? = when {
     // "sources" was a destination before 004: an old saved stack restores to Settings.
     s == "settings" || s == "sources" -> Destination.Settings
     s.startsWith("now:") -> Destination.NowPlaying(s.removePrefix("now:"))
+    s.startsWith("change:room:") -> Destination.StartPlayback(null, Target.Room(s.removePrefix("change:room:")))
+    s.startsWith("change:group:") -> Destination.StartPlayback(null, Target.Group(s.removePrefix("change:group:")))
     s == "play" -> Destination.StartPlayback(null)
     s.startsWith("play:") -> Destination.StartPlayback(s.removePrefix("play:"))
     else -> null

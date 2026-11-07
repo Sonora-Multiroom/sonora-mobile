@@ -1,5 +1,6 @@
 package sonora.multiroom.mobile.ui.nav
 
+import sonora.multiroom.mobile.domain.Target
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
@@ -153,5 +154,76 @@ class AppBackStackTest {
         val d = Destination.NowPlaying("r1", 7, "Bedroom")
         assertEquals("now:r1", encodeDestination(d))
         assertEquals(Destination.NowPlaying("r1", null, null), decodeDestination("now:r1"))
+    }
+
+    private fun fixedRoom(id: String = "k") = Destination.StartPlayback(null, Target.Room(id), "Kitchen")
+
+    @Test
+    fun aFixedTargetIsSavedAsChangeAndRestoredWithoutItsName() {
+        assertEquals("change:room:k", encodeDestination(fixedRoom()))
+        assertEquals("change:group:g", encodeDestination(Destination.StartPlayback(null, Target.Group("g"))))
+        assertEquals(Destination.StartPlayback(null, Target.Room("k")), decodeDestination("change:room:k"))
+        assertEquals(Destination.StartPlayback(null, Target.Group("g")), decodeDestination("change:group:g"))
+        val colon = Destination.StartPlayback(null, Target.Room("a:b"))
+        assertEquals(colon, decodeDestination(encodeDestination(colon)))
+        assertEquals(null, decodeDestination("change:"))
+        assertEquals(null, decodeDestination("change:other:x"))
+        assertEquals(Destination.StartPlayback(null), decodeDestination("play"))
+        assertEquals(Destination.StartPlayback("k"), decodeDestination("play:k"))
+    }
+
+    @Test
+    fun replaceTopTwoSwapsBothAndNeverRemovesTheRoot() {
+        val s = AppBackStack(listOf(Destination.Rooms, Destination.NowPlaying("r1"), fixedRoom()))
+        val d = Destination.NowPlaying("r2")
+        s.replaceTopTwo(d)
+        assertEquals(listOf(Destination.Rooms, d), s.contents())
+
+        val short = AppBackStack(listOf(Destination.Rooms, fixedRoom()))
+        short.replaceTopTwo(d)
+        assertEquals(listOf(Destination.Rooms, d), short.contents())
+    }
+
+    @Test
+    fun showStartedFromAFixedStartPlaybackReplacesTheOldNowPlaying() {
+        val s = AppBackStack(listOf(Destination.Rooms, Destination.NowPlaying("r1"), fixedRoom()))
+        s.showStarted(Destination.NowPlaying("r2"))
+        assertEquals(listOf(Destination.Rooms, Destination.NowPlaying("r2")), s.contents())
+        assertTrue(s.pop())
+        assertEquals(listOf<Destination>(Destination.Rooms), s.contents())
+    }
+
+    @Test
+    fun showStartedFromAPlainStartPlaybackReplacesOnlyTheTop() {
+        val fromRooms = AppBackStack(listOf(Destination.Rooms, Destination.StartPlayback(null)))
+        fromRooms.showStarted(Destination.NowPlaying("r2"))
+        assertEquals(listOf(Destination.Rooms, Destination.NowPlaying("r2")), fromRooms.contents())
+
+        val overNow = AppBackStack(listOf(Destination.Rooms, Destination.NowPlaying("r1"), Destination.StartPlayback(null)))
+        overNow.showStarted(Destination.NowPlaying("r2"))
+        assertEquals(listOf(Destination.Rooms, Destination.NowPlaying("r1"), Destination.NowPlaying("r2")), overNow.contents())
+    }
+
+    @Test
+    fun showStartedFromAFixedStartPlaybackDirectlyOverRoomsKeepsRooms() {
+        val s = AppBackStack(listOf(Destination.Rooms, fixedRoom()))
+        s.showStarted(Destination.NowPlaying("r2"))
+        assertEquals(listOf(Destination.Rooms, Destination.NowPlaying("r2")), s.contents())
+    }
+
+    @Test
+    fun showStartedChangesNothingWhenStartPlaybackAlreadyLeft() {
+        val s = AppBackStack(listOf(Destination.Rooms, Destination.NowPlaying("r1")))
+        s.showStarted(Destination.NowPlaying("r2"))
+        assertEquals(listOf(Destination.Rooms, Destination.NowPlaying("r1")), s.contents())
+    }
+
+    @Test
+    fun closingAFixedStartPlaybackKeepsTheSameNowPlayingEntry() {
+        val now = Destination.NowPlaying("r1")
+        val s = AppBackStack(listOf(Destination.Rooms, now, fixedRoom()))
+        assertTrue(s.pop())
+        assertSame(now, s.stack[1])
+        assertEquals(listOf(Destination.Rooms, now), s.contents())
     }
 }

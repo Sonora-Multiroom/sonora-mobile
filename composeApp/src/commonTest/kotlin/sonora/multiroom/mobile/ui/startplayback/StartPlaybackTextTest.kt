@@ -6,6 +6,9 @@ import sonora.multiroom.mobile.domain.ConsequenceLine
 import sonora.multiroom.mobile.domain.MuteNote
 import sonora.multiroom.mobile.domain.TargetStatus
 import sonora.multiroom.mobile.domain.WontPlay
+import sonora.multiroom.mobile.domain.FixedTargetCard
+import sonora.multiroom.mobile.domain.Target
+import sonora.multiroom.mobile.domain.Unusable
 import kotlin.test.Test
 import kotlin.test.assertEquals
 
@@ -27,11 +30,46 @@ class StartPlaybackTextTest {
     @Test
     fun groupAndUnavailableStatusLines() {
         assertEquals("In Downstairs", targetStatusText(TargetStatus.InGroup("Downstairs")))
-        assertEquals("Group · Radio Paradise", targetStatusText(TargetStatus.GroupPlaying(listOf("Radio Paradise"))))
+        assertEquals("Group · Radio Paradise", targetStatusText(TargetStatus.GroupPlaying(CardStatus.Playing, listOf("Radio Paradise"))))
         assertEquals("Group · Kitchen + Patio", targetStatusText(TargetStatus.GroupMembers(listOf("Kitchen", "Patio"))))
         assertEquals("Turned off", targetStatusText(TargetStatus.TurnedOff))
         assertEquals("Not connected", targetStatusText(TargetStatus.NotConnected))
         assertEquals("No rooms", targetStatusText(TargetStatus.NoRooms))
+    }
+
+    private fun room(status: TargetStatus) = FixedTargetCard(Target.Room("k"), "Kitchen", status, null)
+    private fun group(status: TargetStatus) = FixedTargetCard(Target.Group("g"), "Downstairs", status, null)
+
+    @Test
+    fun theFixedCardReadsARoomAsItsPickerTileDoes() {
+        assertEquals("Playing · KissFM", fixedTargetStatusText(room(TargetStatus.Playing(CardStatus.Playing, listOf("KissFM")))))
+        assertEquals("Paused · Morning playlist", fixedTargetStatusText(room(TargetStatus.Playing(CardStatus.Paused, listOf("Morning playlist")))))
+        assertEquals("In Downstairs", fixedTargetStatusText(room(TargetStatus.InGroup("Downstairs"))))
+        assertEquals("Idle", fixedTargetStatusText(room(TargetStatus.Idle)))
+        assertEquals("Turned off", fixedTargetStatusText(room(TargetStatus.TurnedOff)))
+        assertEquals("Not connected", fixedTargetStatusText(room(TargetStatus.NotConnected)))
+        assertEquals("Removed", fixedTargetStatusText(room(TargetStatus.Removed)))
+    }
+
+    @Test
+    fun theFixedCardAlwaysSaysGroupForAGroup() {
+        assertEquals("Group · Playing Radio Paradise", fixedTargetStatusText(group(TargetStatus.GroupPlaying(CardStatus.Playing, listOf("Radio Paradise")))))
+        assertEquals("Group · Paused Morning playlist", fixedTargetStatusText(group(TargetStatus.GroupPlaying(CardStatus.Paused, listOf("Morning playlist")))))
+        assertEquals("Group · Kitchen + Living room", fixedTargetStatusText(group(TargetStatus.GroupMembers(listOf("Kitchen", "Living room")))))
+        assertEquals("Group · Turned off", fixedTargetStatusText(group(TargetStatus.TurnedOff)))
+        assertEquals("Group · Not connected", fixedTargetStatusText(group(TargetStatus.NotConnected)))
+        assertEquals("Group · No rooms", fixedTargetStatusText(group(TargetStatus.NoRooms)))
+        assertEquals("Group · Removed", fixedTargetStatusText(group(TargetStatus.Removed)))
+    }
+
+    @Test
+    fun theFixedTargetNotes() {
+        assertEquals("Kitchen is turned off", fixedTargetNoteText(Unusable.TurnedOff, "Kitchen"))
+        assertEquals("Kitchen is not connected", fixedTargetNoteText(Unusable.NotConnected, "Kitchen", isGroup = false))
+        assertEquals("Kitchen no longer exists", fixedTargetNoteText(Unusable.Removed, "Kitchen"))
+        assertEquals("All rooms in Downstairs are turned off", fixedTargetNoteText(Unusable.AllRoomsTurnedOff, "Downstairs"))
+        assertEquals("No room in Downstairs is connected", fixedTargetNoteText(Unusable.NotConnected, "Downstairs", isGroup = true))
+        assertEquals("Downstairs has no rooms", fixedTargetNoteText(Unusable.NoRooms, "Downstairs"))
     }
 
     @Test
