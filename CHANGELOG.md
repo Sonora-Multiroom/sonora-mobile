@@ -6,6 +6,17 @@ User-facing changes to the Sonora Multiroom mobile app, one entry per feature. T
 the feature's spec folder and pull request. Repository-only changes (documentation, CI, tooling)
 are listed under "Development" when they affect contributors.
 
+## [0.8.1-alpha] - Unreleased
+
+"Change source…" only for replacing playbacks
+([tinyspec](specs/tiny/change-source-replace-only.md), pull request to follow).
+
+### Changed
+
+- Now Playing no longer offers "Change source…" for an announcement or a playback mixed in with
+  others: changing it would have left the announcement playing, or stopped the room's main
+  playback too.
+
 ## [0.8.0-alpha] - Unreleased
 
 Change what plays from Now Playing ([spec](specs/008-change-source-now-playing/), pull request to

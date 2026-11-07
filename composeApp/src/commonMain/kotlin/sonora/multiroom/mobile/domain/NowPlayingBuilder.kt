@@ -89,7 +89,10 @@ object NowPlayingBuilder {
             pauseEnabled = status == CardStatus.Playing || status == CardStatus.Paused,
             paused = status == CardStatus.Paused,
             moveVisible = route.transferable && status == CardStatus.Playing && route.target !is Target.Unknown,
-            changeSourceVisible = route.target !is Target.Unknown,
+            // A replacing start leaves an announcement playing and stops the room's main playback
+            // with a mixed-in one, so only a replacing playback can have its source changed.
+            changeSourceVisible = route.target !is Target.Unknown &&
+                (route.joinMode == JoinMode.Replace || route.joinMode == JoinMode.Unknown),
             volume = volumeSection(route, rooms, groups, master),
         )
     }
