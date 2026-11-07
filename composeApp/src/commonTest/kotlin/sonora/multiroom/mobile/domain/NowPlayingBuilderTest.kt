@@ -312,6 +312,27 @@ class NowPlayingBuilderTest {
     }
 
     @Test
+    fun changeSourceIsOfferedForAReplacingPlaybackOrAnUnreportedJoinMode() {
+        val room = Target.Room("living")
+        for (mode in listOf(JoinMode.Replace, JoinMode.Unknown)) {
+            val r = route("r1", "radio", room).copy(joinMode = mode)
+            assertTrue(playback(snapshot(routes = listOf(r))).changeSourceVisible, "$mode")
+        }
+    }
+
+    @Test
+    fun changeSourceIsHiddenForAMixedInOrAnnouncementPlayback() {
+        // A replacing start would leave an announcement playing and stop the room's main playback
+        // along with a mixed-in one, so the action would not do what it says.
+        for (mode in listOf(JoinMode.Mix, JoinMode.Announcement)) {
+            val playing = route("r1", "radio", Target.Room("living")).copy(joinMode = mode)
+            val paused = route("r1", "playlist", Target.Group("down"), paused = true, pauseable = true).copy(joinMode = mode)
+            assertFalse(playback(snapshot(routes = listOf(playing))).changeSourceVisible, "$mode playing")
+            assertFalse(playback(snapshot(routes = listOf(paused))).changeSourceVisible, "$mode paused")
+        }
+    }
+
+    @Test
     fun changeSourceIsHiddenForAnUnknownTargetType() {
         assertFalse(playback(snapshot(routes = listOf(route("r1", "radio", Target.Unknown("weird"))))).changeSourceVisible)
     }

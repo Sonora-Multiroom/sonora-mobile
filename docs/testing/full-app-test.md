@@ -4,7 +4,7 @@ A regression run of the whole app on a real phone against the real hub. Every fe
 `quickstart.md` checks only what that feature added, at the time it shipped. This script checks
 what the app does **today**, across every shipped feature, in one pass.
 
-**Covers**: `0.8.0-alpha` · **Hub API**: 0.1.33 · **Last updated**: 2026-11-06
+**Covers**: `0.8.1-alpha` · **Hub API**: 0.1.33 · **Last updated**: 2026-11-07
 
 Run it when the user asks for a "full app test", before a release, after a hub upgrade, and after
 a dependency update that touches Compose, Ktor or the generated client.
@@ -57,9 +57,9 @@ into the report. Where the hub lacks a role, mark the rows that need it `n/a`.
 | Role | Needs | Used by |
 |---|---|---|
 | `GROUP` | a group of two rooms, `G1` and `G2` | R4, R10–R12, N5–N7, N12–N14, N19, S5, S14, S17, ST6–ST7, ST18 |
-| `SOLO` | a room in no group, or in a group other than `GROUP` | R1, N7, ST5 |
+| `SOLO` | a room in no group, or in a group other than `GROUP` | R1, N7, N20, ST5 |
 | `STREAM` | a known-good `http(s)` stream (KissFM) | most rows |
-| `STREAM2` | a second known-good stream (KissFM 2.0 Deep) | S4, N7 |
+| `STREAM2` | a second known-good stream (KissFM 2.0 Deep) | S4, N7, N20 |
 | `LONGNAME` | `STREAM` and `STREAM2` renamed to long names with `PUT /inputs/{id}/display-name` (at most 64 characters; ASCII only from Git Bash, body from a file, see AGENTS.md). Needs a phone-width screen: on a tablet these names fit one line | R13–R17, N16, X3 |
 | `PAUSEABLE` | a configured `file:` source (`oceanwavescrushing`); may be off on the hub, then turn it on for the run and off again in teardown. The sample lasts ~2 min, after which the hub removes its route: start it just before each row that needs it | R5, N3, N8, N18, ST10 |
 | `LINEIN` | a line-in source, if the hub has one (Chromecast Audio, `alsa://…`, usually off: turn it on for N2 and off right after) | N2 |
@@ -137,6 +137,7 @@ into the report. Where the hub lacks a role, mark the rows that need it `n/a`.
 | N17 | `STREAM` on `SOLO` | Open its card; "Change source…"; Close; again, then system Back | Row: Stop · Change source… · Move to room…, 76 dp, 24 dp apart, nothing clipped. Start Playback titled "Change source" with one "Play in" card `SOLO` ("Playing · <STREAM>"), no radio, no other target, nothing selected, <STREAM> still audible. Close and Back both return to the same Now Playing; `GET /routes` unchanged |
 | N18 | `PAUSEABLE` playing on a room, movable; then paused with `PUT /routes/{id}/pause` | Open the card; then pause and look again | Playing: four equal columns, 64 dp buttons, "Change source…" and "Move to room…" may wrap to two lines, nothing clipped. Paused: Stop · Resume · Change source… |
 | N19 | `STREAM` on `GROUP`, `G2` off | Open the card → "Change source…" | The fixed card is `GROUP` ("Group · Playing <STREAM>"), not `G1`; with a source picked the footer says "<STREAM> will stop in <GROUP>" and "Won't play in <G2> (turned off)". Turn `G2` back on |
+| N20 | `STREAM` on `SOLO`; then `STREAM2` mixed in: `POST /routes {inputId: STREAM2, targetId: SOLO, targetType: SINGLE_OUTPUT, joinMode: "MIX"}` | Open the `STREAM2` card; then the `STREAM` card | `STREAM2` (mixed in): no "Change source…", the other buttons share the row. `STREAM` (replacing): "Change source…" as in N17. Stop `STREAM2` |
 
 ## S. Start Playback
 
