@@ -49,6 +49,23 @@ Facts about the hub that shape the behaviour below:
 - A list of stations comes in pages, and the catalogue serves at most the first 10,000 stations of
   any one search.
 
+## Clarifications
+
+### Session 2026-11-16
+
+- Q: Should the most recent stations also be offered directly in Start Playback, so that replaying
+  one does not require opening the radio screen first? → A: Yes. The three most recent stations
+  appear in Start Playback under the "Find a radio station" row, selectable like sources; all ten
+  stay on the radio screen.
+- Q: In which language should the country names in the Country filter be shown? → A: English, like
+  the rest of the app; the names come from the catalogue's English names.
+- Q: On the radio screen, should the "Recent" section stay visible when a country, tag or language
+  filter is chosen but nothing is typed in the search field? → A: Yes. "Recent" shows whenever the
+  search field is empty, whatever filters are chosen, and is not itself filtered.
+- Q: Should the user be able to remove a single station from "Recent"? → A: Yes, on the radio
+  screen only: each "Recent" row there has a remove action, and a removed station also disappears
+  from Start Playback.
+
 ## User Scenarios & Testing *(mandatory)*
 
 ### User Story 1 - Find a station by name and play it in a room (Priority: P1)
@@ -163,11 +180,33 @@ listed.
    the list is shown next, **Then** it appears once, in first place; started again and stopped
    sooner, it keeps its place.
 8. **Given** the user has typed into the search field, **When** results are shown, **Then**
-   "Recent" is not shown; it returns when the field is emptied.
+   "Recent" is not shown; it returns when the field is emptied. **Given** the field is empty and a
+   country, tag or language is chosen, **Then** "Recent" is shown in full, including stations
+   that do not match those filters.
 9. **Given** recent stations exist, **When** the app is closed and opened again, or the phone
    restarts, **Then** they are still listed.
 10. **Given** a station under "Recent" no longer exists in the catalogue, **When** the user plays
     it, **Then** the start fails with the usual message and the station stays under "Recent".
+11. **Given** radio is offered and recent stations exist, **When** the user opens Start Playback,
+    **Then** the three most recent are listed directly under the "Find a radio station" row, most
+    recent first, each shown like a station row; with fewer than three, those there are; with
+    none, only the row.
+12. **Given** recent stations are listed in Start Playback, **When** the user taps one, **Then**
+    it becomes the selected source without the radio screen opening, and Play starts it like any
+    chosen station.
+13. **Given** the user chose, on the radio screen, a station that is one of the three listed in
+    Start Playback, **When** Start Playback shows the selection, **Then** that listed row is the
+    selected one and the station is not shown twice.
+14. **Given** the hub does not offer radio, **When** the user opens Start Playback, **Then** no
+    recent station is listed there, whatever the phone remembers.
+15. **Given** the radio screen shows "Recent", **When** the user uses a row's remove action,
+    **Then** that station leaves "Recent" at once, there and in Start Playback, without a
+    confirmation, and the next most recent station takes a freed place among the three in Start
+    Playback.
+16. **Given** a station was removed from "Recent", **When** the user later starts it again and it
+    plays for at least 30 seconds, **Then** it is in "Recent" again, in first place.
+17. **Given** the removed station is the one currently selected in Start Playback or currently
+    playing, **When** it is removed, **Then** the selection and the playback are unaffected.
 
 ---
 
@@ -194,7 +233,8 @@ again.
    it is never blank: it shows the stations for the current filters in the current order.
 3. **Given** the Country chip, **When** the user taps it, **Then** a sheet lists every country
    with its number of stations, largest first, with a field that narrows the list as they type;
-   choosing one closes the sheet and applies it. Country names are shown in the phone's language.
+   choosing one closes the sheet and applies it. Country names are shown in English, as the
+   catalogue names them.
 4. **Given** the Language chip, **When** the user taps it, **Then** a sheet lists the catalogue's
    languages with their station counts, with a field that narrows the list; choosing one applies
    it.
@@ -319,9 +359,9 @@ radio screen: a plain message and a Retry appear instead of stations.
   other and with a typed name.
 - **FR-007**: The country and language lists MUST be narrowable by typing; the tag list MUST be
   searchable by part of a tag's name and MUST load further tags on scrolling.
-- **FR-008**: Country names MUST be shown in the phone's language where the phone can name the
-  country, otherwise as the catalogue names them. Language and tag names are shown as the
-  catalogue gives them.
+- **FR-008**: Country, language and tag names MUST be shown as the catalogue gives them, which for
+  countries and languages is English, the language of the rest of the app. The phone's language
+  MUST NOT change them.
 - **FR-009**: The user MUST be able to order the list by most voted (the default), by most plays
   in the last 24 hours ("Trending") and by name.
 - **FR-010**: Each chosen filter MUST be visible with its value and removable with one action.
@@ -365,11 +405,19 @@ radio screen: a plain message and a Retry appear instead of stations.
   was not in front at that moment, it judges on its return, and only if the same playback still
   goes on.
 - **FR-022**: The radio screen MUST show them under "Recent" above the list while the search
-  field is empty, and MUST NOT show them while a name is typed.
+  field is empty, whatever filters are chosen and without applying those filters to them, and
+  MUST NOT show them while a name is typed.
+- **FR-022a**: Start Playback MUST list the three most recent of them directly under the "Find a
+  radio station" row whenever radio is offered, selectable in place like sources, and MUST NOT
+  list any when radio is not offered. A selected station that is among them MUST be shown once.
 - **FR-023**: A recent station MUST be selectable like any listed station, without the catalogue
   being asked about it first.
-- **FR-024**: Recent stations MUST survive closing the app and restarting the phone. The feature
-  offers no editing, reordering or removal of them.
+- **FR-024**: Recent stations MUST survive closing the app and restarting the phone.
+- **FR-024a**: On the radio screen each "Recent" row MUST offer an action that removes that
+  station from "Recent" at once, without a confirmation, in both places it is shown. Start
+  Playback's own rows MUST NOT offer removal. Removal MUST NOT affect a selection or a playback,
+  and MUST NOT prevent the station from qualifying again later. The feature offers no other
+  editing of "Recent": no reordering, pinning or renaming.
 
 **How a playing station is shown**
 
@@ -409,7 +457,8 @@ radio screen: a plain message and a Retry appear instead of stations.
 - **Station search**: what the user asked for: a typed name, at most one country, one tag and one
   language, and an order. Yields stations page by page, at most 10,000.
 - **Country, language, tag**: the catalogue's values for narrowing a search, each with the number
-  of stations it has. A country also has a code from which its name can be localised.
+  of stations it has. A country also has a two-letter code, which the station rows show and by
+  which the phone's region is matched on the first visit.
 - **Recent station**: a station started from this phone that then played for at least 30 seconds,
   kept on the phone with what its row shows. At most ten, most recent first.
 - **Radio filters**: the country, tag, language and order last used on this phone, kept on the
@@ -422,8 +471,9 @@ radio screen: a plain message and a Retry appear instead of stations.
 
 - **SC-001**: A user who knows a station's name can have it playing in a room within 30 seconds of
   opening Start Playback, without leaving the app.
-- **SC-002**: A station listened to recently from the phone can be started again with three taps from
-  Start Playback (open radio, choose the station, Play) plus the room choice when none is preset.
+- **SC-002**: One of the three stations listened to most recently from the phone can be started
+  again with two taps from Start Playback (choose the station, Play), and any of the ten with
+  three (open radio, choose the station, Play), plus the room choice when none is preset.
 - **SC-003**: After the user stops typing, matching stations are shown within 2 seconds in normal
   conditions (home network up, catalogue answering).
 - **SC-004**: The radio screen is never blank on opening: it shows stations, a loading state or a
@@ -460,12 +510,11 @@ radio screen: a plain message and a Retry appear instead of stations.
   app is opened again**, is not added: the app only knows what the hub reports while it is open.
 - **"Recent" holds what the phone knew** when the station was started (name and second line). It
   is not refreshed from the catalogue.
-- **"Recent" is shown whenever the search field is empty**, whatever filters are chosen, and is
-  not itself filtered.
 - **The first-visit country** comes from the phone's region setting. No location permission is
   asked for or used.
-- **Language names** are shown as the catalogue gives them (English names); only countries are
-  localised.
+- **Names in the filter lists are not translated**: the app's own text is English only, so country
+  names in the phone's language would mix two languages on one screen. Translating them belongs
+  with translating the app.
 - **A station's kind "Radio"** replaces "Link" for stations only. Other sources added at run time
   keep the kind they have today.
 - **Station images** are left out of this feature: they would be the app's first requests to

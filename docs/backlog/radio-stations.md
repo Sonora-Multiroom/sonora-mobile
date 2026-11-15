@@ -268,6 +268,10 @@ Input for `/speckit-specify`; the spec does not reopen them without asking.
    client.
 7. **The filter is called "Tag"**, not "Genre".
 8. **No HLS mark on station rows.**
+9. **Clarified in the spec (2026-11-16):** the three most recent stations also appear in Start
+   Playback; a station can be removed from "Recent" on the radio screen; "Recent" shows whenever
+   the search field is empty, whatever the filters; country names stay English, as the catalogue
+   gives them (this replaces "names localised from the code" in the UX proposal).
 
 ## Open questions
 
