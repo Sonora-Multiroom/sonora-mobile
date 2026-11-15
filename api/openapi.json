@@ -10,7 +10,7 @@
       "name": "AGPL-3.0",
       "url": "https://www.gnu.org/licenses/agpl-3.0.html"
     },
-    "version": "0.1.33"
+    "version": "0.1.34"
   },
   "servers": [
     {
@@ -20,16 +20,8 @@
   ],
   "tags": [
     {
-      "name": "TTS Cache",
-      "description": "The on-disk cache of synthesized audio"
-    },
-    {
-      "name": "Info",
-      "description": "Which hub is running, its versions, and when it started"
-    },
-    {
-      "name": "Inputs",
-      "description": "Audio input lifecycle management — create, list, retrieve, and delete ephemeral inputs"
+      "name": "Chimes",
+      "description": "Short sounds that can play before a route's audio"
     },
     {
       "name": "TTS Voices",
@@ -52,12 +44,28 @@
       "description": "Audio output management — list outputs, control volume and mute state"
     },
     {
-      "name": "Master Mute",
-      "description": "System-wide master mute control. Master mute is a layer above each output's own mute: while it is on every output is silent, and turning it off restores each output's own mute. It does not change any output's `muted`."
-    },
-    {
       "name": "Groups",
       "description": "Audio output group management — list groups and control group volume"
+    },
+    {
+      "name": "TTS Cache",
+      "description": "The on-disk cache of synthesized audio"
+    },
+    {
+      "name": "Info",
+      "description": "Which hub is running, its versions, and when it started"
+    },
+    {
+      "name": "Inputs",
+      "description": "Audio input lifecycle management — create, list, retrieve, and delete ephemeral inputs"
+    },
+    {
+      "name": "Radio",
+      "description": "Search and browse radio stations"
+    },
+    {
+      "name": "Master Mute",
+      "description": "System-wide master mute control. Master mute is a layer above each output's own mute: while it is on every output is silent, and turning it off restores each output's own mute. It does not change any output's `muted`."
     },
     {
       "name": "Routes",
@@ -1686,7 +1694,11 @@
           "200": {
             "description": "Hub info returned",
             "content": {
-              "application/json": {}
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HubInfoResponse"
+                }
+              }
             }
           }
         }
@@ -1797,6 +1809,28 @@
         }
       }
     },
+    "/api/v2/chimes": {
+      "get": {
+        "tags": [
+          "Chimes"
+        ],
+        "summary": "List chimes",
+        "description": "The chimes loaded from `audio.chimes.sounds` at start-up, in configuration order. An entry that could not be loaded is not listed. `none` is a reserved word for \"no chime\" and never appears here. Always `200`; the list is empty when none is configured.",
+        "operationId": "listChimes",
+        "responses": {
+          "200": {
+            "description": "Chimes returned",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ChimeListResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/tts/providers/{providerName}/voices": {
       "get": {
         "tags": [
@@ -1878,6 +1912,496 @@
               "*/*": {
                 "schema": {
                   "$ref": "#/components/schemas/CacheStats"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/radio/tags": {
+      "get": {
+        "tags": [
+          "Radio"
+        ],
+        "summary": "Tags with their station counts",
+        "description": "Largest first. The full list has more than ten thousand entries, so it is paged; filter it with `name`. Each page is remembered by the hub for 6 hours.",
+        "operationId": "listRadioTags",
+        "parameters": [
+          {
+            "name": "name",
+            "in": "query",
+            "description": "Part of the tag name, any letter case. Blank counts as not given. `%` and `/` are refused.",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "maxLength": 100
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "description": "Page size. A value outside the range is refused, never reduced.",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 20,
+              "maximum": 100,
+              "minimum": 1
+            }
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "description": "Where the page starts. Send the previous answer's `nextOffset`.",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 0,
+              "maximum": 10000,
+              "minimum": 0
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "One page of tags",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RadioTagPage"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "A malformed or out-of-range value, an unknown or repeated parameter (invalid-parameter)",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RadioProblem"
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "The catalogue answered with something unreadable (catalogue-bad-answer)",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RadioProblem"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "No catalogue server answered in time (catalogue-unavailable)",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RadioProblem"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "405, 404 for another path, or 500",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RadioProblem"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/radio/stations": {
+      "get": {
+        "tags": [
+          "Radio"
+        ],
+        "summary": "Search stations",
+        "description": "Returns stations matching every filter given, never ones the catalogue marks as broken. With no parameters: the 20 most-voted stations. The order among stations with equal values is not stable, so a client that pages drops stations whose `uuid` it has already received. A parameter this request does not define, or one sent twice, answers 400.",
+        "operationId": "searchRadioStations",
+        "parameters": [
+          {
+            "name": "name",
+            "in": "query",
+            "description": "Part of the station name, any letter case. Blank counts as not given. `%` is refused.",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "maxLength": 100
+            }
+          },
+          {
+            "name": "tag",
+            "in": "query",
+            "description": "One whole tag, any letter case (\"jazz\" does not match \"acid jazz\"). Find tags through `/api/radio/tags`.",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "maxLength": 100
+            }
+          },
+          {
+            "name": "countryCode",
+            "in": "query",
+            "description": "ISO 3166-1 alpha-2, either case.",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z]{2}$"
+            }
+          },
+          {
+            "name": "language",
+            "in": "query",
+            "description": "One whole language name as `/api/radio/languages` gives it, any letter case.",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "maxLength": 100
+            }
+          },
+          {
+            "name": "codec",
+            "in": "query",
+            "description": "The catalogue's codec label, whole, any letter case (for example MP3, AAC+).",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "maxLength": 32
+            }
+          },
+          {
+            "name": "bitrateMin",
+            "in": "query",
+            "description": "Lowest bitrate in kbit/s. Stations of unknown bitrate are excluded when it is above 0.",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 1000000,
+              "minimum": 0
+            }
+          },
+          {
+            "name": "order",
+            "in": "query",
+            "description": "What to sort by.",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "votes",
+              "enum": [
+                "name",
+                "votes",
+                "clickCount",
+                "bitrate"
+              ]
+            }
+          },
+          {
+            "name": "direction",
+            "in": "query",
+            "description": "Defaults to `desc` for `votes` and `clickCount`, `asc` for `name` and `bitrate`.",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "asc",
+                "desc"
+              ]
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "description": "Page size. A value outside the range is refused, never reduced.",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 20,
+              "maximum": 100,
+              "minimum": 1
+            }
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "description": "Where the page starts. Send the previous answer's `nextOffset`.",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 0,
+              "maximum": 10000,
+              "minimum": 0
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "One page of stations",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RadioStationPage"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "A malformed or out-of-range value, an unknown or repeated parameter (invalid-parameter); `parameter` names it. The catalogue was not contacted.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RadioProblem"
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "The catalogue answered with something unreadable or refused the request (catalogue-bad-answer)",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RadioProblem"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "No catalogue server answered within the time budget (catalogue-unavailable); `Retry-After` says when to try again",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RadioProblem"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "405 for a method other than GET (method-not-allowed), 404 for an unknown path under /api/radio/ (not-found), 500 for an unexpected failure (internal-error)",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RadioProblem"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/radio/stations/{uuid}": {
+      "get": {
+        "tags": [
+          "Radio"
+        ],
+        "summary": "One station by its UUID",
+        "description": "Returned whether or not the catalogue marks it as broken (see `lastCheckOk`). May be up to 5 minutes old.",
+        "operationId": "getRadioStation",
+        "parameters": [
+          {
+            "name": "uuid",
+            "in": "path",
+            "description": "The station UUID, any letter case.",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The station",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RadioStation"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "The UUID is malformed, or a query parameter was sent (invalid-parameter)",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RadioProblem"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "A well-formed UUID the catalogue does not know (station-not-found); the detail names it",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RadioProblem"
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "The catalogue answered with something unreadable (catalogue-bad-answer)",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RadioProblem"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "No catalogue server answered in time (catalogue-unavailable)",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RadioProblem"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "405, 404 for another path, or 500",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RadioProblem"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/radio/languages": {
+      "get": {
+        "tags": [
+          "Radio"
+        ],
+        "summary": "Languages with their station counts",
+        "description": "The whole list, largest first. Remembered by the hub for 6 hours. Accepts no parameters.",
+        "operationId": "listRadioLanguages",
+        "responses": {
+          "200": {
+            "description": "Every language that has stations",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/RadioLanguage"
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "A parameter was sent (invalid-parameter)",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RadioProblem"
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "The catalogue answered with something unreadable (catalogue-bad-answer)",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RadioProblem"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "No catalogue server answered in time (catalogue-unavailable)",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RadioProblem"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "405, 404 for another path, or 500",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RadioProblem"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/radio/countries": {
+      "get": {
+        "tags": [
+          "Radio"
+        ],
+        "summary": "Countries with their station counts",
+        "description": "The whole list, largest first. Remembered by the hub for 6 hours. Counts exclude broken stations and are close to, not equal to, what a search returns. Accepts no parameters.",
+        "operationId": "listRadioCountries",
+        "responses": {
+          "200": {
+            "description": "Every country that has stations",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/RadioCountry"
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "A parameter was sent (invalid-parameter)",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RadioProblem"
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "The catalogue answered with something unreadable (catalogue-bad-answer)",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RadioProblem"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "No catalogue server answered in time (catalogue-unavailable)",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RadioProblem"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "405, 404 for another path, or 500",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RadioProblem"
                 }
               }
             }
@@ -2320,6 +2844,16 @@
           "enabled": {
             "type": "boolean",
             "description": "Whether output is enabled for new route creation"
+          },
+          "chime": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Chime played before a route that starts on this output after it has been silent for a while, as configured (an id or `none`); null when none is set. An id that is not loaded is reported but ignored",
+            "examples": [
+              "ding"
+            ]
           }
         }
       },
@@ -2424,6 +2958,16 @@
             "description": "Ducking level in dB for DUCK_OTHERS routes from this input whose request names none; null when none is declared",
             "examples": [
               -25.0
+            ]
+          },
+          "defaultChime": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Chime for routes from this input whose request names none, as configured (an id or `none`); null when none is declared",
+            "examples": [
+              "ding"
             ]
           }
         }
@@ -2541,6 +3085,16 @@
           "system": {
             "type": "boolean",
             "description": "Whether the hub maintains this group itself (the broadcast group of every room) rather than the operator configuring it"
+          },
+          "chime": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Chime played before a route addressed to this group, as configured (an id or `none`); null when none is set. Its members' own chimes are not used for a group route",
+            "examples": [
+              "ding"
+            ]
           }
         }
       },
@@ -2615,6 +3169,17 @@
             ],
             "maximum": 0.0,
             "minimum": -60.0
+          },
+          "chime": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "The chime that starts this route's audio: omitted = the input's default chime, then the target's; none = no chime, whatever those say; anything else = a chime id from GET /api/v2/chimes (400 if it is not loaded). A chime is a request: it is skipped when every target output is already playing",
+            "examples": [
+              "ding"
+            ],
+            "pattern": ".*\\S.*"
           }
         },
         "required": [
@@ -2760,6 +3325,17 @@
             ],
             "maximum": 0.0,
             "minimum": -60.0
+          },
+          "chime": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "The chime that starts this route's audio: omitted = the input's default chime, then the target's; none = no chime, whatever those say; anything else = a chime id from GET /api/v2/chimes (400 if it is not loaded). A chime is a request: it is skipped when every target output is already playing",
+            "examples": [
+              "ding"
+            ],
+            "pattern": ".*\\S.*"
           }
         },
         "required": [
@@ -2882,6 +3458,17 @@
             ],
             "maximum": 0.0,
             "minimum": -60.0
+          },
+          "defaultChime": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Chime for routes from this input whose request names none: a chime id from GET /api/v2/chimes, or `none` for no chime. Omitted: no opinion, the output's or group's chime applies. An id that is not loaded is refused with 400",
+            "examples": [
+              "ding"
+            ],
+            "pattern": ".*\\S.*"
           }
         },
         "required": [
@@ -3156,6 +3743,39 @@
           }
         }
       },
+      "HubInfoResponse": {
+        "type": "object",
+        "description": "Which hub is running, and since when",
+        "properties": {
+          "product": {
+            "type": "string",
+            "description": "Always `multiroom`; tells the hub from another server on the same address",
+            "example": "multiroom"
+          },
+          "version": {
+            "type": "string",
+            "description": "The hub's build version. `unknown` when the build carries no version, so a client must not assume a semantic version",
+            "example": "0.1.34"
+          },
+          "apiVersion": {
+            "type": "string",
+            "description": "The REST API version the hub provides. `unknown` when the build carries no version, so a client must not assume a semantic version",
+            "example": "0.1.34"
+          },
+          "startedAt": {
+            "type": "string",
+            "format": "date-time",
+            "description": "When the hub process started. Equal on every call of one process, so a change means a restart. It can be wrong after a cold boot of the host (clock not yet synchronised): compare it, do not trust it",
+            "example": "2026-10-04T14:30:00.123Z"
+          },
+          "uptimeSeconds": {
+            "type": "integer",
+            "format": "int64",
+            "description": "Whole seconds since the process started",
+            "example": 86400
+          }
+        }
+      },
       "Extension": {
         "type": "object",
         "properties": {
@@ -3219,6 +3839,40 @@
           }
         }
       },
+      "ChimeListResponse": {
+        "type": "object",
+        "description": "The chimes the hub has loaded, in configuration order",
+        "properties": {
+          "chimes": {
+            "type": "array",
+            "description": "Every loaded chime; empty when none is configured. The reserved word `none` (no chime) is never listed",
+            "items": {
+              "$ref": "#/components/schemas/ChimeResponse"
+            }
+          }
+        }
+      },
+      "ChimeResponse": {
+        "type": "object",
+        "description": "A chime the hub has loaded",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "The id to send as `chime` or `defaultChime`",
+            "examples": [
+              "ding"
+            ]
+          },
+          "durationMillis": {
+            "type": "integer",
+            "format": "int32",
+            "description": "How long the chime plays, in milliseconds",
+            "examples": [
+              1800
+            ]
+          }
+        }
+      },
       "TtsVoiceDescriptor": {
         "type": "object",
         "properties": {
@@ -3276,6 +3930,276 @@
             }
           }
         }
+      },
+      "RadioTag": {
+        "type": "object",
+        "description": "A tag with stations",
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "The value to send as `tag` in a search"
+          },
+          "stationCount": {
+            "type": "integer",
+            "format": "int64",
+            "description": "How many stations carry it"
+          }
+        },
+        "required": [
+          "name",
+          "stationCount"
+        ]
+      },
+      "RadioTagPage": {
+        "type": "object",
+        "description": "One page of tags",
+        "properties": {
+          "tags": {
+            "type": "array",
+            "description": "The tags of this page",
+            "items": {
+              "$ref": "#/components/schemas/RadioTag"
+            }
+          },
+          "nextOffset": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "int32",
+            "description": "The offset of the next page; null on the last page"
+          }
+        },
+        "required": [
+          "tags"
+        ]
+      },
+      "RadioProblem": {
+        "type": "object",
+        "description": "RFC 7807 problem details",
+        "properties": {
+          "type": {
+            "type": "string",
+            "description": "One of urn:multiroom:radio:error:invalid-parameter, :station-not-found, :catalogue-bad-answer, :catalogue-unavailable, :method-not-allowed, :not-found, :internal-error. More may be added."
+          },
+          "title": {
+            "type": "string",
+            "description": "A short fixed title for the type"
+          },
+          "detail": {
+            "type": "string",
+            "description": "What happened"
+          },
+          "status": {
+            "type": "integer",
+            "format": "int32",
+            "description": "The HTTP status"
+          },
+          "instance": {
+            "type": "string",
+            "description": "The request path"
+          },
+          "timestamp": {
+            "type": "string",
+            "format": "date-time",
+            "description": "When it happened"
+          },
+          "parameter": {
+            "type": "string",
+            "description": "The offending parameter; only on invalid-parameter"
+          }
+        },
+        "required": [
+          "detail",
+          "status",
+          "title",
+          "type"
+        ]
+      },
+      "RadioStation": {
+        "type": "object",
+        "description": "A radio station",
+        "properties": {
+          "uuid": {
+            "type": "string",
+            "format": "uuid",
+            "description": "The station's stable identifier, lower case"
+          },
+          "uri": {
+            "type": "string",
+            "description": "Pass unchanged to POST /api/v2/play",
+            "example": "radiobrowser://9617a958-0601-11e8-ae97-52543be04c81"
+          },
+          "name": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Community-edited text",
+            "maxLength": 256
+          },
+          "favicon": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "An http or https address the hub has not fetched or checked",
+            "maxLength": 2048
+          },
+          "homepage": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "An http or https address the hub has not fetched or checked",
+            "maxLength": 2048
+          },
+          "countryCode": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "ISO 3166-1 alpha-2, upper case"
+          },
+          "languages": {
+            "type": "array",
+            "description": "At most 10 language names, in the catalogue's order",
+            "items": {
+              "type": "string",
+              "maxLength": 64
+            },
+            "maxItems": 10
+          },
+          "tags": {
+            "type": "array",
+            "description": "At most 30 tags, in the catalogue's order",
+            "items": {
+              "type": "string",
+              "maxLength": 64
+            },
+            "maxItems": 30
+          },
+          "codec": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "The catalogue's label, for example MP3, AAC+, OGG, UNKNOWN",
+            "maxLength": 32
+          },
+          "bitrate": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "int32",
+            "description": "kbit/s; null when unknown"
+          },
+          "hls": {
+            "type": "boolean",
+            "description": "An HLS stream; the hub may be configured to refuse these when played"
+          },
+          "lastCheckOk": {
+            "type": "boolean",
+            "description": "Whether the catalogue's last check of the stream succeeded"
+          },
+          "votes": {
+            "type": "integer",
+            "format": "int64",
+            "description": "The catalogue's vote count",
+            "minimum": 0
+          },
+          "clickCount": {
+            "type": "integer",
+            "format": "int64",
+            "description": "Plays reported in the last 24 hours",
+            "minimum": 0
+          }
+        },
+        "required": [
+          "clickCount",
+          "hls",
+          "languages",
+          "lastCheckOk",
+          "tags",
+          "uri",
+          "uuid",
+          "votes"
+        ]
+      },
+      "RadioStationPage": {
+        "type": "object",
+        "description": "One page of stations",
+        "properties": {
+          "stations": {
+            "type": "array",
+            "description": "The stations of this page",
+            "items": {
+              "$ref": "#/components/schemas/RadioStation"
+            }
+          },
+          "nextOffset": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "int32",
+            "description": "The offset of the next page; null on the last page"
+          }
+        },
+        "required": [
+          "stations"
+        ]
+      },
+      "RadioLanguage": {
+        "type": "object",
+        "description": "A language with stations",
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "The value to send as `language` in a search"
+          },
+          "code": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "ISO 639 code where the catalogue has one"
+          },
+          "stationCount": {
+            "type": "integer",
+            "format": "int64",
+            "description": "How many stations speak it"
+          }
+        },
+        "required": [
+          "name",
+          "stationCount"
+        ]
+      },
+      "RadioCountry": {
+        "type": "object",
+        "description": "A country with stations",
+        "properties": {
+          "code": {
+            "type": "string",
+            "description": "ISO 3166-1 alpha-2, upper case"
+          },
+          "name": {
+            "type": "string",
+            "description": "English name; localise from `code`"
+          },
+          "stationCount": {
+            "type": "integer",
+            "format": "int64",
+            "description": "How many stations the catalogue holds for it"
+          }
+        },
+        "required": [
+          "code",
+          "name",
+          "stationCount"
+        ]
       },
       "BulkStopResponse": {
         "type": "object",
