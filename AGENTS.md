@@ -42,6 +42,7 @@ iosApp/                                # Xcode project stub (not built)
 design/screens/*.dc.html               # design source, see "Design"
 docs/licenses/                         # OFL licences for the bundled fonts
 docs/backlog/                          # proposed features not yet specified, see "Backlog"
+docs/hub-api-history.md                # what each hub API version changed, see "API"
 docs/testing/full-app-test.md          # full on-device regression script, see "Full app test"
 ```
 
@@ -161,30 +162,15 @@ Record the build (CI build number and commit), the device and each row's evidenc
   `GET /api/v2/extensions` lists the extension `radio` as `ACTIVE`, and work fully without it. The
   contract's other extension paths (`/api/tts/*`) stay out of bounds; another namespace needs a
   constitution amendment.
-- 0.1.21 added join modes (`RouteResponse.joinMode`, `InputResponse.defaultJoinMode`) and admission
-  refusals on errors (`ErrorResponse.reason`, `outputId`). The app never sends a `joinMode`.
-- 0.1.22 (deployed 2026-10-06): route IDs are opaque and a transfer keeps the route's id;
-  `RouteResponse.outputs` lists the outputs a route plays on right now; starting, playing or moving
-  onto a disabled output, group or input answers **409** with a `reason` (`OUTPUT_DISABLED`,
-  `GROUP_DISABLED`, `INPUT_DISABLED`, `ALL_MEMBERS_DISABLED`) instead of 400. Since 0.6.0-alpha
-  the app maps these four ("<room> is turned off" and so on, then a refresh) besides
-  `ROUTE_LIMIT_REACHED` and `INPUT_ALREADY_ON_OUTPUT`, and retries a move refused as
-  `ROUTE_CHANGING_OUTPUTS` (0.1.25) once after 1 s.
-  Since 0.1.28 the contract's description of `ErrorResponse.reason` lists every reason and says
-  to treat an unknown one as a generic conflict.
-- 0.1.23 (HUB-025): master mute is a layer above each output's own mute and no longer changes any
-  output's `muted`; turning it off restores each output's own mute.
-- 0.1.25 (HUB-027, HUB-028): turning off a source stops every route playing it (paused ones
-  too), and an auto-remove source is then removed; turning off a group stops the routes addressed
-  to it; turning a room back on puts it back into every live group route of an enabled group
-  containing it, under the same route id. While that room rejoins, a transfer answers 409
-  `ROUTE_CHANGING_OUTPUTS`, which clears by itself within moments. HUB-028 is internal (sound-card
-  channel use).
-- 0.1.28: `PUT /api/v2/inputs/{id}/display-name` `{displayName}` renames an input (at most 64
-  characters; null or blank restores the original name; lasts until a restart for a configured
-  input, until removal for a runtime one). `POST /api/v2/play` answers with the input's
-  `displayName`: the name sent, the title the link resolved to, or a generated placeholder.
-  Resolved titles can be long. The app calls neither the rename nor reads the new field yet.
+- What each API version changed, and what the app did about it, is in
+  [docs/hub-api-history.md](docs/hub-api-history.md). Add an entry there when the contract is
+  refreshed; keep only present-tense rules in this file.
+- The app never sends a `joinMode` or a `chime` on a start.
+- A refusal answers 409 with `ErrorResponse.reason`. The app maps `OUTPUT_DISABLED`,
+  `GROUP_DISABLED`, `INPUT_DISABLED` and `ALL_MEMBERS_DISABLED` ("<room> is turned off" and so on,
+  then a refresh), `ROUTE_LIMIT_REACHED` and `INPUT_ALREADY_ON_OUTPUT`, and retries a move refused
+  as `ROUTE_CHANGING_OUTPUTS` once after 1 s (it clears by itself while a room rejoins a group
+  route). An unknown reason is a generic conflict.
 - Generate a Kotlin multiplatform client (Ktor + kotlinx.serialization) from it at build time,
   e.g. OpenAPI Generator `kotlin` with `library=multiplatform`. Do not commit generated code. Wrap
   it behind a small hand-written repository interface so screens never touch generated types.
@@ -218,8 +204,13 @@ Record the build (CI build number and commit), the device and each row's evidenc
   both single-output routes on X and group routes whose group contains X. One function decides
   this for every screen (`occupiedRooms` in `domain/PlaybackRules.kt`).
 - `enabled = false` on an output/group/input means "cannot start new playback"; show it as "Off".
-  Turning one off also stops what plays on or from it (see 0.1.25 above): a room leaves group
-  playback, which plays on in its other rooms.
+  Turning one off also stops what plays on or from it: a source stops every route playing it
+  (paused ones too), and an auto-remove source is then removed; a group stops the routes addressed
+  to it; a room leaves group playback, which plays on in its other rooms. Turning a room back on
+  puts it back into every live group route of an enabled group containing it, under the same
+  route id.
+- Master mute is a layer above each output's own mute: it never changes an output's `muted`, and
+  turning it off restores each output's own mute.
 - `OutputResponse.available = false` means hardware not connected.
 - Inputs with `source = EPHEMERAL` were added at runtime (links played, DLNA); `STATIC` come from
   configuration. Only ephemeral ones get a delete action.
