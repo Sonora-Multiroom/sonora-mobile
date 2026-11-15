@@ -261,8 +261,9 @@ Input for `/speckit-specify`; the spec does not reopen them without asking.
    screen, and a chosen station returns as the selected source. No Radio tab in this feature.
 4. **First filter:** the country of the phone's region on the first visit, when the country list has
    it; afterwards the filters last used, kept on the device.
-5. **Recent stations are in the first version:** the last ten started from this phone, kept on the
-   device. Favourites stay out.
+5. **Recent stations are in the first version:** the last ten started from this phone that then
+   played for at least 30 seconds (refined 2026-11-16, see the spec), kept on the device.
+   Favourites stay out.
 6. **A played station's kind is "Radio"**, in the stream colours, for stations started by any
    client.
 7. **The filter is called "Tag"**, not "Genre".

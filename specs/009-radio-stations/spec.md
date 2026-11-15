@@ -31,7 +31,8 @@ against the live hub on 2026-11-16, and the decisions this spec starts from:
 - The app offers radio only while the hub reports the radio extension as active.
 - The first time, the station list is narrowed to the country of the phone's region; afterwards to
   the filters last used.
-- The last ten stations started from this phone are kept on the phone as "Recent".
+- The last ten stations started from this phone, and listened to for a while, are kept on the
+  phone as "Recent".
 - A station that plays is shown as kind "Radio", whichever client started it.
 - The catalogue's labels are called "Tag" in the app.
 - Station rows carry no mark for the stream technology (HLS).
@@ -129,33 +130,44 @@ and the line "Live streams can't be paused".
 ### User Story 3 - Play a recent station again (Priority: P2)
 
 Most days I listen to the same few stations. When I open the radio screen I see the stations I
-started recently from this phone, above the list, and one tap chooses one of them. I do not search
-again.
+listened to recently from this phone, above the list, and one tap chooses one of them. I do not
+search again. A station I only tried for a moment, or one that fell silent right after starting,
+is not among them.
 
 **Why this priority**: The hub forgets a station once it stops, so without this every replay costs
 a search. Replaying a known station is the most frequent use of radio.
 
-**Independent Test**: Start two different stations from the phone, stop them, open the radio
-screen: both are listed under "Recent", the later one first; choosing one and pressing Play plays
-it.
+**Independent Test**: Start two different stations from the phone, let each play for more than 30
+seconds, stop them, and open the radio screen: both are listed under "Recent", the later one first;
+choosing one and pressing Play plays it. Start a third and stop it after a few seconds: it is not
+listed.
 
 **Acceptance Scenarios**:
 
-1. **Given** the user started a station from this phone and it played, **When** they next open the
-   radio screen with an empty search field, **Then** that station is first under "Recent", shown
-   like any station row.
-2. **Given** ten stations are under "Recent", **When** an eleventh is started, **Then** it is
-   first and the oldest is gone.
-3. **Given** a station under "Recent" is started again, **When** the list is shown next, **Then**
-   it appears once, in first place.
-4. **Given** the user has typed into the search field, **When** results are shown, **Then**
-   "Recent" is not shown; it returns when the field is emptied.
-5. **Given** a station start failed, **When** the radio screen is opened again, **Then** that
+1. **Given** the user started a station from this phone and it has played for at least 30
+   seconds, **When** they next open the radio screen with an empty search field, **Then** that
+   station is first under "Recent", shown like any station row.
+2. **Given** the user started a station, **When** it stops within 30 seconds of starting, for any
+   reason (the user stopped it, started something else in its place, another client stopped it, or
+   the stream ended by itself), **Then** it is not added to "Recent".
+3. **Given** a station start failed, **When** the radio screen is opened again, **Then** that
    attempt did not add the station to "Recent".
-6. **Given** recent stations exist, **When** the app is closed and opened again, or the phone
+4. **Given** the user started a station and left the app before 30 seconds had passed, **When**
+   they return to the app and the station still plays, **Then** it is added to "Recent"; **and
+   When** it no longer plays on their return, **Then** it is not added.
+5. **Given** a station was moved to another room within its first 30 seconds, **When** it goes on
+   playing there, **Then** the move does not restart the count.
+6. **Given** ten stations are under "Recent", **When** an eleventh qualifies, **Then** it is
+   first and the oldest is gone.
+7. **Given** a station under "Recent" is started again and plays for at least 30 seconds, **When**
+   the list is shown next, **Then** it appears once, in first place; started again and stopped
+   sooner, it keeps its place.
+8. **Given** the user has typed into the search field, **When** results are shown, **Then**
+   "Recent" is not shown; it returns when the field is emptied.
+9. **Given** recent stations exist, **When** the app is closed and opened again, or the phone
    restarts, **Then** they are still listed.
-7. **Given** a station under "Recent" no longer exists in the catalogue, **When** the user plays
-   it, **Then** the start fails with the usual message and the station stays under "Recent".
+10. **Given** a station under "Recent" no longer exists in the catalogue, **When** the user plays
+    it, **Then** the start fails with the usual message and the station stays under "Recent".
 
 ---
 
@@ -275,6 +287,9 @@ radio screen: a plain message and a Retry appear instead of stations.
 - **Radio becomes active while the app is open** (the extension was just installed): the row
   appears the next time Start Playback is opened.
 - **A playing station and "Move to room…"**: works as for any playback the hub marks transferable.
+- **Trying several stations in a row**: each replaces the one before within seconds, so none of
+  the sampled ones enters "Recent"; only the one left playing does.
+- **Two stations started from the phone in different rooms**: each is judged by its own playback.
 - **Two phones**: each keeps its own "Recent" and its own filters.
 - **Switching to another hub**: "Recent" and the filters stay, since stations belong to the
   catalogue and not to a hub; a hub without radio simply offers no radio row.
@@ -340,8 +355,15 @@ radio screen: a plain message and a Retry appear instead of stations.
 
 **Recent stations**
 
-- **FR-021**: The app MUST keep, on the phone, the last ten stations that were started
-  successfully from this phone, most recent first, each once, with what a station row shows.
+- **FR-021**: The app MUST keep, on the phone, the last ten stations that were started from this
+  phone and then played for at least 30 seconds, most recent first, each once, with what a station
+  row shows. A station that failed to start, or stopped playing for any reason before 30 seconds
+  had passed, MUST NOT be added and MUST NOT change the order.
+- **FR-021a**: The 30 seconds count from the moment the station started playing and are judged by
+  what the hub reports: the station qualifies once the app sees that playback still going at least
+  30 seconds after its start. Moving it to another room does not restart the count. When the app
+  was not in front at that moment, it judges on its return, and only if the same playback still
+  goes on.
 - **FR-022**: The radio screen MUST show them under "Recent" above the list while the search
   field is empty, and MUST NOT show them while a name is typed.
 - **FR-023**: A recent station MUST be selectable like any listed station, without the catalogue
@@ -388,8 +410,8 @@ radio screen: a plain message and a Retry appear instead of stations.
   language, and an order. Yields stations page by page, at most 10,000.
 - **Country, language, tag**: the catalogue's values for narrowing a search, each with the number
   of stations it has. A country also has a code from which its name can be localised.
-- **Recent station**: a station started successfully from this phone, kept on the phone with what
-  its row shows. At most ten, most recent first.
+- **Recent station**: a station started from this phone that then played for at least 30 seconds,
+  kept on the phone with what its row shows. At most ten, most recent first.
 - **Radio filters**: the country, tag, language and order last used on this phone, kept on the
   phone.
 - **Radio availability**: whether the hub's radio extension is active, as the hub reports it.
@@ -400,7 +422,7 @@ radio screen: a plain message and a Retry appear instead of stations.
 
 - **SC-001**: A user who knows a station's name can have it playing in a room within 30 seconds of
   opening Start Playback, without leaving the app.
-- **SC-002**: A station started recently from the phone can be started again with three taps from
+- **SC-002**: A station listened to recently from the phone can be started again with three taps from
   Start Playback (open radio, choose the station, Play) plus the room choice when none is preset.
 - **SC-003**: After the user stops typing, matching stations are shown within 2 seconds in normal
   conditions (home network up, catalogue answering).
@@ -428,6 +450,14 @@ radio screen: a plain message and a Retry appear instead of stations.
 - **The pause before a typed name is searched** is about half a second.
 - **"Recent" and the remembered filters belong to the phone**, not to a hub address: stations are
   the catalogue's, the same on every hub.
+- **The 30 seconds before a station counts as "Recent"** (owner's request, 2026-11-16: "only if
+  the user continues to listen for some time, maybe 5 seconds, maybe more") is the value chosen
+  here. It is long enough to leave out a stream that the hub drops shortly after starting and a
+  station the user only sampled while browsing, and short enough that a station left playing
+  always counts. Listening is judged by the playback going on, since the app cannot know whether
+  anyone hears it.
+- **A station whose first 30 seconds end while the app is closed, and which has stopped before the
+  app is opened again**, is not added: the app only knows what the hub reports while it is open.
 - **"Recent" holds what the phone knew** when the station was started (name and second line). It
   is not refreshed from the catalogue.
 - **"Recent" is shown whenever the search field is empty**, whatever filters are chosen, and is
