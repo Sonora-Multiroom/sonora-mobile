@@ -1,16 +1,21 @@
 # sonora-mobile Constitution
 
 sonora-mobile is the Android (later iOS) remote control for the Multiroom Audio Hub, built with
-Kotlin Multiplatform and Compose Multiplatform. It talks only to the hub's REST API v2 on the home
-LAN.
+Kotlin Multiplatform and Compose Multiplatform. It talks only to the hub on the home LAN: its REST
+API v2 and, as the one exception named in Principle I, the radio extension's read-only requests.
 
 ## Core Principles
 
 ### I. API Contract Fidelity (NON-NEGOTIABLE)
 
 - `api/openapi.json` is the single source of truth for every hub interaction. The app MUST use
-  only `/api/v2/**`; v1 paths (`/api/*` without `v2`) and extension paths (`/api/tts/*`) in the
-  spec are out of bounds.
+  only `/api/v2/**`, with the one exception in the next rule; v1 paths (`/api/*` without `v2`) and
+  every other extension namespace in the spec (`/api/tts/*`) are out of bounds.
+- The one exception (since 1.6.0): the app MAY call the radio extension's read-only requests under
+  `/api/radio/**` (RADIO-002, in the spec since API 0.1.34, operations tagged `Radio`). Every other
+  rule of this principle applies to them unchanged. Radio is optional: the app MUST offer it only
+  while `GET /api/v2/extensions` lists the extension `radio` as `ACTIVE`, and MUST work fully
+  without it. Any other extension namespace needs a new amendment.
 - The Kotlin client MUST be generated from the spec at build time. Generated code MUST NOT be
   hand-edited or committed.
 - Screens and view-state logic MUST NOT use generated types directly; all hub access goes through
@@ -24,7 +29,9 @@ LAN.
 - This repository MUST NOT change the hub; backend changes belong to `multiroom-ai`.
 
 Rationale: the hub is the only authority on audio state. A client that drifts from the contract
-fails silently on a device the developer cannot debug from the cloud.
+fails silently on a device the developer cannot debug from the cloud. The radio exception exists
+because the extension is the single place that holds the radio-browser.info catalogue logic; a
+hub-side `/api/v2` wrapper would duplicate it.
 
 ### II. Truthful UI
 
@@ -200,4 +207,4 @@ Rationale: each dependency is a multiplatform compatibility risk and a future iO
 - Reviews of specs, plans and implementations MUST check compliance with every principle;
   unjustified complexity or deviation is a blocking finding.
 
-**Version**: 1.5.0 | **Ratified**: 2026-10-01 | **Last Amended**: 2026-10-17
+**Version**: 1.6.0 | **Ratified**: 2026-10-01 | **Last Amended**: 2026-11-16

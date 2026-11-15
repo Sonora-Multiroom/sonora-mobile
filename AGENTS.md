@@ -2,7 +2,8 @@
 
 Mobile remote control for the **Multiroom Audio Hub**, a Java/Spring Boot server on the home LAN
 that routes audio from inputs (internet streams, files, line-in, SoundCloud/YouTube links) to
-outputs (speakers) and groups of outputs. The app talks only to the hub's REST API v2.
+outputs (speakers) and groups of outputs. The app talks only to the hub's REST API v2, plus one
+named exception: the radio extension's read-only requests (see "API").
 
 The hub lives in another repository (`multiroom-ai`) that is **not reachable from cloud sessions**,
 and neither is the hub itself (`http://multiroom.lan:8080`). Everything you need from it is in this
@@ -151,9 +152,15 @@ Record the build (CI build number and commit), the device and each row's evidenc
 
 - [api/openapi.json](api/openapi.json) was fetched from the production hub on 2026-11-06
   (API version **0.1.33**, the hub's live version that day; the app builds green against it);
-  refresh it with `./gradlew refreshOpenApi` from a local session. It
-  also contains TTS extension paths (`/api/tts/*`): **use only `/api/v2/**`**. The hub removed
-  REST v1 in 0.1.24.
+  refresh it with `./gradlew refreshOpenApi` from a local session. The hub removed REST v1 in
+  0.1.24.
+- **Use only `/api/v2/**`**, with one exception (constitution 1.6.0, Principle I; decided
+  2026-11-16, decision 1 in [docs/backlog/radio-stations.md](docs/backlog/radio-stations.md)): the
+  app may call the radio extension's read-only requests under `/api/radio/**` (RADIO-002, in the
+  contract since API 0.1.34, operations tagged `Radio`). Radio is optional: offer it only while
+  `GET /api/v2/extensions` lists the extension `radio` as `ACTIVE`, and work fully without it. The
+  contract's other extension paths (`/api/tts/*`) stay out of bounds; another namespace needs a
+  constitution amendment.
 - 0.1.21 added join modes (`RouteResponse.joinMode`, `InputResponse.defaultJoinMode`) and admission
   refusals on errors (`ErrorResponse.reason`, `outputId`). The app never sends a `joinMode`.
 - 0.1.22 (deployed 2026-10-06): route IDs are opaque and a transfer keeps the route's id;
