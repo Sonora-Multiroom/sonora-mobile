@@ -1,19 +1,18 @@
 # Radio: find and play internet stations from the radio-browser.info catalogue
 
-- **Status:** Proposed, not started. Written 2026-11-13, rewritten 2026-11-15 against the shipped
-  search contract, reviewed 2026-11-16 against the contract, the app code and the live hub.
+- **Status:** Specified, not started. Written 2026-11-13, rewritten 2026-11-15 against the shipped
+  search contract, reviewed 2026-11-16 against the contract, the app code and the live hub. UX proposal
+  added and accepted 2026-11-16. **Specified as MOB-009:**
+  [specs/009-radio-stations/spec.md](../../specs/009-radio-stations/spec.md).
 - **Origin:** `sonora-radio` (RADIO-001 play by UUID, RADIO-002 search and browse). The extension's
   own repository records the decision that clients stay thin and that the mobile app gets a browse
   and search screen.
 - **Depends on:**
   - RADIO-001 and RADIO-002 (`sonora-radio` 0.2.0) on the hub: deployed and `ACTIVE` on
     `multiroom.lan` (seen 2026-11-16); the PR `Sonora-Multiroom/sonora-radio#2` is still open.
-  - A constitution amendment allowing `/api/radio/**` (decision 1 below), with AGENTS.md synced in
-    the same change.
-  - The refreshed `api/openapi.json` (API 0.1.34, which carries the radio paths) committed and
-    reconciled: besides radio it adds `GET /api/v2/chimes` and changes `InputResponse`,
-    `OutputResponse`, `GroupResponse`, `PlaybackRequest`, `CreateRouteRequest` and
-    `CreateInputRequest` (Constitution I: reconcile before further work touches those calls).
+  - Done with pull request #22 (2026-11-16): constitution 1.6.0 allows `/api/radio/**`, and
+    `api/openapi.json` is at API 0.1.34 (additive v2 changes only, nothing to reconcile).
+  - The UX decisions: taken 2026-11-16 (decisions 3 to 8 below).
 - **Effort:** Medium to large. A contract addition, domain mapping, a browse and search screen with
   paging, a way to start a station from it, a design pass first, and tests.
 
@@ -103,7 +102,124 @@ tagged `Radio`) and in `sonora-radio/specs/002-station-search-api/contracts/radi
   images would be the app's first requests to hosts other than the hub and probably needs an
   image-loading dependency (Constitution VII), so the first version may leave them out.
 
-Nothing here is designed. A design pass on the canvas comes first (Constitution VI).
+Nothing here is drawn. The UX proposal below comes first; the canvas design follows the spec and
+precedes the plan (Constitution VI).
+
+## UX proposal (2026-11-16, accepted)
+
+Written against the shipped screens: two tabs (Rooms, Settings) and Start Playback ("Play
+something": paste a link, or pick a source, then "Play in", the "will stop" note and one Play
+button). Start Playback opens three ways: "Play something", "Play in <room>" from Rooms, and
+"Change source…" from Now Playing with a fixed target. Each choice below has a recommendation, all
+accepted on 2026-11-16 (see "Decisions"); nothing is drawn yet.
+
+### 1. Where radio lives
+
+| Option | How it works | For | Against |
+|---|---|---|---|
+| **A. A source inside Start Playback** (recommended) | A row "Find a radio station" between the link field and the source list opens the radio screen. Choosing a station returns to Start Playback with it selected; the room choice, the "will stop" note and Play stay as they are | A station is a source, and Start Playback is where sources are chosen. All three ways in get radio at once, "Change source…" included. No second room picker to build. The tab bar never changes shape when the extension comes or goes | Two steps to play: choose, then Play. Radio is not visible from the tab bar |
+| B. A third tab "Radio" | The radio screen is a tab root. Tapping a station opens a "Play in" sheet (rooms, the "will stop" note, Play), like the Move to room sheet | Browsing is one tap away and easy to discover | A second room picker and warning to build and keep in step with Start Playback. The tab appears and disappears with the extension. "Change source…" still needs A |
+| C. Both | A now, the tab opening the same screen | Most reach | Most scope; the tab adds B's costs |
+
+With A the radio screen is one pushed destination that hands a station back; B could be added later
+on top of the same screen without redoing it.
+
+### 2. The radio screen
+
+```text
+┌──────────────────────────────────────┐
+│ ←  Radio stations                    │
+│ ┌──────────────────────────────────┐ │
+│ │ 🔍 Station name                  │ │
+│ └──────────────────────────────────┘ │
+│ (Germany ✕) (Tag ▾) (Language ▾) (⇅ Most voted)   ← scrolls sideways
+│                                      │
+│ RECENT                               │
+│ ▣ MANGORADIO           DE · MP3 · 128│
+│ ▣ Radio Paradise       US · AAC · 320│
+│ MOST VOTED IN GERMANY                │
+│ ▣ 1LIVE                DE · MP3 · 128│
+│ ▣ SWR3                 DE · MP3 · 128│
+│ …                        (next page loads on scroll)
+└──────────────────────────────────────┘
+```
+
+- **Search-first, never empty** (recommended) rather than a browse tree (Top / By country / By tag
+  as separate screens). The screen opens on a list straight away: the request with no name gives the
+  most voted stations for the current filters. A browse tree means more screens for the same
+  result.
+- **Filters are chips**, each opening a bottom sheet in the style of the Move to room sheet:
+  - Country: the 225 countries with their station counts, a field that narrows the list on the
+    phone, names localised from the code.
+  - Language: the 585 languages, same pattern, the catalogue's names as they are.
+  - Tag: the most used tags first, and a field that asks the hub (the list has over ten thousand
+    entries and is paged). Labelled "Tag", not "Genre": the values include "news" and "talk".
+  - Order: Most voted (default), Trending (most plays in the last 24 hours), Name A–Z.
+  - A chosen filter shows its value with a ✕ to remove it.
+- **Typing searches by itself** after a short pause (about half a second); an earlier request still
+  in flight is dropped. The field takes at most 100 characters and `%` is removed before sending.
+- **First filter:** the country of the phone's region on the very first visit, when it is in the
+  list (most people want local stations and can remove the chip with one tap); after that the
+  screen reopens with the filters last used, kept on the device. Alternative: always start with no
+  filter (the world's most voted).
+
+### 3. A station row
+
+- A 38 dp tile in the stream colours with the stream icon (no favicon in the first version, see
+  Proposal), the name on one line ending in "…" when too long, and a second line from the parts the
+  hub knows: country code, codec, bitrate ("DE · MP3 · 128 kbps"). A missing part is left out, as is
+  the codec label `UNKNOWN`. A station without a name reads "Unnamed station".
+- No HLS mark (recommended): the app cannot tell whether the hub refuses HLS, so the mark would give
+  the user nothing to act on. No votes or play counts on the row either; the order already says it.
+- Tapping a row chooses the station and returns to Start Playback. No play button on the row: every
+  start goes past the "will stop" note.
+
+### 4. Back in Start Playback
+
+- The "Find a radio station" row becomes the chosen station (tile, name, "Radio · MP3 · 128 kbps"),
+  selected like any source; tapping it reopens the radio screen. Choosing a configured source or
+  typing a link deselects it, as link and source already exclude each other.
+- The button reads "Play MANGORADIO in Bedroom"; the "will stop" note works unchanged.
+- "<station> is already playing in <room>" disables Play, matched by the station's address.
+- Starting can take up to 10 s on a cold catalogue: the button shows the same starting state as a
+  pasted link. A failed start keeps the station selected and says "Couldn't start MANGORADIO", in
+  the place link failures use today (the hub gives no reason).
+
+### 5. After it starts
+
+- Rooms and Now Playing show the station as a live stream: status "Live stream", Stop only, and
+  "Live streams can't be paused".
+- Now Playing's subtitle reads "Radio", not "Link · radiobrowser://…". Either a new kind "Radio" in
+  the stream colours (recommended: no new token, and true for stations started by other clients
+  too), or the existing "Stream" label.
+
+### 6. Recent stations
+
+Stopping a station removes its input from the hub, so the station is gone from the source list and
+playing it again tomorrow means searching again. That is the most common use of radio. Proposed for
+the first version: the last ten stations started from this phone, kept on the device (name, address
+and the second line), shown as "Recent" above the list while the search field is empty. A recent
+station plays without a lookup; if it no longer exists, the start fails with the usual message.
+This is not favourites (no editing, no ordering, nothing shared with other clients); leaving it to a
+follow-up is the alternative, at the cost of a search for every replay.
+
+### 7. States the contract forces
+
+| State | What the user sees |
+|---|---|
+| Radio not installed or not active | No "Find a radio station" row. It appears once the extension list has answered, never as a disabled row |
+| First page loading | Placeholder rows |
+| Next page loading | A small indicator under the last row; loads when the list nears its end |
+| Nothing matches | "No stations match" and a "Clear filters" action |
+| Catalogue not answering (503, 502) | "The station catalogue isn't answering" with Retry, above any rows already loaded |
+| Hub unreachable | The app's existing connection state |
+| Paging limit (offset 10000) | "Showing the first 10,000 stations. Narrow the search to see others." |
+| The extension goes away while the screen is open | "Radio is no longer available on this hub", and the screen closes |
+
+### Decided
+
+The owner accepted every recommendation above on 2026-11-16; they are decisions 3 to 8 under
+"Decisions" below. The options not taken stay in this section as the record of what was weighed.
 
 ### Effects on existing screens
 
@@ -126,21 +242,31 @@ transferable. Stopping the route removed the input. So, with today's code:
 
 - Votes and favourites. The extension casts no votes and reports no plays for a search; an app
   control for them is a separate decision.
-- Saved stations, and with them `lastCheckOk`: only the lookup by UUID can return a broken station,
+- Saved stations beyond the recent list (decision 5), and with them `lastCheckOk`: only the lookup by UUID can return a broken station,
   and only a saved station needs that lookup.
 - Anything the hub already does: finding the current stream address, reporting the play, mirror
   failover and caching.
 
 ## Decisions (2026-11-16)
 
-1. **Policy exception: allowed, pending the amendment.** The app may call `/api/radio/**` as the one
-   extension namespace, because the extension is the single place that holds the catalogue logic
-   and a hub-side `/api/v2` wrapper would duplicate it. Constitution Principle I names extension
-   paths as out of bounds, so this needs an amendment through `/speckit-constitution` (a version
-   bump) with AGENTS.md synced in the same change, before the feature's plan.
+Input for `/speckit-specify`; the spec does not reopen them without asking.
+
+1. **Policy exception: allowed (constitution 1.6.0, pull request #22).** The app may call
+   `/api/radio/**` as the one extension namespace, because the extension is the single place that
+   holds the catalogue logic and a hub-side `/api/v2` wrapper would duplicate it.
 2. **How the app knows radio is installed:** `GET /api/v2/extensions`, an entry with id `radio` and
    status `ACTIVE`. It is a v2 request the app already makes, and it also gives the extension's
    version.
+3. **Radio lives inside Start Playback** (option A): a "Find a radio station" row opens the radio
+   screen, and a chosen station returns as the selected source. No Radio tab in this feature.
+4. **First filter:** the country of the phone's region on the first visit, when the country list has
+   it; afterwards the filters last used, kept on the device.
+5. **Recent stations are in the first version:** the last ten started from this phone, kept on the
+   device. Favourites stay out.
+6. **A played station's kind is "Radio"**, in the stream colours, for stations started by any
+   client.
+7. **The filter is called "Tag"**, not "Genre".
+8. **No HLS mark on station rows.**
 
 ## Open questions
 
@@ -154,5 +280,3 @@ transferable. Stopping the route removed the input. So, with today's code:
    shared by every client. A list kept in the app is a separate item.
 3. **Language of the lists.** Country names come in English with a code; the app can localise from
    `countryCode`. Language names are the catalogue's English names, and 447 of 585 have no code.
-4. **Where does the entry point live?** A fifth bottom-navigation item, or a way into radio from
-   Start Playback's source list. For the design pass.
