@@ -150,8 +150,8 @@ Record the build (CI build number and commit), the device and each row's evidenc
 
 ## API
 
-- [api/openapi.json](api/openapi.json) was fetched from the production hub on 2026-11-06
-  (API version **0.1.33**, the hub's live version that day; the app builds green against it);
+- [api/openapi.json](api/openapi.json) was fetched from the production hub on 2026-11-15
+  (API version **0.1.34**, the hub's live version that day; the app builds green against it);
   refresh it with `./gradlew refreshOpenApi` from a local session. The hub removed REST v1 in
   0.1.24.
 - **Use only `/api/v2/**`**, with one exception (constitution 1.6.0, Principle I; decided
