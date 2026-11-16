@@ -563,26 +563,26 @@ states.
 
 ## Phase 8: Polish & Cross-Cutting Concerns
 
-- [ ] T069 [P] Check test/ui/theme/ContrastTest.kt holds every new pair of contracts/radio-ui.md
+- [X] T069 [P] Check test/ui/theme/ContrastTest.kt holds every new pair of contracts/radio-ui.md
   "Accessibility" (`textSoft` on `surface`, `accent` on `selectedBg`, `warningText` on `surface`,
   `textMuted` on `surface`; added with T036, T063, T064 and T068) and that all pass; fix any
   token use that fails.
-- [ ] T070 Run `./gradlew :androidApp:assembleDebug`, `:composeApp:testAndroidHostTest`,
+- [X] T070 Run `./gradlew :androidApp:assembleDebug`, `:composeApp:testAndroidHostTest`,
   `:composeApp:allTests` and `:composeApp:check` with `ANDROID_HOME="$LOCALAPPDATA/Android/Sdk"`,
   reading each Gradle exit code (`… > log; echo $?`); all green, and `verifyLayering` finds no
   generated radio type under `ui/` or `domain/`. Walk quickstart §1.
-- [ ] T071 Create specs/009-radio-stations/verification.md in the format of 008's: build under test
+- [X] T071 Create specs/009-radio-stations/verification.md in the format of 008's: build under test
   (CI build number and commit), the commands of T070 with dates and counts, and an empty table of
   quickstart §2 rows 1–31 (with 25a and 29a) to fill on the device.
-- [ ] T072 [P] Add a `## [0.9.0-alpha] - Unreleased` entry to CHANGELOG.md above 0.8.1-alpha
+- [X] T072 [P] Add a `## [0.9.0-alpha] - Unreleased` entry to CHANGELOG.md above 0.8.1-alpha
   (user-facing: find and play radio stations, recent stations, filters, a station shown as
   "Radio · Live stream"), linking `specs/009-radio-stations` and "pull request to follow".
-- [ ] T073 [P] Update AGENTS.md: the layout (`ui/radio/`, the three session objects), "Endpoints
+- [X] T073 [P] Update AGENTS.md: the layout (`ui/radio/`, the three session objects), "Endpoints
   per screen" (radio requests; the extensions request also when Start Playback opens), "Hub gaps"
   (no failure reason for a failed station start, HLS unknown), "Agreed details" (station kind
   "Radio", the three-part Play label), and the API paragraph (radio used since 0.9.0-alpha).
-- [ ] T074 [P] Add the entry "0.1.34: radio is used since 0.9.0-alpha" to docs/hub-api-history.md.
-- [ ] T075 [P] Delete docs/backlog/radio-stations.md and its row in docs/backlog/INDEX.md; keep
+- [X] T074 [P] Add the entry "0.1.34: radio is used since 0.9.0-alpha" to docs/hub-api-history.md.
+- [X] T075 [P] Delete docs/backlog/radio-stations.md and its row in docs/backlog/INDEX.md; keep
   docs/backlog/start-failure-above-play.md and its row.
 - [ ] T076 On a local session with the installed build, run quickstart §2 as AGENTS.md "On-device
   verification" describes (POCO, volumes noted and set to 1, Do Not Disturb, Sonora in front before

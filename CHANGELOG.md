@@ -6,6 +6,22 @@ User-facing changes to the Sonora Multiroom mobile app, one entry per feature. T
 the feature's spec folder and pull request. Repository-only changes (documentation, CI, tooling)
 are listed under "Development" when they affect contributors.
 
+## [0.9.0-alpha] - Unreleased
+
+Find and play radio stations ([spec](specs/009-radio-stations/), pull request to follow).
+
+### Added
+
+- "Find a radio station" in Start Playback, on hubs that offer the radio extension: search the
+  station catalogue by name, narrow it by country, tag and language, order it by votes, trend or
+  name, and choose a station to play in a room like any other source. Nothing shows on a hub
+  without radio.
+- Your last ten stations ("Recent"), kept on the phone: a station counts after it has played for
+  30 seconds. The three newest are listed in Start Playback.
+- A playing station is shown as a live radio stream on Rooms, Now Playing and in Settings.
+- Plain messages when the station catalogue isn't answering (with Retry), when nothing matches and
+  when radio is no longer available on the hub.
+
 ## [0.8.1-alpha] - Unreleased
 
 "Change source…" only for replacing playbacks
