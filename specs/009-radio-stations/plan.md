@@ -118,10 +118,11 @@ production files and 20 edited ones; 8 new and 12 extended test files.
    three reopens the radio screen from its own row ("Change"), as the canvas draws it.
 7. **The Play button's three-part layout applies to source names too**, so a long source name no
    longer hides the target.
-8. **The 30 seconds are counted on the phone's clock**, so that a pending station survives the
-   app's process being ended, and **from the first moment the hub reports the playback as
-   playing** (the start's answer when it is already `Active`, otherwise the first refresh that
-   shows it so). Time spent `Starting` does not count (FR-021a, settled after the design review).
+8. **The 30 seconds are counted from when the hub says the audio began** (`RouteResponse.startedAt`,
+   mapped by this feature), never earlier than the start's answer on the phone's clock, and fixed
+   once per playback, so that a hub clock running behind, or a move to another room, cannot
+   shorten or restart the count. Time spent `Starting` does not count (FR-021a;
+   [R8](research.md#r8-recent-stations-and-the-30-second-rule-fr-021-to-fr-024a)).
 
 Settled after `/speckit-analyze` on 2026-11-16 and written into the spec:
 
@@ -132,13 +133,20 @@ Settled after `/speckit-analyze` on 2026-11-16 and written into the spec:
   ([R12](research.md#r12-start-playback-with-radio-fr-002-fr-016-fr-016a-fr-022a)).
 - **A selected station is deselected when radio stops being offered**, for whatever reason
   (FR-022b).
-- **Settled after the design review** (owner-judge, 2026-11-16, commit `3617d83`, verdict
+- **Settled after the first design review** (owner-judge, 2026-11-16, commit `3617d83`, verdict
   CONCERNS): a station started through "Or pick a source" does not enter "Recent" (spec
-  Assumptions); the 30 seconds start at the first `Active` (decision 8); a failed radio request
-  is told apart from an unreachable hub by a fresh session refresh, not by the session's last
-  known state ([R9](research.md#r9-radio-errors-in-plain-words-fr-029-to-fr-034)); tag paging
-  stops at offset 10,000 like station paging; a selected station counts only while radio is
-  offered; an error answer to the extensions request means "not offered"
+  Assumptions); a failed radio request is told apart from an unreachable hub by a fresh session
+  refresh, not by the session's last known state
+  ([R9](research.md#r9-radio-errors-in-plain-words-fr-029-to-fr-034)); tag paging stops at offset
+  10,000 like station paging; a selected station counts only while radio is offered.
+- **Settled after the second design review** (owner-judge, 2026-11-16, commit `2bfb2a8`, verdict
+  CONCERNS): the 30 seconds use the hub's `startedAt` (decision 8), which makes User Story 3
+  scenario 4 hold for a station that began playing while the app was in the background; the
+  screen reads one "effective station" and a change of hub deselects
+  ([R12](research.md#r12-start-playback-with-radio-fr-002-fr-016-fr-016a-fr-022a)); the repeat of
+  a radio request after an outage waits for a refresh that started after the failure; an error
+  answer to the extensions request turns "unknown" into "not offered" but never takes away a
+  confirmed radio section, and the request is asked at most once more per opening
   ([R3](research.md#r3-knowing-whether-radio-is-offered-fr-001-fr-002-fr-033)).
 - **Settings' run-time source row shows a station by its stream tile only**; it names no kind in
   words, as before (User Story 2, scenario 3).
@@ -171,7 +179,7 @@ composeApp/src/commonMain/kotlin/sonora/multiroom/mobile/
 ├── domain/
 │   ├── Radio.kt                                    # new: Station, StationQuery, StationOrder, pages, Country,
 │   │                                               #   Language, Tag, RadioFilters, PendingStation and the pure rules
-│   ├── Models.kt                                   # SourceKind.Radio
+│   ├── Models.kt                                   # SourceKind.Radio; Route.startedAt
 │   ├── SourceKind.kt                               # isStationAddress, sameStation; kind, live stream, label, detail
 │   ├── StartRequest.kt                             # StartWhat.Station
 │   ├── StartConsequence.kt                         # already playing by station address; a station replaces

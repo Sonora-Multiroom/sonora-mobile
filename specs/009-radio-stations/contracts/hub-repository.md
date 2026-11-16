@@ -56,6 +56,7 @@ Still **absent**: `GET /api/radio/stations/{uuid}`, every `/api/tts/*` path, gro
 
 | Wire | Domain | Rule |
 |---|---|---|
+| `RouteResponse.startedAt` | `Route.startedAt: Instant?` | the hub's "timestamp when audio began playing"; null, missing, blank or unreadable → null, and the refresh never fails because of it (as `createdAt` of an input) |
 | `RadioStation` | `Station` | `uuid` and `uri` as given; a blank one drops the station. `name`, `countryCode`: trimmed, blank → null. `codec`: trimmed, blank or `UNKNOWN` in any letter case → null. `bitrate`: null or ≤ 0 → null. Nothing else is mapped |
 | `RadioStationPage` | `StationPage` | `stations` in order, `nextOffset` as given |
 | `RadioCountry` | `Country` | blank `code` or `name` drops the entry |
@@ -120,3 +121,5 @@ A failed station **start** is not a radio request: it is `playLink`'s answer and
 
 17. An input with `uri: "radiobrowser://…"`, `source: "EPHEMERAL"` maps to a `Source` of kind
     `Radio`; one with `source: "STATIC"` and the same scheme too.
+18. A route with `startedAt: "2026-11-16T10:00:05Z"` maps to that instant; `null`, a missing field,
+    `""` and `"soon"` map to null, and the snapshot never fails because of it.

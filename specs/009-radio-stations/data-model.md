@@ -73,12 +73,13 @@ recent first, each `uuid` once.
 |---|---|---|
 | `station` | `Station` | what will be added |
 | `routeId` | `String` | the playback being watched |
-| `activeSince` | `Long?` | epoch ms when the hub first reported the playback `Active`: the start's answer when its route is already `Active`, else set by the first refresh that shows it; null while it is still starting |
+| `trackedAt` | `Long` | the phone's clock (epoch ms) when the start's answer arrived; the audio cannot have begun earlier |
+| `playingSince` | `Long?` | when the audio began, fixed once by the first refresh that shows the route `Active`: `max(route.startedAt ?: now, trackedAt)`; null until then |
 
 | Function | Result |
 |---|---|
 | `addRecent(list, station)` | `station` first, any older entry with its `uuid` removed, cut to ten |
-| `judgeRecent(pending, snapshot, nowMillis)` | `Recent`, `Drop` or `Wait(pending)`, where the entry carried by `Wait` has `activeSince` filled in when this snapshot is the first to show the route `Active` ([research R8](research.md#r8-recent-stations-and-the-30-second-rule-fr-021-to-fr-024a)) |
+| `judgeRecent(pending, snapshot, nowMillis)` | `Recent`, `Drop` or `Wait(pending)`, where the entry carried by `Wait` has `playingSince` fixed when this snapshot is the first to show the route `Active`; a route already playing for 30 s at that moment is `Recent` in the same call ([research R8](research.md#r8-recent-stations-and-the-30-second-rule-fr-021-to-fr-024a)) |
 
 `RECENT_AFTER_MILLIS = 30_000`, `RECENT_LIMIT = 10`, `RECENT_IN_START_PLAYBACK = 3`.
 
@@ -99,6 +100,7 @@ recent first, each `uuid` once.
 | Item | Change |
 |---|---|
 | `StartWhat` (`StartRequest.kt`) | new `Station(station: Station)` |
+| `Route` (`Models.kt`) | gains `startedAt: Instant?`, the hub's `RouteResponse.startedAt` (when the audio began; null before playback starts, when missing or when unreadable) |
 | `effectiveJoinMode` | `Station` → `Replace` |
 | `StartConsequence.of` | `alreadyThere` for a station: a live route addressed to the target whose input address is the same station |
 | `RuntimeSourceRow` (`SettingsBuilder.kt`) | gains `kind: SourceKind` |
@@ -152,7 +154,7 @@ unchanged and also carries a station's address.
 |---|---|---|
 | `RadioAvailability` | `state: StateFlow<RadioOffer>` (`Unknown`, `Offered`, `NotOffered`); `Unknown` again when the hub address changes | `suspend refresh()`, `markGone()` |
 | `StationPicker` | `picked: StateFlow<Station?>`, `gone: StateFlow<Boolean>` | `pick(station)`, `reportGone()`, `consumePicked()`, `consumeGone()` |
-| `RecentStationTracker` | pending entries (also stored) | `track(station, routeId, fence)`; judges on every successful refresh |
+| `RecentStationTracker` | pending entries (also stored) | `track(station, route, fence)`; judges on every successful refresh and stores an entry whenever a judgement changed it |
 | `PlaybackStarter` (changed) | | `StartKind.Station`; calls `tracker.track` when a station start succeeds |
 
 `AppGraph` gains `radioStore`, the three objects above, `region: () -> String` and
@@ -180,7 +182,8 @@ unchanged and also carries a station's address.
 | Field | Type | Meaning |
 |---|---|---|
 | `radio` | `RadioRows?` (new) | null ⇒ no "Or a radio station" section |
-| `selectedStation` | `Station?` (new) | excludes `selectedSourceId` and a non-empty `linkText`; cleared whenever radio is `NotOffered`, whatever it was before; kept but ignored (not played, not named on the Play button) while it is `Unknown` |
+| `selectedStation` | `Station?` (new) | excludes `selectedSourceId` and a non-empty `linkText`. Deselected when radio becomes `NotOffered`, or leaves `Offered` for `Unknown` (a change of hub). One restored from saved state while radio is still `Unknown` is kept |
+| effective station | derived | `selectedStation` while radio is `Offered`, else none. The only value the Play label, `playEnabled`, the consequence, `radio`, `hideListedStations` and the start read; while it is none the screen behaves as with no station selected |
 | `content.sources` | `List<SourceOption>` | now passed through `hideListedStations` |
 | `openRadio` | `Boolean` (new) | one-shot request to push `Destination.Radio`; consumed by the screen |
 | `playLabel` | `PlayLabel` | `PlaySource(stationDisplayName, target)` for a station |
@@ -235,11 +238,14 @@ query changed (name: after 500 ms; filter/order: at once) ─► LoadingFirst
   ├─ Catalogue ────────► Loaded, problem = Catalogue ── Retry ─► LoadingFirst
   ├─ HubUnreachable ───► session.awaitFreshSnapshot()
   │                        ├─ a snapshot ─► as Catalogue (the hub answers, radio did not)
-  │                        └─ null ───────► no message; repeated once the hub answers again
+  │                        └─ null ───────► no message; repeated once, after the first successful
+  │                                         refresh that started after the null (fence rule)
   └─ Gone ─────────────► markGone, reportGone, exit = Gone
 Loaded, scrolled near the end, canLoadMore ─► LoadingMore
   ├─ Ok ───────────────► Loaded (mergePage); limitReached when nextOffset ≥ 10000
-  └─ Catalogue ────────► Loaded, rows kept, problem = Catalogue ── Retry ─► LoadingMore
+  ├─ Catalogue ────────► Loaded, rows kept, problem = Catalogue ── Retry ─► LoadingMore
+  ├─ HubUnreachable ───► as for the first page; rows kept
+  └─ Gone ─────────────► as for the first page
 any state, query changed again ─► the request in flight is cancelled; its answer is never used
 ```
 
@@ -252,7 +258,7 @@ Play ─► PlaybackStarter.start(StartWhat.Station(S))
   └─ started (route r) ──► tracker.track(S, r) ; Now Playing(r)
         each refresh: judgeRecent
           ├─ r gone / Failed / another input ─► dropped
-          ├─ r Active for the first time ─────► activeSince = now; wait
+          ├─ r Active for the first time ─────► playingSince = max(r.startedAt ?: now, trackedAt)
           ├─ r Active and ≥ 30 s since then ──► RadioStore.addRecent(S); dropped
           └─ otherwise ───────────────────────► wait (also across background and restart)
 ```

@@ -75,18 +75,21 @@ factory and a second "follow the address" path for four read-only calls); the de
 `state: StateFlow<RadioOffer>` with `Unknown`, `Offered`, `NotOffered`.
 
 - `refresh()` calls `HubRepository.extensions()`; an answer for a repository that is no longer the
-  session's is dropped. `Offered` when the inventory has an extension whose id is `radio` (letter
-  case ignored) with status `Active`; otherwise `NotOffered`. A request the hub answers with an error status (`Rejected`)
-  or an unreadable body (`Unexpected`) also gives `NotOffered`: a hub that cannot list its
-  extensions offers no radio. Only an unreachable hub leaves the state as it was. The rule for a
-  readable answer is one pure function, `radioOffered(inventory)`.
+  session's is dropped. A readable answer decides: `Offered` when the inventory has an extension
+  whose id is `radio` (letter case ignored) with status `Active`, otherwise `NotOffered`; the rule
+  is one pure function, `radioOffered(inventory)`.
+- An answer that is not a readable inventory (an error status, `Rejected`, or an unreadable body,
+  `Unexpected`) turns `Unknown` into `NotOffered`: a hub that cannot list its extensions is not
+  shown to offer radio. It leaves `Offered` as it is, so one failed request never takes away a
+  radio section the hub has confirmed, nor a station the user has selected.
+- An unreachable hub (`Unreachable`) leaves the state as it was.
 - The state goes back to `Unknown` when the hub address changes.
 - `markGone()` sets `NotOffered` (called when a radio request shows the extension is gone, R9).
-- Start Playback's view model calls `refresh()` each time the screen becomes visible, and again
-  after each successful session refresh while the state is still `Unknown`. That can only be
-  because the hub was unreachable when the screen opened, so the repeat ends with the first
-  answer of any kind and never adds a request to every poll. It shows the radio row and the recent stations only while the state is
-  `Offered`.
+- Start Playback's view model calls `refresh()` each time the screen becomes visible. If the
+  state is still `Unknown` afterwards (the request got no answer), it asks **once** more, after
+  the first successful session refresh that follows, and then leaves it until the screen next
+  becomes visible. So the extensions request is never tied to the 2.5 s poll. It shows the radio
+  row and the recent stations only while the state is `Offered`.
 
 **Rationale**:
 - The row is absent until the hub has answered and is never drawn disabled (`Unknown` and
@@ -268,10 +271,27 @@ the catalogue's English names); a platform `expect fun` for the region (not need
 - When a station start succeeds (also when the answer was recovered from a snapshot, and also when
   Start Playback was already closed), `PlaybackStarter` calls
   `tracker.track(station, route, fence)`. The tracker stores a **pending** entry: the station,
-  the route id and `activeSince`, the wall-clock time at which the hub first reported the
-  playback as `Active`: the moment of the answer when the answered route is already `Active`,
-  otherwise empty until a refresh shows it so. Pending entries are kept on the phone too
-  (R10), so one survives the app's process being ended in the background.
+  the route id, `trackedAt` (the phone's clock at that moment) and an empty `playingSince`.
+  Pending entries are kept on the phone too (R10), so one survives the app's process being ended
+  in the background.
+- **When the audio began** comes from the hub: `RouteResponse.startedAt`, "timestamp when audio
+  began playing (nullable before playback starts)", which this feature maps into the domain as
+  `Route.startedAt` (an unreadable or missing value is null, never a failed refresh). The first
+  refresh that shows the route `Active` fixes the entry's `playingSince` once and for all:
+
+  ```text
+  playingSince = max(route.startedAt ?: now, trackedAt)
+  ```
+
+  - `startedAt` is the hub's own statement, so a station that began while the app was in the
+    background is credited with the time it really played.
+  - `max(…, trackedAt)`: the audio cannot have begun before the start was answered. This bounds a
+    hub clock that runs behind the phone's, which would otherwise let a station in after a few
+    seconds. A hub clock that runs ahead only makes a station qualify that much later.
+  - `?: now`: a hub that reports `Active` without `startedAt` is counted from when the app first
+    saw it playing.
+  - Fixed once: a later change of `startedAt` (it is not known whether a move to another room
+    keeps it) cannot restart the count.
 - On every successful session refresh the tracker judges each pending entry with one pure
   function, `judgeRecent(pending, snapshot, nowMillis)`:
 
@@ -280,9 +300,9 @@ the catalogue's English names); a platform `expect fun` for the region (not need
   | no live route with that id | drop |
   | the route's input is missing, or its address is not the same station | drop |
   | the route's status is `Failed` | drop |
-  | status `Active` and `activeSince` empty | wait, with `activeSince` set to now (and stored) |
-  | status `Active` and at least 30,000 ms since `activeSince` | **recent**: add, then drop the pending entry |
-  | anything else (still `Starting`, or `Active` for less than 30 s) | wait |
+  | status `Active`, `playingSince` empty | `playingSince` is fixed as above (and stored), then judged by the next two rows in the same pass |
+  | status `Active` and at least 30,000 ms since `playingSince` | **recent**: add, then drop the pending entry |
+  | anything else (still `Starting`, or playing for less than 30 s) | wait |
 
 - A pending entry made in this process is judged only by a refresh that started after the start's
   answer (the fence rule of `HubSession`, with the `startedSeq` the starter already captures). One
@@ -299,9 +319,9 @@ Why each spec case holds:
 | stopped, replaced or ended within 30 s | the route is gone from the next snapshot: drop |
 | a failed start | `track` is never called |
 | left the app before 30 s, still playing on return | pending survived; first refresh: `Active`, older than 30 s |
-| sat in `Starting` for most of 30 s, then played briefly and died | the count began only at the first `Active`, so it is dropped before 30 s of play |
-| left the app while still `Starting`, playing on return | `activeSince` is set by the first refresh on return; it qualifies 30 s later if it still plays (the app cannot know when it began) |
-| moved to another room | a transfer keeps the route id (API 0.1.22) and `activeSince` is not touched |
+| sat in `Starting` for most of 30 s, then played briefly and died | the count begins when the audio does, so it is dropped before 30 s of play |
+| left the app while still `Starting`, playing on return | the first refresh on return fixes `playingSince` from the hub's `startedAt`; if that is 30 s or more ago, it is added at once (User Story 3, scenario 4) |
+| moved to another room | a transfer keeps the route id (API 0.1.22), and `playingSince`, once fixed, is not touched |
 | a station picked from "Or pick a source" | started as a hub source, never tracked (spec Assumptions) |
 | several stations sampled in a row | each start replaces the route before it: only the last survives |
 | two stations in two rooms | two pending entries, each with its own route id |
@@ -317,12 +337,16 @@ Why each spec case holds:
   the first three in Start Playback while radio is offered.
 
 **Rationale**: the hub is the only authority on what plays (Constitution II), and FR-021a asks for
-the judgement "by what the hub reports". The time is wall-clock because it must survive the
-process; a clock change during those 30 seconds can at worst let one station in early or late.
+the judgement "by what the hub reports", which includes when the audio began. The times are
+wall-clock because they must survive the process; a clock change on the phone during those 30
+seconds can at worst let one station in early or late.
 
 **Alternatives considered**: a 30 s timer in the starter (wrong while the app is in the background,
-and blind to a playback stopped from another client); counting from the route's first `Active`
-snapshot (the start's answer is the simpler moment and differs by at most one poll).
+and blind to a playback stopped from another client); counting from the start's answer (a stream
+that sat in `Starting` and died soon after would qualify; found by the first design review);
+counting from the first refresh that shows the route `Active` (a station that began playing while
+the app was in the background would be credited only from the user's return, against User Story
+3 scenario 4; found by the second design review, which also pointed out `startedAt`).
 
 ## R9. Radio errors in plain words (FR-029 to FR-034)
 
@@ -362,8 +386,16 @@ first one that *started after the call*, or null after 5 s):
 
 - a snapshot comes back: the hub is reachable and only the radio request got no answer: show
   `Catalogue` with Retry;
-- null: the hub is unreachable. Show nothing of the catalogue (the session's own state brings the
-  stale banner), wait for the next successful refresh, then repeat the failed request once.
+- null: the hub is unreachable (or no screen holds the session because the app is in the
+  background). Show nothing of the catalogue (the session's own state brings the stale banner)
+  and repeat the failed request **once**, after the first successful refresh that *started after
+  this null result*: the fence rule again (capture `session.startedSeq`, wait for a state whose
+  `refreshSeq` is greater). Never wait on "the connection is live": that still reads true from
+  before the failure, so the request would be repeated at once and again every few seconds, also
+  in the background. If the repeated request fails, it is classified afresh by the same rule.
+
+The same holds for a first page and a next page; a changed query or a cleared view model cancels
+the wait with the request it belongs to.
 
 A filter sheet follows the same rule: with the hub unreachable it shows no catalogue card, keeps
 what it lists (or its loading rows) and repeats its request when the hub answers again.
@@ -388,7 +420,7 @@ an in-memory one for tests.
 |---|---|---|
 | `radio_recent` | JSON array of stations, most recent first | 10 |
 | `radio_filters` | JSON object: country (code, name), tag, language, order; absent before the first visit | |
-| `radio_pending` | JSON array of pending entries: station, route id, `activeSince` (epoch ms, absent while the playback is still starting) | pruned by every judgement |
+| `radio_pending` | JSON array of pending entries: station, route id, `trackedAt` and `playingSince` (epoch ms; the second absent until the playback is seen playing) | pruned by every judgement |
 
 - The app keeps one preferences file and DataStore allows one instance per file, so `AppGraph`
   creates the `DataStore<Preferences>` once and hands it to both `DataStoreHubAddressStore` (whose
@@ -456,11 +488,19 @@ key (a station is not navigation state, and the stack would have to be rewritten
   name may shrink and end in "…". This applies to source names too, which the single truncated
   text cuts at the end today, hiding the target.
 - **Saved state**: the selected station is kept in `SavedStateHandle` as JSON (R10).
-- **A selected station counts only while radio is offered.** The rule looks at the present state,
-  not at what it was before: whenever the state is `NotOffered`, a selected station is deselected
-  (also one restored from saved state in a process that never saw `Offered`); while it is
-  `Unknown`, a restored selection is kept but ignored, so Play neither names nor starts it until
-  the hub has answered.
+- **A selected station counts only while radio is offered.** Everything the screen derives from
+  the selection (the Play label and whether Play is enabled, "already playing" and "will stop",
+  the radio rows, `hideListedStations`, what Play sends) reads one value, the **effective
+  station**: `selectedStation` while the state is `Offered`, otherwise none. Nothing reads the raw
+  field.
+  - The state becomes `NotOffered`, or leaves `Offered` for `Unknown` (a change of hub): the
+    station is deselected for good. A new hub that offers radio does not bring it back.
+  - A station restored from saved state finds the state `Unknown` (this process has not asked
+    yet): it is kept but not effective, so the screen looks and behaves as with nothing selected
+    (the Play label is "Play", Play is disabled unless a source or link is chosen, no consequence
+    line). When the answer is `Offered` it becomes effective and shows selected; when it is
+    `NotOffered` it is deselected. Choosing a source or typing a link meanwhile deselects it as
+    always.
 - **Radio stops being offered** (the state leaves `Offered`, by a later answer of the extensions
   request, by `Gone`, or by a change of hub): the section disappears and a selected station is
   deselected, so nothing is selected that the screen does not show (FR-022b).

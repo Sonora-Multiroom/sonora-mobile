@@ -39,8 +39,8 @@ know yet, and on a hub without radio, the screen is exactly as before this featu
 | Station could not be started | The screen stays, the station and the target stay selected, and the snackbar says "Couldn't start <station>", as link failures are shown. No cause is given. The canvas's `startFailed` state (a line above Play) is not built: see [research R5](../research.md#r5-starting-a-station-fr-015-to-fr-020) |
 | Other failures of a station start | The existing snackbar and wording ("<room> is turned off", "<room> can't play more at once", "<target> is no longer on the hub", "Couldn't reach the hub") |
 | Radio went away (reported by the radio screen) | Snackbar "Radio is no longer available on this hub"; the section disappears; a selected station is deselected |
-| The screen is restored with a station selected | Until the hub has said whether it offers radio, the station is neither drawn nor named on Play, and Play does not start it; then it shows selected again, or is deselected if radio is not offered |
-| Radio stops being offered for any other reason (a later answer of the hub, another hub address) | The section disappears and a selected station is deselected, without a message |
+| The screen is restored with a station selected | Until the hub has said whether it offers radio, the screen is as with no station selected: no radio section, Play reads "Play" and is disabled (unless a source or link is chosen meanwhile, which deselects the station), no "will stop" or "already playing" line. Then the station shows selected again, or is deselected if radio is not offered |
+| Radio stops being offered for any other reason (a readable answer of the hub without an active radio extension, another hub address; never a single failed request while radio was offered) | The section disappears and a selected station is deselected, without a message |
 | A station of the section that also plays | It is left out of "Or pick a source", so it shows once. A source that is selected is never left out |
 | Restored by the system | The same station selected |
 
