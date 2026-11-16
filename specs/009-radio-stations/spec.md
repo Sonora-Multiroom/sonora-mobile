@@ -65,6 +65,14 @@ Facts about the hub that shape the behaviour below:
 - Q: Should the user be able to remove a single station from "Recent"? → A: Yes, on the radio
   screen only: each "Recent" row there has a remove action, and a removed station also disappears
   from Start Playback.
+- Q: Where does the order choice sit, given that four chips do not fit the width of a phone? → A:
+  Not among the chips. Three filter chips (country, tag, language) stay in the row; the order is a
+  control beside the list's heading. A chosen filter's value is cut with "…" when long, and the
+  row scrolls sideways if it still does not fit.
+- Q: How is a station name shown that is too long for its line? → A: In lists (the radio screen,
+  "Recent", the filter sheets, unselected rows in Start Playback) on one line ending in "…"; two
+  lines were tried on the canvas and rejected. The station selected in Start Playback scrolls its
+  name as a marquee. The Play button cuts only the station's name, so the target always shows.
 
 ## User Scenarios & Testing *(mandatory)*
 
@@ -214,7 +222,8 @@ listed.
 
 I do not always know a station's name. I want to browse: the popular stations of my country, or
 jazz stations, or stations in a language I speak. Chips above the list let me choose a country, a
-tag, a language and an order, alone or together, and the list follows.
+tag and a language, alone or together; a control beside the list's heading sets the order; and the
+list follows.
 
 **Why this priority**: Browsing is how users discover stations they cannot name. Search by name
 (story 1) already makes the feature usable, so this refines it.
@@ -241,7 +250,8 @@ again.
 5. **Given** the Tag chip, **When** the user taps it, **Then** a sheet lists the most used tags
    with their station counts and a field that finds tags by part of their name; more tags load as
    the user scrolls; choosing one applies it.
-6. **Given** the order choice, **When** the user picks "Most voted", "Trending" (most plays in the
+6. **Given** the order control beside the list's heading, which names the current order, **When**
+   the user opens it and picks "Most voted", "Trending" (most plays in the
    last 24 hours) or "Name A–Z", **Then** the list is reloaded in that order; "Most voted" is the
    order before any choice is made.
 7. **Given** a filter is chosen, **When** the user looks at its chip, **Then** it shows the chosen
@@ -302,8 +312,16 @@ radio screen: a plain message and a Retry appear instead of stations.
 - **A station without a name**: the row reads "Unnamed station"; it can still be chosen and played.
 - **A station without country, codec or bitrate**, or whose codec the catalogue labels as unknown:
   the second line shows only the known parts; with none known there is no second line.
-- **A very long station name**: one line ending in "…" on the radio screen and in Start Playback;
-  on the Rooms card and Now Playing it scrolls as long names already do (MOB-007).
+- **A very long station name**: one line ending in "…" in every list (the radio screen, "Recent",
+  unselected rows in Start Playback). The station selected in Start Playback scrolls its name as a
+  marquee, under the rules long names already follow on the Rooms card and Now Playing (MOB-007):
+  it stands still when the name fits, when the app is not in front and when animations are off.
+  On the Rooms card and Now Playing a station's name scrolls as any long name does.
+- **A long station name on the Play button**: only the name is cut with "…"; "Play" and the target
+  ("in Bedroom") always show.
+- **A long country, language or tag name in a filter sheet**: one line ending in "…"; its station
+  count stays in place.
+- **Opening a filter sheet with a value already chosen**: the sheet opens with that row in view.
 - **Text the hub would refuse**: the search field accepts at most 100 characters, and a `%` typed
   into it is not sent. The user never sees an "invalid parameter" error for something they typed.
 - **Only spaces typed**: counts as an empty search field.
@@ -364,7 +382,10 @@ radio screen: a plain message and a Retry appear instead of stations.
   MUST NOT change them.
 - **FR-009**: The user MUST be able to order the list by most voted (the default), by most plays
   in the last 24 hours ("Trending") and by name.
-- **FR-010**: Each chosen filter MUST be visible with its value and removable with one action.
+- **FR-010**: Each chosen filter MUST be visible with its value and removable with one action. The
+  three filters MUST fit the width of a phone without scrolling when their values are short; a
+  long value MUST be cut with "…" rather than push another filter out of sight, and the order
+  control MUST always be visible beside the list's heading.
 - **FR-011**: On the first visit on a phone the country filter MUST be preset to the phone's
   region when the catalogue lists that country, and to nothing otherwise. Afterwards the screen
   MUST open with the filters and order last used on that phone; the typed name is not kept.
@@ -372,7 +393,7 @@ radio screen: a plain message and a Retry appear instead of stations.
   station twice, and MUST stop at the catalogue's limit of 10,000 stations per search with a note
   saying so.
 - **FR-013**: A station row MUST show the station's name ("Unnamed station" when it has none) on
-  one line, and a second line made of the known parts of country, codec and bitrate. Unknown parts
+  one line ending in "…" when it does not fit, and a second line made of the known parts of country, codec and bitrate. Unknown parts
   MUST be left out, never shown as placeholders.
 - **FR-014**: Station rows MUST NOT show votes, play counts, images or a mark for the stream
   technology.
@@ -384,6 +405,10 @@ radio screen: a plain message and a Retry appear instead of stations.
 - **FR-016**: In Start Playback a selected station MUST behave as any selected source: the target
   choice, the "will stop" note, the Play button's wording and the refusal messages apply to it
   unchanged. Selecting a configured source or typing a link MUST deselect it.
+- **FR-016a**: A selected station whose name does not fit its line in Start Playback MUST scroll
+  the name as a marquee, following the existing marquee rules (MOB-007); every other station row
+  there MUST show one line ending in "…". The Play button MUST always show the target, cutting
+  only the station's name when the text does not fit.
 - **FR-017**: Play MUST be disabled with "<station> is already playing in <target>" when that
   station already plays on the chosen target, whichever client started it.
 - **FR-018**: After a successful start the app MUST show the playback's Now Playing, as after
