@@ -1,5 +1,6 @@
 package sonora.multiroom.mobile.ui.session
 
+import sonora.multiroom.mobile.data.HubError
 import sonora.multiroom.mobile.data.HubResult
 import sonora.multiroom.mobile.data.InMemoryHubAddressStore
 import sonora.multiroom.mobile.data.InMemoryRadioStore
@@ -149,6 +150,31 @@ class RecentStationTrackerTest {
         s.playing = emptyList()
         advanceTimeBy(5_000); runCurrent()
         advanceTimeBy(60_000); runCurrent()
+        assertEquals(emptyList(), s.recent())
+        assertEquals(emptyList(), s.store.pending())
+    }
+
+    @Test
+    fun aFailedRefreshReplayingAnOldSnapshotNeverCountsAsPlaying() = runTest {
+        val s = setup(acquire = false)
+        s.playing = listOf(Playing(mango, "r1", RouteStatus.Active, startedAt = base))
+        s.track(mango, "r1")
+        runCurrent()
+        s.session.acquire()
+        runCurrent()
+        advanceTimeBy(3_000); runCurrent()
+        s.session.release()
+        // Stopped while the app was away; on return the hub cannot be reached.
+        advanceTimeBy(60_000); runCurrent()
+        s.playing = emptyList()
+        val live = s.repo.snapshotResult
+        s.repo.snapshotResult = { HubResult.Err(HubError.Unreachable) }
+        s.session.acquire()
+        runCurrent()
+        assertEquals(emptyList(), s.recent())
+        // The hub answers again: the route is gone, the entry is dropped.
+        s.repo.snapshotResult = live
+        advanceTimeBy(2_500); runCurrent()
         assertEquals(emptyList(), s.recent())
         assertEquals(emptyList(), s.store.pending())
     }

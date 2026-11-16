@@ -44,7 +44,8 @@ class RecentStationTracker(
             publish()
             loaded.complete(Unit)
             session.state.collect { s ->
-                if (s is SessionState.Connected && s.snapshot != null) judge(s)
+                // A failed refresh re-emits the last good snapshot as Unreachable: not evidence.
+                if (s is SessionState.Connected && s.snapshot != null && s.connection == Connection.Live) judge(s)
             }
         }
     }
