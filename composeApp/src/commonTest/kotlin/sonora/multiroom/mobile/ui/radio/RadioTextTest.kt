@@ -35,6 +35,17 @@ class RadioTextTest {
     }
 
     @Test
+    fun theFailureAndEndStatesWording() {
+        assertEquals("The station catalogue isn't answering", RadioText.CATALOGUE_DOWN)
+        assertEquals("Retry", RadioText.RETRY)
+        assertEquals("No stations match", RadioText.NO_MATCH)
+        assertEquals("Try another name or fewer filters.", RadioText.NO_MATCH_HINT)
+        assertEquals("Clear filters", RadioText.CLEAR_FILTERS)
+        assertEquals("Showing the first 10,000 stations. Narrow the search to see others.", RadioText.LIMIT_NOTE)
+        assertEquals("Radio is no longer available on this hub", RadioText.RADIO_GONE)
+    }
+
+    @Test
     fun theChipsSpokenRemovals() {
         assertEquals("Remove the country Ukraine", removeFilterLabel(FilterSheetState.Kind.Country, "Ukraine"))
         assertEquals("Remove the tag jazz", removeFilterLabel(FilterSheetState.Kind.Tag, "jazz"))

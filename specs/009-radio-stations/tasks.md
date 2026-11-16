@@ -520,13 +520,13 @@ states.
 
 ### Tests for User Story 5 (write first, see them fail)
 
-- [ ] T065 [P] [US5] In test/ui/radio/RadioTextTest.kt add failing tests for the wording of the
+- [X] T065 [P] [US5] In test/ui/radio/RadioTextTest.kt add failing tests for the wording of the
   failure and end states: "The station catalogue isn't answering", "Retry", "No stations match",
   "Try another name or fewer filters.", "Clear filters", "Showing the first 10,000 stations.
   Narrow the search to see others.", and "Radio is no longer available on this hub". (The view
   model's failure paths are built and tested in US1, T027 and T035; the sheet's own failure in
   T060.)
-- [ ] T066 [P] [US5] In test/ui/startplayback/StartPlaybackViewModelTest.kt add failing tests:
+- [X] T066 [P] [US5] In test/ui/startplayback/StartPlaybackViewModelTest.kt add failing tests:
   `Unknown` and `NotOffered` show nothing of radio and no error (a hub without radio is exactly as
   before, recent stations not listed); when the first request got no answer (hub
   unreachable), availability is asked once more after the first successful session refresh that started after
@@ -545,11 +545,11 @@ states.
 
 ### Implementation for User Story 5
 
-- [ ] T067 [US5] In `StartPlaybackViewModel` implement the single `Unknown` re-ask, the `gone` handling
+- [X] T067 [US5] In `StartPlaybackViewModel` implement the single `Unknown` re-ask, the `gone` handling
   and the deselection when radio stops being offered (T066), and put the wording of T065 into
   `RadioText.kt` (the screen uses it from T037 on). The refresh on each visible opening already
   exists from T038.
-- [ ] T068 [US5] In RadioScreen.kt and FilterSheet.kt draw the catalogue card (a `surface` card
+- [X] T068 [US5] In RadioScreen.kt and FilterSheet.kt draw the catalogue card (a `surface` card
   above the list, role alert, info icon, "The station catalogue isn't answering" in `warningText`,
   "Retry" in `accent`; rows already listed stay under it, inside the sheet for a sheet), the
   placeholder and "Loading more…" announcements (status), "No stations match" (Sora 17 sp, "Try

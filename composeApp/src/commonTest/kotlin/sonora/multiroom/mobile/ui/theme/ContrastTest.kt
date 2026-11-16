@@ -55,6 +55,7 @@ class ContrastTest {
     @Test
     fun filterControls() {
         assertText("textSoft on surface (chips, order control)", c.textSoft, c.surface)
+        assertText("warningText on surface (catalogue card)", c.warningText, c.surface)
         assertText("textMuted on surface (sheet counts)", c.textMuted, c.surface)
         assertText("accent on selectedBg (chip remove, chosen count)", c.accent, c.selectedBg)
     }

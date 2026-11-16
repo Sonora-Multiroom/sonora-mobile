@@ -41,12 +41,13 @@ class RadioAvailability(private val session: HubSession, scope: CoroutineScope) 
      * Asks the hub for its extensions. An answer for a repository that is no longer the session's
      * is dropped. A readable inventory decides; an error answer turns `Unknown` into `NotOffered`
      * (a hub that cannot list its extensions is not shown to offer radio) but never takes away a
-     * confirmed `Offered`; an unreachable hub changes nothing.
+     * confirmed `Offered`; an unreachable hub changes nothing. Returns false only when the hub
+     * could not be reached, so the caller may ask once more later.
      */
-    suspend fun refresh() {
-        val repo = session.repository ?: return
+    suspend fun refresh(): Boolean {
+        val repo = session.repository ?: return true
         val result = repo.extensions()
-        if (session.repository !== repo) return
+        if (session.repository !== repo) return true
         when (result) {
             is HubResult.Ok ->
                 _state.value = if (radioOffered(result.value)) RadioOffer.Offered else RadioOffer.NotOffered
@@ -55,6 +56,7 @@ class RadioAvailability(private val session: HubSession, scope: CoroutineScope) 
                 _state.value = RadioOffer.NotOffered
             }
         }
+        return !(result is HubResult.Err && result.error == HubError.Unreachable)
     }
 
     /** A radio request showed that the extension is not there. */

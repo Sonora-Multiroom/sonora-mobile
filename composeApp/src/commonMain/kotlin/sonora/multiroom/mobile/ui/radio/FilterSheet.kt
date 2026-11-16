@@ -65,6 +65,7 @@ fun FilterSheet(
     onSearch: (String) -> Unit,
     onChoose: (FilterRow) -> Unit,
     onListPosition: (Int) -> Unit,
+    onRetry: () -> Unit,
     onDismiss: () -> Unit,
 ) {
     val colors = SonoraTheme.colors
@@ -101,7 +102,7 @@ fun FilterSheet(
             RadioText.searchLabel(state.kind)?.let { label ->
                 SheetField(state.searchText, label, onSearch)
             }
-            SheetRows(state, onChoose, onListPosition, modifier = Modifier.weight(1f, fill = false))
+            SheetRows(state, onChoose, onListPosition, onRetry, modifier = Modifier.weight(1f, fill = false))
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -152,6 +153,7 @@ private fun SheetRows(
     state: FilterSheetState,
     onChoose: (FilterRow) -> Unit,
     onListPosition: (Int) -> Unit,
+    onRetry: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val colors = SonoraTheme.colors
@@ -169,6 +171,9 @@ private fun SheetRows(
         modifier = modifier.selectableGroup(),
         verticalArrangement = Arrangement.spacedBy(4.dp),
     ) {
+        if (state.problem != null) {
+            item(key = "problem") { CatalogueCard(onRetry = onRetry) }
+        }
         if (state.loading) {
             item(key = "loading") {
                 Column(

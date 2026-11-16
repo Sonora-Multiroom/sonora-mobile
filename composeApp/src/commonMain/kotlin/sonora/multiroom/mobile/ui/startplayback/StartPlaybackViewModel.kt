@@ -26,13 +26,17 @@ import sonora.multiroom.mobile.ui.session.RadioOffer
 import sonora.multiroom.mobile.ui.session.StationPicker
 import sonora.multiroom.mobile.ui.session.SessionState
 import sonora.multiroom.mobile.ui.session.StartAttempt
+import sonora.multiroom.mobile.ui.radio.RadioText
 import sonora.multiroom.mobile.ui.startFailureMessage
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.filterNotNull
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
@@ -93,7 +97,11 @@ class StartPlaybackViewModel(
         viewModelScope.launch { starter.attempt.collect(::onAttempt) }
         viewModelScope.launch {
             availability.state.collect { state ->
+                val previous = offer
                 offer = state
+                // A station chosen under an offer that is gone (or was never confirmed) does not wait for a
+                // later one: it is dropped for good, so it cannot return with another answer or hub.
+                if (state == RadioOffer.NotOffered || (previous == RadioOffer.Offered && state != RadioOffer.Offered)) clearStation()
                 if (started) return@collect
                 _state.update(::derive)
             }
@@ -103,6 +111,13 @@ class StartPlaybackViewModel(
                 recent = list
                 if (started) return@collect
                 _state.update(::derive)
+            }
+        }
+        viewModelScope.launch {
+            picker.gone.filter { it }.collect {
+                picker.consumeGone()
+                clearStation()
+                if (!started) _state.update { derive(it.copy(message = RadioText.RADIO_GONE)) }
             }
         }
         viewModelScope.launch {
@@ -327,10 +342,23 @@ class StartPlaybackViewModel(
     fun onVisible() {
         session.acquire()
         // Asked each time the screen opens, never on the poll: the inventory changes only on a hub restart.
-        viewModelScope.launch { availability.refresh() }
+        askJob?.cancel()
+        askJob = viewModelScope.launch {
+            if (availability.refresh() || availability.state.value != RadioOffer.Unknown) return@launch
+            // The hub did not answer: once more, after the first refresh that started after that failure.
+            // The session may still say "live" from before the network was lost, so that is not waited on.
+            val fence = session.startedSeq
+            session.state.first { it is SessionState.Connected && it.refreshSeq > fence }
+            availability.refresh()
+        }
     }
 
-    fun onHidden() = session.release()
+    private var askJob: Job? = null
+
+    fun onHidden() {
+        askJob?.cancel()
+        session.release()
+    }
 
     fun consumeMessage() = _state.update { it.copy(message = null) }
 

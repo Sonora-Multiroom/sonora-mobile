@@ -2,6 +2,7 @@ package sonora.multiroom.mobile.ui.radio
 
 import sonora.multiroom.mobile.domain.RadioFilters
 import sonora.multiroom.mobile.domain.stationDetail
+import sonora.multiroom.mobile.ui.RadioFailure
 import sonora.multiroom.mobile.ui.rooms.IconCircleButton
 import sonora.multiroom.mobile.ui.rooms.StaleBanner
 import sonora.multiroom.mobile.ui.session.Connection
@@ -126,6 +127,7 @@ fun RadioScreen(
         )
         StationListView(
             state,
+            onRetry = viewModel::retry,
             onOrder = { viewModel.onOpenSheet(FilterSheetState.Kind.Order) },
             onClearFilters = viewModel::onClearFilters,
             onChoose = viewModel::onChoose,
@@ -140,6 +142,7 @@ fun RadioScreen(
             onSearch = viewModel::onSheetSearch,
             onChoose = viewModel::onSheetChoose,
             onListPosition = viewModel::onSheetListPosition,
+            onRetry = viewModel::retrySheet,
             onDismiss = viewModel::onCloseSheet,
         )
     }
@@ -148,6 +151,7 @@ fun RadioScreen(
 @Composable
 private fun StationListView(
     state: RadioUiState,
+    onRetry: () -> Unit,
     onOrder: () -> Unit,
     onClearFilters: () -> Unit,
     onChoose: (sonora.multiroom.mobile.domain.Station) -> Unit,
@@ -236,6 +240,9 @@ private fun StationListView(
                 }
             }
         }
+        if (list.problem == RadioFailure.Catalogue) {
+            item(key = "problem") { CatalogueCard(onRetry = onRetry, modifier = Modifier.padding(bottom = 8.dp)) }
+        }
         if (list.phase == ListPhase.LoadingFirst) {
             item(key = "placeholders") {
                 Column(
@@ -250,6 +257,16 @@ private fun StationListView(
         }
         items(list.stations, key = { it.uuid }) { station ->
             StationRow(station, secondLine = stationDetail(station), onClick = { onChoose(station) })
+        }
+        if (list.limitReached) {
+            item(key = "limit") {
+                Text(
+                    RadioText.LIMIT_NOTE,
+                    style = type.body13,
+                    color = colors.textMuted,
+                    modifier = Modifier.padding(8.dp),
+                )
+            }
         }
         if (list.phase == ListPhase.LoadingMore) {
             item(key = "more") {

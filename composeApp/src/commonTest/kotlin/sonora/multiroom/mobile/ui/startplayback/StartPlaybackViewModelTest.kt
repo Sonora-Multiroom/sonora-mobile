@@ -73,6 +73,7 @@ class StartPlaybackViewModelTest {
         val picker: StationPicker,
         val availability: RadioAvailability,
         val store: InMemoryRadioStore,
+        val addresses: InMemoryHubAddressStore,
     ) {
         val repo get() = factory.last
         val ui get() = vm.state.value
@@ -90,7 +91,8 @@ class StartPlaybackViewModelTest {
         script: (sonora.multiroom.mobile.ui.rooms.FakeRepository) -> Unit = {},
     ): Setup {
         val factory = FakeFactory { currentTime }
-        val session = HubSession(InMemoryHubAddressStore(address), factory, backgroundScope, now = { currentTime })
+        val addresses = InMemoryHubAddressStore(address)
+        val session = HubSession(addresses, factory, backgroundScope, now = { currentTime })
         val messages = AppMessages()
         val posted = mutableListOf<String>()
         backgroundScope.launch { messages.messages.collect { posted += it } }
@@ -104,7 +106,7 @@ class StartPlaybackViewModelTest {
         val vm = StartPlaybackViewModel(initialTargetId, fixedTarget, fixedName, handle, session, starter, availability, picker, store)
         if (visible) vm.onVisible()
         runCurrent()
-        return Setup(vm, session, factory, starter, posted, handle, picker, availability, store)
+        return Setup(vm, session, factory, starter, posted, handle, picker, availability, store, addresses)
     }
 
     private fun Setup.refresh(snapshot: HubSnapshot) {
@@ -992,6 +994,120 @@ class StartPlaybackViewModelTest {
         for (n in listOf("x", "y", "z")) s.store.addRecent(recentStations(n).single())
         runCurrent()
         assertEquals(listOf("jazz", "link-a"), s.ui.content?.sources?.map { it.id })
+        s.vm.onHidden()
+    }
+
+    // ---- Radio missing, slow or failing (MOB-009) ------------------------------------------------
+
+    private val noRadio = ExtensionInventory(true, emptyList())
+
+    @Test
+    fun aHubWithoutRadioIsAsBeforeWithNoMessageAndNoRecentRows() = runViewModelTest {
+        val s = live(radio = false, store = InMemoryRadioStore(recent = recentStations("a", "b")))
+        assertNull(s.ui.radio)
+        assertNull(s.ui.message)
+        assertEquals(listOf("jazz", "news"), s.ui.content?.sources?.map { it.id })
+        s.vm.onHidden()
+    }
+
+    @Test
+    fun anUnreachableFirstAnswerIsAskedAgainAfterTheFirstRefreshThatStartedAfterIt() = runViewModelTest {
+        var up = false
+        val s = live(radio = true, script = { it.extensionsResult = { if (up) HubResult.Ok(radioInventory) else unreachable } })
+        // The session still says live from before; that must not trigger the second question.
+        assertEquals(1, s.repo.extensionsCalls)
+        assertNull(s.ui.radio)
+        up = true
+        advanceTimeBy(2_600); runCurrent()
+        assertEquals(2, s.repo.extensionsCalls)
+        assertNotNull(s.ui.radio)
+        s.vm.onHidden()
+    }
+
+    @Test
+    fun theSecondQuestionIsTheLastUntilTheScreenIsVisibleAgainWhateverItReturns() = runViewModelTest {
+        val s = live(radio = true, script = { it.extensionsResult = { unreachable } })
+        advanceTimeBy(30_000); runCurrent()
+        assertEquals(2, s.repo.extensionsCalls)
+        s.vm.onHidden()
+        s.vm.onVisible(); runCurrent()
+        advanceTimeBy(30_000); runCurrent()
+        assertEquals(4, s.repo.extensionsCalls)
+        assertNull(s.ui.radio)
+        s.vm.onHidden()
+    }
+
+    @Test
+    fun noSecondQuestionIsAskedOnceTheScreenIsHidden() = runViewModelTest {
+        val s = live(radio = true, script = { it.extensionsResult = { unreachable } })
+        s.vm.onHidden()
+        advanceTimeBy(30_000); runCurrent()
+        assertEquals(1, s.repo.extensionsCalls)
+    }
+
+    @Test
+    fun aGoneReportShowsTheMessageOnceDropsTheRowsAndDeselectsTheStation() = runViewModelTest {
+        val s = live(radio = true)
+        s.vm.onSelectStation(mango)
+        s.availability.markGone()
+        s.picker.reportGone(); runCurrent()
+        assertEquals("Radio is no longer available on this hub", s.ui.message)
+        assertNull(s.ui.radio)
+        assertNull(s.ui.selectedStation)
+        assertFalse(s.picker.gone.value)
+        s.vm.consumeMessage()
+        s.vm.onHidden(); s.vm.onVisible(); runCurrent()
+        assertNull(s.ui.message)
+        s.vm.onHidden()
+    }
+
+    @Test
+    fun aLaterAnswerThatSaysNotActiveDropsTheRowsAndDeselectsWithoutAMessage() = runViewModelTest {
+        val s = live(radio = true)
+        s.vm.onSelectStation(mango)
+        s.repo.extensionsResult = { HubResult.Ok(noRadio) }
+        s.vm.onHidden(); s.vm.onVisible(); runCurrent()
+        assertNull(s.ui.radio)
+        assertNull(s.ui.selectedStation)
+        assertNull(s.ui.message)
+        // It does not come back when radio does.
+        s.repo.extensionsResult = { HubResult.Ok(radioInventory) }
+        s.vm.onHidden(); s.vm.onVisible(); runCurrent()
+        assertNotNull(s.ui.radio)
+        assertNull(s.ui.selectedStation)
+        s.vm.onHidden()
+    }
+
+    @Test
+    fun aStationRestoredFromSavedStateIsDeselectedWhenTheFirstAnswerIsNotOffered() = runViewModelTest {
+        val handle = SavedStateHandle().also { it["station"] = encodeStation(mango) }
+        val s = live(radio = false, handle = handle)
+        assertNull(s.ui.selectedStation)
+        assertNull(handle.get<String>("station"))
+        s.vm.onHidden()
+    }
+
+    @Test
+    fun aHubChangeDeselectsTheStationAndItDoesNotReturnWhenTheNewHubOffersRadio() = runViewModelTest {
+        val s = live(radio = true)
+        s.vm.onSelectStation(mango)
+        s.addresses.save(HubAddress("http://other:8080")); runCurrent()
+        assertNull(s.ui.selectedStation)
+        s.factory.last.extensionsResult = { HubResult.Ok(radioInventory) }
+        s.vm.onHidden(); s.vm.onVisible(); runCurrent()
+        assertNotNull(s.ui.radio)
+        assertNull(s.ui.selectedStation)
+        s.vm.onHidden()
+    }
+
+    @Test
+    fun oneErrorAnswerWhileOfferedChangesNothing() = runViewModelTest {
+        val s = live(radio = true)
+        s.vm.onSelectStation(mango)
+        s.repo.extensionsResult = { HubResult.Err(HubError.Rejected(500, null)) }
+        s.vm.onHidden(); s.vm.onVisible(); runCurrent()
+        assertNotNull(s.ui.radio)
+        assertEquals(mango, s.ui.selectedStation)
         s.vm.onHidden()
     }
 }
