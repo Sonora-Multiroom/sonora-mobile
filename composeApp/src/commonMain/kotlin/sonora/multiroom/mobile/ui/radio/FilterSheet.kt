@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
@@ -139,6 +140,7 @@ private fun SheetField(text: String, label: String, onChange: (String) -> Unit) 
                 textStyle = type.body15.copy(color = colors.text),
                 cursorBrush = SolidColor(colors.accent),
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Text, imeAction = ImeAction.Search),
+                decorationBox = { inner -> Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.CenterStart) { inner() } },
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(44.dp)

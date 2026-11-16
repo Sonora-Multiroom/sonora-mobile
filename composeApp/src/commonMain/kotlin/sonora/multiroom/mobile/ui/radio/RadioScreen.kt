@@ -413,7 +413,7 @@ private fun NameField(text: String, onChange: (String) -> Unit, onClear: () -> U
                 cursorBrush = SolidColor(colors.accent),
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Text, imeAction = ImeAction.Search),
                 keyboardActions = KeyboardActions(onSearch = { focusManager.clearFocus() }),
-                decorationBox = { inner -> Box(contentAlignment = Alignment.CenterStart) { inner() } },
+                decorationBox = { inner -> Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.CenterStart) { inner() } },
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(44.dp)
