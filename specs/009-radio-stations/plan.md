@@ -121,6 +121,18 @@ production files and 20 edited ones; 8 new and 12 extended test files.
 8. **The 30 seconds are counted from the start's answer** and on the phone's clock, so that a
    pending station survives the app's process being ended.
 
+Settled after `/speckit-analyze` on 2026-11-16 and written into the spec:
+
+- Decisions 1 and 3 are departures from the canvas and are now listed in the spec's Assumptions
+  (Constitution VI). Decision 6 is now User Story 1, scenario 8.
+- **A station shown in the radio section is not listed again under "Or pick a source"** while it
+  plays (FR-022a); a playing station the section does not show stays in the source list
+  ([R12](research.md#r12-start-playback-with-radio-fr-002-fr-016-fr-016a-fr-022a)).
+- **A selected station is deselected when radio stops being offered**, for whatever reason
+  (FR-022b).
+- **Settings' run-time source row shows a station by its stream tile only**; it names no kind in
+  words, as before (User Story 2, scenario 3).
+
 ## Project Structure
 
 ### Documentation (this feature)

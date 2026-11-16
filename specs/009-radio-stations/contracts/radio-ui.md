@@ -39,6 +39,8 @@ know yet, and on a hub without radio, the screen is exactly as before this featu
 | Station could not be started | The screen stays, the station and the target stay selected, and the snackbar says "Couldn't start <station>", as link failures are shown. No cause is given. The canvas's `startFailed` state (a line above Play) is not built: see [research R5](../research.md#r5-starting-a-station-fr-015-to-fr-020) |
 | Other failures of a station start | The existing snackbar and wording ("<room> is turned off", "<room> can't play more at once", "<target> is no longer on the hub", "Couldn't reach the hub") |
 | Radio went away (reported by the radio screen) | Snackbar "Radio is no longer available on this hub"; the section disappears; a selected station is deselected |
+| Radio stops being offered for any other reason (a later answer of the hub, another hub address) | The section disappears and a selected station is deselected, without a message |
+| A station of the section that also plays | It is left out of "Or pick a source", so it shows once. A source that is selected is never left out |
 | Restored by the system | The same station selected |
 
 ## The radio screen
@@ -61,7 +63,7 @@ A pushed screen over Start Playback, no bottom bar.
 | Hub unreachable | The app's stale banner; rows stay and can be chosen; no catalogue card. The failed request is repeated by itself when the hub answers again |
 | Radio went away | The screen closes; Start Playback says so (above) |
 | Back | Returns to Start Playback unchanged |
-| Rotation, background and return | Name, filters, list and scroll position kept |
+| Rotation, background and return | Name, filters, list and scroll position kept (the list's scroll state is saved with the screen) |
 
 ### Order of the parts in the scrolling area
 
@@ -94,8 +96,8 @@ handle, the scrim).
 |---|---|
 | Rooms card | The station's name (marquee when long, as today), status "Radio · Live stream", the stream tile, Stop only |
 | Now Playing | Title: the station's name; subtitle "Radio" with nothing after it; the stream panel; Stop and no Pause; "Live streams can't be paused"; "Change source…" and "Move to room…" by the existing rules |
-| Start Playback's source list | A playing station is a source on the hub while it plays: it is listed with kind "Radio" and the stream tile, and is selectable as any source |
-| Settings → Sources | In "Added at run time": the stream tile and the added line, with the remove action as for any runtime source |
+| Start Playback's source list | A playing station is a source on the hub while it plays: it is listed with kind "Radio" and the stream tile, and is selectable as any source, unless the radio section above already shows that station |
+| Settings → Sources | In "Added at run time": the stream tile and the added line, with the remove action as for any runtime source. The row names no kind in words |
 
 All four hold for a station started by any client.
 

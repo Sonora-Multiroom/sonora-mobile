@@ -113,7 +113,9 @@ the station is audible and Now Playing shows it.
    group, with no target to pick.
 8. **Given** a station is selected in Start Playback, **When** the user picks a configured source
    or types into the link field, **Then** the station is no longer selected; **and When** the user
-   taps the selected station's row, **Then** the radio screen opens again to choose another.
+   taps the row of a selected station that is not one of the recent stations listed there, **Then**
+   the radio screen opens again to choose another. (A selected recent row stays selected when
+   tapped; the "Find a radio station" row above it opens the radio screen.)
 9. **Given** more stations match than one page holds, **When** the user scrolls towards the end of
    the list, **Then** further stations are added below, and no station appears twice.
 
@@ -141,9 +143,10 @@ and the line "Live streams can't be paused".
 2. **Given** a station plays, **When** the user opens its Now Playing, **Then** it shows Stop and
    no Pause, the line "Live streams can't be paused", and the description "Radio" with no address
    after it.
-3. **Given** a station plays, **When** it appears in any list of sources (Start Playback's source
-   list, Settings' Sources tab), **Then** its kind reads "Radio" and its tile uses the stream
-   colours.
+3. **Given** a station plays, **When** it appears in a list of sources, **Then** its tile uses the
+   stream colours, and where the list names a source's kind (Start Playback's source list) the
+   kind reads "Radio". Settings' Sources tab lists it among the sources added at run time, whose
+   rows say when they were added and name no kind.
 4. **Given** a station plays in the Kitchen, **When** the user selects the same station for the
    Kitchen in Start Playback, **Then** Play is disabled with "<station> is already playing in
    Kitchen", as for any source that already plays on the chosen target.
@@ -287,7 +290,8 @@ radio screen: a plain message and a Retry appear instead of stations.
 3. **Given** the radio screen is loading its first stations, **When** the user looks at it,
    **Then** it shows that it is loading.
 4. **Given** no station matches the name and filters, **When** the list has loaded, **Then** the
-   screen says "No stations match" and offers to clear the filters.
+   screen says "No stations match" and, when a country, tag or language is chosen, offers to
+   clear the filters.
 5. **Given** the catalogue does not answer or answers with something unreadable, **When** a list
    is requested, **Then** the screen says in plain words that the station catalogue isn't
    answering and offers Retry; stations already listed stay visible.
@@ -435,6 +439,11 @@ radio screen: a plain message and a Retry appear instead of stations.
 - **FR-022a**: Start Playback MUST list the three most recent of them directly under the "Find a
   radio station" row whenever radio is offered, selectable in place like sources, and MUST NOT
   list any when radio is not offered. A selected station that is among them MUST be shown once.
+  A station shown in that section that also plays at the moment, and is therefore a source on the
+  hub, MUST NOT be listed a second time in the source list; a playing station not shown in the
+  section stays in the source list.
+- **FR-022b**: When radio stops being offered while a station is selected in Start Playback, the
+  station MUST be deselected, so that nothing is selected that the screen no longer shows.
 - **FR-023**: A recent station MUST be selectable like any listed station, without the catalogue
   being asked about it first.
 - **FR-024**: Recent stations MUST survive closing the app and restarting the phone.
@@ -458,7 +467,8 @@ radio screen: a plain message and a Retry appear instead of stations.
 **When things go wrong**
 
 - **FR-029**: While stations are loading the screen MUST show that; when nothing matches it MUST
-  say "No stations match" and offer to clear the filters.
+  say "No stations match" and, when a country, tag or language is chosen, offer to clear the
+  filters.
 - **FR-030**: When the catalogue does not answer or answers unreadably, the screen (or the filter
   sheet that asked) MUST say so in plain words and offer Retry, keeping what is already listed.
 - **FR-031**: A slow catalogue MUST NOT be reported as an unreachable hub: the app MUST wait for
@@ -516,10 +526,19 @@ radio screen: a plain message and a Retry appear instead of stations.
 
 ## Assumptions
 
-- **Design**: nothing is drawn yet. The screens are designed on the canvas after this spec and
-  before the plan (Constitution VI), following the accepted UX proposal in the backlog item: a row
-  in Start Playback, a search-first radio screen with filter chips that open bottom sheets, and
+- **Design**: the screens were drawn on the canvas after this spec and before the plan
+  (Constitution VI; offline copies `design/screens/Radio.dc.html`, `RadioFilterSheet.dc.html`,
+  `StartPlaybackRadio.dc.html`), following the accepted UX proposal in the backlog item: a row in
+  Start Playback, a search-first radio screen with filter chips that open bottom sheets, and
   station rows styled like source rows with the stream colours.
+- **Departures from the canvas** (Constitution VI), both decided on 2026-11-16:
+  - The canvas draws a failed station start as a line above Play (`StartPlaybackRadio.dc.html`,
+    property `startFailed`). The app shows it where link failures are shown today (FR-019), so
+    that a station and a link fail alike on one screen. The line is the backlog item
+    [start-failure-above-play.md](../../docs/backlog/start-failure-above-play.md), for every
+    start failure together.
+  - The canvas shows "Clear filters" whenever no station matches. The app offers it only when a
+    country, tag or language is chosen, since otherwise it would clear nothing.
 - **Wording** given in quotes above ("Find a radio station", "Recent", "No stations match",
   "Couldn't start <station>", and so on) is the intended wording; the design pass may refine it.
 - **The pause before a typed name is searched** is about half a second.

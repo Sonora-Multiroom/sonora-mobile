@@ -118,7 +118,8 @@ Checked live (backlog item): a played station is an input with `source = EPHEMER
 - `forKind(Radio)` = the stream colours, `iconForKind(Radio)` = the stream icon (`ui/rooms/KindStyle.kt`).
 - Settings' runtime source row hard-codes the Link tile (`RuntimeSourceSettingRow` in
   `ui/settings/SettingRows.kt`). `RuntimeSourceRow` gains `kind`, and the row draws that kind's
-  tile, so a playing station shows the stream tile there (User Story 2, scenario 3).
+  tile, so a playing station shows the stream tile there (User Story 2, scenario 3). That row
+  names no kind in words (it says when the source was added), and stays so.
 
 Nothing else needs touching: `cardStatus`, Rooms' status line ("Radio · Live stream") and Now
 Playing's "Live streams can't be paused" all derive from these functions.
@@ -430,9 +431,16 @@ key (a station is not navigation state, and the stack would have to be rewritten
   name may shrink and end in "…". This applies to source names too, which the single truncated
   text cuts at the end today, hiding the target.
 - **Saved state**: the selected station is kept in `SavedStateHandle` as JSON (R10).
-- A selected station stays selected when radio stops being offered by a later answer of the
-  extensions request only if it was not reported gone (R9 deselects on `Gone`); the next Play then
-  fails or succeeds as the hub decides.
+- **Radio stops being offered** (the state leaves `Offered`, by a later answer of the extensions
+  request, by `Gone`, or by a change of hub): the section disappears and a selected station is
+  deselected, so nothing is selected that the screen does not show (FR-022b).
+- **A station shown twice** (FR-022a): a station that plays is also a source on the hub, so it
+  would appear under "Or pick a source" as well. `hideListedStations(sources, rows)` (pure) leaves
+  out of the source list every source whose address is the same station (`sameStation`) as one
+  shown in the radio section (the three recent rows or the selected one). A source that is the
+  selected source is never left out. A playing station that the section does not show stays in
+  the source list with kind "Radio" (User Story 2, scenario 3). For this `SourceOption` gains
+  `stationUri`, the address when the source is a station.
 
 **Rationale**: the canvas `StartPlaybackRadio.dc.html`, and the spec's clarification that a station
 is shown once.

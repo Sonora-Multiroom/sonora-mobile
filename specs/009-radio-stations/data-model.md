@@ -113,6 +113,11 @@ recent first, each `uuid` once.
 | `recent: List<Station>` | the first three recent stations |
 | `selectedUuid: String?` | the selected station's `uuid`, for marking a recent row |
 
+`SourceOption` gains `stationUri: String?` (the source's address when its kind is `Radio`).
+`hideListedStations(sources, rows, selectedSourceId): List<SourceOption>` leaves out every source
+whose `stationUri` is the same station as `rows.found` or one of `rows.recent`, except the
+selected source; with `rows == null` it returns the list unchanged.
+
 ### Radio availability
 
 `radioOffered(inventory: ExtensionInventory): Boolean`: an extension with id `radio` (any letter
@@ -175,7 +180,8 @@ unchanged and also carries a station's address.
 | Field | Type | Meaning |
 |---|---|---|
 | `radio` | `RadioRows?` (new) | null ⇒ no "Or a radio station" section |
-| `selectedStation` | `Station?` (new) | excludes `selectedSourceId` and a non-empty `linkText` |
+| `selectedStation` | `Station?` (new) | excludes `selectedSourceId` and a non-empty `linkText`; cleared whenever `radio` becomes null after having been offered |
+| `content.sources` | `List<SourceOption>` | now passed through `hideListedStations` |
 | `openRadio` | `Boolean` (new) | one-shot request to push `Destination.Radio`; consumed by the screen |
 | `playLabel` | `PlayLabel` | `PlaySource(stationDisplayName, target)` for a station |
 | `message` | `String?` | unchanged: the one-shot snackbar text; also carries "Couldn't start <station>" and "Radio is no longer available on this hub" |
@@ -194,7 +200,7 @@ drawing: `("Play ", "MANGORADIO", " in Bedroom")`; `name` is empty for "Play", "
 | `connection` | `Connection` | from the session; unreachable ⇒ the stale banner |
 | `nameText` | `String` | the field's text (at most 100 characters, no `%`) |
 | `filters` | `RadioFilters` | what the chips and the order control show |
-| `recent` | `List<Station>` | shown while `stationName(nameText)` is null and the list is not empty |
+| `recent` | `List<Station>` | the recent stations; the "Recent" section shows while `stationName(nameText)` is null and `recent` itself is not empty, whatever the station list holds (also under "No stations match" and the catalogue message) |
 | `list` | `StationList` | see below |
 | `sheet` | `FilterSheet?` | the open sheet, if any |
 | `exit` | `RadioExit?` | `Chosen` or `Gone`; the screen consumes it and navigation pops |
