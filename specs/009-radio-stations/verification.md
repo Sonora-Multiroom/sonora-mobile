@@ -4,19 +4,23 @@ Results of [quickstart.md](quickstart.md): §1 (build and tests) and the on-devi
 
 ## §1 Build and tests
 
-Run on 2026-11-16 in a local session (Windows 10, Git Bash), feature branch `009-radio-stations`
-at commit `67b2189` plus the documentation edits of phase 8, `api/openapi.json` at 0.1.34,
-`gradle.properties` at `0.9.0-alpha` / code 9. Commands one at a time with
-`ANDROID_HOME="$LOCALAPPDATA/Android/Sdk"` and each exit code read directly:
+Run on 2026-11-17 in a local session (Windows 10, Git Bash), feature branch `009-radio-stations`
+at commit `990fb3a` (`daefce5` plus the tracker fix of the code review, see Issues),
+`api/openapi.json` at 0.1.34, `gradle.properties` at `0.9.0-alpha` / code 9. An earlier run
+(2026-11-16, `67b2189`, 928 tests) came before two code commits and is superseded. Commands one at
+a time with `ANDROID_HOME="$LOCALAPPDATA/Android/Sdk"` and each exit code read directly:
 
 ```bash
 ./gradlew :androidApp:assembleDebug         # exit 0
-./gradlew :composeApp:testAndroidHostTest   # exit 0, 928 tests, 0 failed, 0 skipped
+./gradlew :composeApp:testAndroidHostTest   # exit 0, 930 tests, 0 failed, 0 skipped
 ./gradlew :composeApp:allTests              # exit 0 (iOS targets skipped on Windows)
 ./gradlew :composeApp:check                 # exit 0, includes verifyLayering
 ```
 
 `verifyLayering` found no generated radio type under `ui/` or `domain/`.
+
+Test-first evidence for the review fix: `RecentStationTrackerTest.aFailedRefreshReplayingAnOldSnapshotNeverCountsAsPlaying`
+failed with the old code (13 tests, 1 failed) and passes with the fix.
 
 Test-first evidence: in every phase the new tests were written before the code they cover. They
 never ran red: the first failure each time was a compile error (`Unresolved reference` to the
@@ -36,7 +40,7 @@ no routes playing at the start. Rooms: `A` = Office Speaker, `B` = Kitchen Speak
 used. Volumes noted (Office 30, Kitchen 30, Bedroom 50, Bathroom 50 and turned off) and set to 1
 before the first start; test routes stopped first, then volumes restored; screen timeout 60000
 and Do Not Disturb off restored. Taps by `input tap` after a foreground check. Build under test:
-local debug APK 0.9.0-alpha; rows 15-19 and later ran on the build with the two fixes listed
+local debug APK 0.9.0-alpha (built from the working tree before `ab3f7d0` and `4abd363`; no CI build number was recorded, and the rows are not re-run on `daefce5`); rows 15-19 and later ran on the build with the two fixes listed
 under Issues. The first session stopped at 13% battery; the rest ran after the phone was charged. Status legend: ✅ pass · ❌ fail · ⏳ not run · n/a not applicable.
 
 | # | Check | Status | Evidence |
@@ -65,14 +69,14 @@ under Issues. The first session stopped at 13% battery; the rest ran after the p
 | 22 | look at Start Playback and the Play button | ✅ | `Blu Radio, señal nacional (HJCK, …)` (246 characters): selected name scrolls as a marquee on Start Playback, unselected recent/list rows end in "…", Play reads "Play Blu Radio, señal naci… in Office Speaker" (the full label is the node text). The label runs close to the pill's right edge |
 | 23 | look at the field and `GET` nothing by hand | ✅ | `100%` typed: no `%` appeared in the field, no message |
 | 24 | rotate; press Home and return | ✅ | Name `jazz` typed; rotated to landscape and back, then Home and back: name, filters and the 20 listed rows kept |
-| 25 | Rooms, Now Playing, "Play something", Settings → Sources | ✅ | Intense Radio started by `curl` on Bedroom: Rooms "Radio · Live stream"; Settings → Sources "ADDED FROM APPS", "Added today 21:28 · removed when it stops" (no kind in words); not in "RECENT" after 4 min. Now Playing and Start Playback rows not re-read |
+| 25 | Rooms, Now Playing, "Play something", Settings → Sources | ⏳ | Intense Radio started by `curl` on Bedroom: Rooms "Radio · Live stream"; Settings → Sources "ADDED FROM APPS", "Added today 21:28 · removed when it stops" (no kind in words); not in "RECENT" after 4 min. Now Playing and Start Playback rows not re-read |
 | 25a | "Play something" | ✅ | MANGORADIO playing and recent: shown once (row 8), not under "OR PICK A SOURCE" |
 | 26 | select a station, a room, Play; Close at once | ✅ | Play of Blu Radio on Office, Close within 1 s: Rooms; the playback appeared on the Office card; no other notice later (dumps at 1 s and 7 s) |
 | 27 | Play | n/a | Not tried: no station was found that fails to start |
-| 28 | open the radio screen; Retry; restore access; Retry | n/a | User row, not done |
-| 29 | look; restore Wi-Fi | n/a | User row, not done |
-| 29a | look; restore Wi-Fi | n/a | User row, not done |
-| 30 | focus a station row, a chosen chip's ✕, the order control, a "Recent" ✕, the selected station row in | n/a | User row (TalkBack), not done. Accessibility tree read instead: "Remove the country Germany", "Order: Most voted. Change the order", "Remove MANGORADIO from Recent", "MANGORADIO, selected. Choose another station" |
+| 28 | open the radio screen; Retry; restore access; Retry | ⏳ | User row, not done |
+| 29 | look; restore Wi-Fi | ⏳ | User row, not done |
+| 29a | look; restore Wi-Fi | ⏳ | User row, not done |
+| 30 | focus a station row, a chosen chip's ✕, the order control, a "Recent" ✕, the selected station row in | ⏳ | User row (TalkBack), not done. Accessibility tree read instead: "Remove the country Germany", "Order: Most voted. Change the order", "Remove MANGORADIO from Recent", "MANGORADIO, selected. Choose another station" |
 | 31 | "Play something" | n/a | No hub without radio at hand; covered by `StartPlaybackViewModelTest` |
 
 ## Issues found
@@ -89,5 +93,18 @@ under Issues. The first session stopped at 13% battery; the rest ran after the p
   and centres its text, in the radio screen and in the filter sheets.
 - Observation (rows 22): the Play button's label runs up to the pill's right edge when the station
   name is long, because the name takes all the remaining width. Readable and complete; not changed.
+- **Code review (2026-11-17, `daefce5`): the Recent tracker judged a failed refresh.** A failed
+  refresh re-emits the last good snapshot as Unreachable, so a station stopped while the app was
+  away could enter "Recent" when the hub could not be reached on return. Fixed: only a Live state
+  is judged; test above. Row 25 is ⏳ because its Now Playing and Start Playback rows were not re-read.
+- **Open, cause unknown: a station chosen on the radio screen is sometimes not selected on
+  return, and Play stays disabled.** Seen once by the owner and once in the Pixel 5 run; not
+  reproduced. Recorded in `docs/backlog/start-playback-station-lost.md`.
 - Rows 28-30 need the user and were not done; row 27 and 31 were not possible (no failing station,
   no hub without radio).
+
+## Reviews
+
+| Mode | Date | Commit | Verdict | Notes |
+|---|---|---|---|---|
+| code | 2026-11-17 | daefce5 | CONCERNS | Tracker fix applied (see Issues); chip ✕ 40 dp and the selection-loss defect await the owner |
