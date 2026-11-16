@@ -27,7 +27,7 @@ Pure functions beside it:
 | `stationName(text)` | the name to search for: `%` removed, trimmed, at most 100 characters; null when empty |
 | `tagName(text)` | as `stationName`, with `/` removed too |
 | `mergePage(listed, page)` | `listed` plus the stations of `page` whose `uuid` is not yet listed, in page order |
-| `canLoadMore(nextOffset)` / `limitReached(nextOffset)` | `nextOffset != null && nextOffset < 10000` / `nextOffset != null && nextOffset >= 10000` |
+| `canLoadMore(nextOffset)` / `limitReached(nextOffset)` | `nextOffset != null && nextOffset < 10000` / `nextOffset != null && nextOffset >= 10000`. `canLoadMore` also ends the Tag sheet's paging |
 | `regionCountry(region, countries)` | the country whose code equals the phone's region ignoring case, or null |
 | `narrow(items, text)` | the items whose name contains the trimmed text ignoring case; all when blank |
 | `groupThousands(count)` | "6,965" |
@@ -73,12 +73,12 @@ recent first, each `uuid` once.
 |---|---|---|
 | `station` | `Station` | what will be added |
 | `routeId` | `String` | the playback being watched |
-| `startedAt` | `Long` | epoch ms when the start's answer arrived |
+| `activeSince` | `Long?` | epoch ms when the hub first reported the playback `Active`: the start's answer when its route is already `Active`, else set by the first refresh that shows it; null while it is still starting |
 
 | Function | Result |
 |---|---|
 | `addRecent(list, station)` | `station` first, any older entry with its `uuid` removed, cut to ten |
-| `judgeRecent(pending, snapshot, nowMillis)` | `Recent`, `Drop` or `Wait` ([research R8](research.md#r8-recent-stations-and-the-30-second-rule-fr-021-to-fr-024a)) |
+| `judgeRecent(pending, snapshot, nowMillis)` | `Recent`, `Drop` or `Wait(pending)`, where the entry carried by `Wait` has `activeSince` filled in when this snapshot is the first to show the route `Active` ([research R8](research.md#r8-recent-stations-and-the-30-second-rule-fr-021-to-fr-024a)) |
 
 `RECENT_AFTER_MILLIS = 30_000`, `RECENT_LIMIT = 10`, `RECENT_IN_START_PLAYBACK = 3`.
 
@@ -180,7 +180,7 @@ unchanged and also carries a station's address.
 | Field | Type | Meaning |
 |---|---|---|
 | `radio` | `RadioRows?` (new) | null ⇒ no "Or a radio station" section |
-| `selectedStation` | `Station?` (new) | excludes `selectedSourceId` and a non-empty `linkText`; cleared whenever `radio` becomes null after having been offered |
+| `selectedStation` | `Station?` (new) | excludes `selectedSourceId` and a non-empty `linkText`; cleared whenever radio is `NotOffered`, whatever it was before; kept but ignored (not played, not named on the Play button) while it is `Unknown` |
 | `content.sources` | `List<SourceOption>` | now passed through `hideListedStations` |
 | `openRadio` | `Boolean` (new) | one-shot request to push `Destination.Radio`; consumed by the screen |
 | `playLabel` | `PlayLabel` | `PlaySource(stationDisplayName, target)` for a station |
@@ -233,7 +233,9 @@ drawing: `("Play ", "MANGORADIO", " in Bedroom")`; `name` is empty for "Play", "
 query changed (name: after 500 ms; filter/order: at once) ─► LoadingFirst
   ├─ Ok ───────────────► Loaded (stations = page, nextOffset)
   ├─ Catalogue ────────► Loaded, problem = Catalogue ── Retry ─► LoadingFirst
-  ├─ HubUnreachable ───► refresh requested; repeated by itself when the hub answers again
+  ├─ HubUnreachable ───► session.awaitFreshSnapshot()
+  │                        ├─ a snapshot ─► as Catalogue (the hub answers, radio did not)
+  │                        └─ null ───────► no message; repeated once the hub answers again
   └─ Gone ─────────────► markGone, reportGone, exit = Gone
 Loaded, scrolled near the end, canLoadMore ─► LoadingMore
   ├─ Ok ───────────────► Loaded (mergePage); limitReached when nextOffset ≥ 10000
@@ -250,7 +252,8 @@ Play ─► PlaybackStarter.start(StartWhat.Station(S))
   └─ started (route r) ──► tracker.track(S, r) ; Now Playing(r)
         each refresh: judgeRecent
           ├─ r gone / Failed / another input ─► dropped
-          ├─ r Active and ≥ 30 s ─────────────► RadioStore.addRecent(S); dropped
+          ├─ r Active for the first time ─────► activeSince = now; wait
+          ├─ r Active and ≥ 30 s since then ──► RadioStore.addRecent(S); dropped
           └─ otherwise ───────────────────────► wait (also across background and restart)
 ```
 

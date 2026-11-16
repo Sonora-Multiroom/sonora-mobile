@@ -107,11 +107,13 @@ radio store, and the three small app-scoped objects every story reads.
   in-memory implementation for view-model tests, shaped like InMemoryHubAddressStore.kt). Failing
   tests: JSON round trips of recent stations, filters and pending entries; an unreadable value is
   absent (empty list, no filters), an unknown `order` reads as "Most voted"; `addRecent` keeps ten;
-  `removeRecent(uuid)` removes only that entry and touches no pending entry; `encodeStation` /
+  `removeRecent(uuid)` removes only that entry and touches no pending entry; a pending entry
+  round-trips with `activeSince` null and set; `encodeStation` /
   `decodeStation` round trip and `decodeStation` of garbage is null.
 - [ ] T007 [P] Create test/ui/session/RadioAvailabilityTest.kt with failing tests (research R3):
   starts `Unknown`; `refresh()` → `Offered` for an active `radio` extension, `NotOffered`
-  otherwise; a failed request leaves the state as it was; an answer for a repository that is no
+  otherwise; an error status or an unreadable answer → `NotOffered`; only an unreachable hub
+  leaves the state as it was; an answer for a repository that is no
   longer the session's is dropped; a changed hub address returns it to `Unknown`; `markGone()` →
   `NotOffered`.
 - [ ] T008 [P] Create test/ui/session/StationPickerTest.kt with failing tests: `pick` publishes the
@@ -124,7 +126,7 @@ radio store, and the three small app-scoped objects every story reads.
 
 - [ ] T010 Create main/domain/Radio.kt (after T003): `Station`, `StationQuery`, `StationOrder`
   (`MostVoted`, `Trending`, `NameAZ`), `StationPage`, `Country`, `Language`, `Tag`, `TagPage`,
-  `RadioFilters` (with `toQuery(name)`), `PendingStation` (`station`, `routeId`, `startedAt`) and
+  `RadioFilters` (with `toQuery(name)`), `PendingStation` (`station`, `routeId`, `activeSince: Long?`) and
   the pure functions and constants of T003 (`RADIO_PAGE_SIZE = 50`, the 10,000 limit,
   `RECENT_LIMIT = 10`), `radioOffered(inventory)`. Quote data-model.md for
   each field's rule (e.g. `uuid` blank ⇒ dropped; `codec` blank or `UNKNOWN` in any letter case ⇒
@@ -155,8 +157,8 @@ radio store, and the three small app-scoped objects every story reads.
   `dataStorePath` and hand it to both stores; `AppGraph(dataStorePath)` stays the production entry
   and `SonoraApplication` is not edited.
 - [ ] T018 Create main/ui/session/RadioAvailability.kt (after T007): `state: StateFlow<RadioOffer>`
-  (`Unknown`, `Offered`, `NotOffered`), `suspend refresh()`, `markGone()`; `Unknown` again when the
-  hub address changes. Wire it in AppGraph (the same file as T017 and T019: one after the other).
+  (`Unknown`, `Offered`, `NotOffered`), `suspend refresh()` (an error answer is `NotOffered`,
+  only `Unreachable` keeps the state), `markGone()`; `Unknown` again when the hub address changes. Wire it in AppGraph (the same file as T017 and T019: one after the other).
 - [ ] T019 Create main/ui/session/StationPicker.kt (after T008): `picked`, `gone`, `pick`,
   `reportGone`, `consumePicked`, `consumeGone`. Wire it in AppGraph.
 - [ ] T020 Add `Destination.Radio` (data object, saved as `radio`, not a tab, bottom bar hidden) in
@@ -213,7 +215,9 @@ Now Playing and Rooms name the station is User Story 2).
   listed again under the sources (`hideListedStations`); in fixed-target mode ("Change source…")
   the radio section is offered, and a station start goes to the fixed room or group with no
   target picked; tapping the "Change" row of a selected station that is not among the recent ones
-  raises `openRadio`.
+  raises `openRadio`; a station restored from saved state is ignored while availability is
+  `Unknown` (the Play label does not name it, Play does not start it) and is selected again once
+  it is `Offered`.
 - [ ] T026 [P] [US1] In test/ui/startplayback/StartPlaybackTextTest.kt add failing tests for
   `playLabelParts` (`("Play ", "MANGORADIO", " in Bedroom")`; the name is empty for "Play", "Play
   link in <target>" and "Starting…", whose whole text is in `before`; source names use the same
@@ -221,17 +225,19 @@ Now Playing and Rooms name the station is User Story 2).
 - [ ] T027 [P] [US1] Create test/ui/radio/RadioViewModelTest.kt with failing tests for the name
   search: the list loads without typing (first page, no filters, `MostVoted`); a typed name loads
   after 500 ms (virtual time) and `%` is not sent; only the latest text decides the list (an
-  earlier slow answer never replaces it); a blank name counts as empty; a trailing space loads
+  earlier slow answer never replaces it, and neither does a next-page answer still in flight when
+  the query changes); a blank name counts as empty; a trailing space loads
   nothing again; paging requests the next page within 10 rows of the end, drops duplicate `uuid`s,
   follows a page of only duplicates with the next request at once, stops at `nextOffset == null`
   and at 10,000; choosing a station calls `StationPicker.pick` and sets `exit = Chosen`; nothing is
   emitted after the view model is cleared; the typed name is kept in `SavedStateHandle`. The
   failure paths too, since every later story builds on them: a `Catalogue` failure keeps the
   listed stations and sets `problem`; Retry repeats the failed request (first page or next page)
-  and `limitReached` survives a failed and retried next page; `HubUnreachable` asks the session
-  for a refresh, shows no catalogue message while the session is unreachable and repeats the
-  request by itself when the hub answers again (if the session is live all the same, it is shown
-  as `Catalogue`); `Gone` calls `RadioAvailability.markGone()` and `StationPicker.reportGone()`
+  and `limitReached` survives a failed and retried next page; `HubUnreachable` is decided by
+  `session.awaitFreshSnapshot()`, never by the session's last known state (research R9): the
+  radio call fails while the session still says live and the following refresh fails too → no
+  catalogue message, and the request is repeated by itself after the next successful refresh;
+  the radio call fails and the following refresh succeeds → shown as `Catalogue` with Retry; `Gone` calls `RadioAvailability.markGone()` and `StationPicker.reportGone()`
   and sets `exit = Gone`; "No stations match" for an empty loaded list.
 - [ ] T028 [P] [US1] Create test/ui/radio/RadioTextTest.kt with failing tests for the wording and
   spoken labels of the screen and a station row ("Radio stations", "Station name", "Clear the
@@ -260,7 +266,8 @@ Now Playing and Rooms name the station is User Story 2).
   the 500 ms wait for a name and an immediate load for a filter; paging and `mergePage`; the
   session's connection; `StationPicker.pick`; the name in `SavedStateHandle`; all requests in
   `viewModelScope`. The three failure paths and Retry of T027 (`radioFailure`: `Catalogue` sets
-  `problem` and keeps the rows, `HubUnreachable`, `Gone`). Filters are read from `RadioStore`
+  `problem` and keeps the rows; `HubUnreachable` through `session.awaitFreshSnapshot()` as research
+  R9 "Telling a silent radio request from an unreachable hub" describes; `Gone`). Filters are read from `RadioStore`
   (none stored ⇒ no filter, `MostVoted`); the first-visit rule and the sheets come in US4.
 - [ ] T036 [P] [US1] Create main/ui/radio/StationRow.kt: the row of contracts/radio-ui.md "A
   station row" (54 dp, tile 38 dp in the stream colours, one-line name ending in "…", second line
@@ -358,12 +365,16 @@ them: both are under "Recent", the later first; a station stopped after a few se
 
 - [ ] T049 [P] [US3] In test/domain/RadioTest.kt add failing tests for `judgeRecent(pending,
   snapshot, nowMillis)`, every row of research R8: no live route with that id → `Drop`; input
-  missing or another address → `Drop`; status `Failed` → `Drop`; `Active` and ≥ 30,000 ms since the
-  start → `Recent`; `Starting` or younger than 30 s → `Wait`; a transfer keeps the route id and
-  the start time.
+  missing or another address → `Drop`; status `Failed` → `Drop`; `Active` with `activeSince` null
+  → `Wait` carrying the entry with `activeSince` = now; `Active` and ≥ 30,000 ms since
+  `activeSince` → `Recent`; `Starting`, or `Active` for less than 30 s → `Wait` unchanged; a route
+  that was `Starting` for 29 s and `Active` for 5 s is not `Recent`; a transfer keeps the route id
+  and `activeSince`.
 - [ ] T050 [P] [US3] Create test/ui/session/RecentStationTrackerTest.kt with failing tests, fake
-  session and virtual time: `track` stores a pending entry (also in the store); a refresh older
-  than 30 s adds the station first and drops the entry; a stop within 30 s adds nothing; a failed
+  session and virtual time: `track` stores a pending entry (also in the store) with `activeSince`
+  set when the answered route is `Active` and null when it is `Starting`; a `Starting` route gets
+  `activeSince` from the first refresh that shows it `Active`, and the changed entry is stored; a
+  refresh at least 30 s after `activeSince` adds the station first and drops the entry; a stop within 30 s adds nothing; a failed
   start never calls `track`; a pending entry made in this process is judged only by a refresh that
   started after the start's answer (the fence) and a restored one by any refresh; a pending entry
   restored from the store after the process was ended is judged on the first refresh; two stations
@@ -371,7 +382,8 @@ them: both are under "Recent", the later first; a station stopped after a few se
   at ten with each `uuid` once; the tracker never polls.
 - [ ] T051 [P] [US3] In test/ui/session/PlaybackStarterTest.kt add failing tests: a successful
   station start (also a recovered one, also when Start Playback was closed) calls
-  `tracker.track(station, routeId, fence)`; a source or a link start does not.
+  `tracker.track(station, route, fence)`; a source or a link start does not, also when the source
+  is a station another client started (spec Assumptions).
 - [ ] T052 [P] [US3] In test/ui/startplayback/StartPlaybackViewModelTest.kt add failing tests: up to
   three recent rows, most recent first, none when radio is not offered whatever the phone
   remembers; selecting a recent row selects the station without opening the radio screen; a
@@ -389,7 +401,7 @@ them: both are under "Recent", the later first; a station stopped after a few se
 
 - [ ] T054 [US3] In main/domain/Radio.kt add `judgeRecent`, `RECENT_AFTER_MILLIS = 30_000` and
   `RECENT_IN_START_PLAYBACK = 3` (T049).
-- [ ] T055 [US3] Create main/ui/session/RecentStationTracker.kt (T050): `track(station, routeId,
+- [ ] T055 [US3] Create main/ui/session/RecentStationTracker.kt (T050): `track(station, route,
   fence)`, judging on every successful session refresh, pending entries kept in `RadioStore`,
   read once at start-up. Create it in AppGraph beside `PlaybackStarter`.
 - [ ] T056 [US3] In main/ui/session/PlaybackStarter.kt call `tracker.track` when a station start
@@ -428,12 +440,14 @@ voted first; removing the tag shows all German stations again (quickstart §2 ro
   chosen; a stored value the catalogue no longer lists is still applied and shown.
 - [ ] T060 [P] [US4] In test/ui/radio/RadioViewModelTest.kt add failing sheet tests: Country and
   Language lists load once when the sheet first opens, are kept while the screen lives, and the
-  field narrows them on the phone; the Tag sheet pages 50 at a time, asks the hub for `name` 0.5 s
+  field narrows them on the phone; the Tag sheet pages 50 at a time and stops at `nextOffset == null` or
+  at 10,000 (`canLoadMore`, never requesting a larger offset), asks the hub for `name` 0.5 s
   after the last change with `%` and `/` removed, shows a chosen tag as the first row and leaves it
   out of its own place; the Order sheet has three rows ("Most voted", "Trending", "Name A–Z");
   opening with a value chosen reports that row as the one to show; choosing closes the sheet,
   applies and stores; Cancel, scrim and Back change nothing; a sheet that cannot load shows the
-  catalogue message inside itself and leaves the list untouched.
+  catalogue message inside itself and leaves the list untouched; with the hub unreachable (the
+  rule of T027) a sheet shows no catalogue message and loads again by itself when the hub answers.
 - [ ] T061 [P] [US4] In test/ui/radio/RadioTextTest.kt add failing tests: the chips' spoken
   removals ("Remove the country Ukraine", "Remove the tag jazz", "Remove the language german"),
   "Order: Most voted. Change the order", the list heading ("STATIONS IN <COUNTRY>" / "STATIONS"),
@@ -444,7 +458,7 @@ voted first; removing the tag shows all German stations again (quickstart §2 ro
 
 - [ ] T062 [US4] In `RadioViewModel` and RadioUiState.kt add the filters, the first-visit rule,
   `Clear filters`, the four sheet kinds (the state type is `FilterSheetState`) with `FilterRow(name, count, detail, selected)` (a country
-  row also carries its code), the tag paging and the 500 ms tag search; persist through
+  row also carries its code), the tag paging (ended by `canLoadMore`) and the 500 ms tag search; persist through
   `RadioStore.saveFilters` (T059, T060). The region comes from the `region` function of T040.
 - [ ] T063 [US4] Create main/ui/radio/FilterSheet.kt: a `ModalBottomSheet` in the style of the Move
   to room sheet (handle, radius 28, scrim), Sora 22 sp title, the 48 dp field (not for Order, at
@@ -492,7 +506,10 @@ states.
   refresh while still `Unknown`; a picker `gone` shows "Radio is no longer available on this hub"
   once, drops the radio rows and deselects a selected station; when the state leaves `Offered`
   for any other reason (a later answer says the extension is not active, the hub address changes)
-  the rows go and a selected station is deselected without a message; a start whose screen was
+  the rows go and a selected station is deselected without a message; a station restored from
+  saved state is deselected when the first answer is `NotOffered`, although this process never
+  saw `Offered`; availability is not asked again once any answer has arrived (an error answer is
+  `NotOffered`, so a failing extensions request adds nothing to the poll); a start whose screen was
   closed reports to Rooms through `AppMessages` as today.
 
 ### Implementation for User Story 5

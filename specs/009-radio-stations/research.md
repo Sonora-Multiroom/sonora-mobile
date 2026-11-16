@@ -76,13 +76,16 @@ factory and a second "follow the address" path for four read-only calls); the de
 
 - `refresh()` calls `HubRepository.extensions()`; an answer for a repository that is no longer the
   session's is dropped. `Offered` when the inventory has an extension whose id is `radio` (letter
-  case ignored) with status `Active`; otherwise `NotOffered`. A failed request leaves the state as
-  it was. The rule is one pure function, `radioOffered(inventory)`.
+  case ignored) with status `Active`; otherwise `NotOffered`. A request the hub answers with an error status (`Rejected`)
+  or an unreadable body (`Unexpected`) also gives `NotOffered`: a hub that cannot list its
+  extensions offers no radio. Only an unreachable hub leaves the state as it was. The rule for a
+  readable answer is one pure function, `radioOffered(inventory)`.
 - The state goes back to `Unknown` when the hub address changes.
 - `markGone()` sets `NotOffered` (called when a radio request shows the extension is gone, R9).
 - Start Playback's view model calls `refresh()` each time the screen becomes visible, and again
-  after each successful session refresh while the state is still `Unknown` (the hub was unreachable
-  when the screen opened). It shows the radio row and the recent stations only while the state is
+  after each successful session refresh while the state is still `Unknown`. That can only be
+  because the hub was unreachable when the screen opened, so the repeat ends with the first
+  answer of any kind and never adds a request to every poll. It shows the radio row and the recent stations only while the state is
   `Offered`.
 
 **Rationale**:
@@ -233,7 +236,9 @@ loading on a "Load more" button (the spec asks for loading on scroll).
   the view model while the radio screen lives. The field narrows it on the phone (the name
   contains the typed text, letter case ignored). Opening with a value chosen scrolls that row into
   view.
-- **Tag sheet**: paged from the hub (50 per page, next page on scroll, "Loading more tags…"). The
+- **Tag sheet**: paged from the hub (50 per page, next page on scroll, "Loading more tags…"). Paging stops like the station list's, when
+  `nextOffset` is null or reaches 10,000 (`canLoadMore`): the hub refuses a larger offset with 400.
+  No note is shown there; a tag that far down is found by typing. The
   field sends `name` after the same 500 ms wait; `tagName(text)` removes `%` and `/`, trims and
   cuts to 100 characters. A chosen tag is shown as the first row, selected, and is left out of its
   place further down, since it may be thousands of rows away; its count shows once a loaded page
@@ -262,8 +267,10 @@ the catalogue's English names); a platform `expect fun` for the region (not need
 
 - When a station start succeeds (also when the answer was recovered from a snapshot, and also when
   Start Playback was already closed), `PlaybackStarter` calls
-  `tracker.track(station, routeId, fence)`. The tracker stores a **pending** entry: the station,
-  the route id and the wall-clock time of that moment. Pending entries are kept on the phone too
+  `tracker.track(station, route, fence)`. The tracker stores a **pending** entry: the station,
+  the route id and `activeSince`, the wall-clock time at which the hub first reported the
+  playback as `Active`: the moment of the answer when the answered route is already `Active`,
+  otherwise empty until a refresh shows it so. Pending entries are kept on the phone too
   (R10), so one survives the app's process being ended in the background.
 - On every successful session refresh the tracker judges each pending entry with one pure
   function, `judgeRecent(pending, snapshot, nowMillis)`:
@@ -273,8 +280,9 @@ the catalogue's English names); a platform `expect fun` for the region (not need
   | no live route with that id | drop |
   | the route's input is missing, or its address is not the same station | drop |
   | the route's status is `Failed` | drop |
-  | status `Active` and at least 30,000 ms since the start | **recent**: add, then drop the pending entry |
-  | anything else (still `Starting`, or younger than 30 s) | wait |
+  | status `Active` and `activeSince` empty | wait, with `activeSince` set to now (and stored) |
+  | status `Active` and at least 30,000 ms since `activeSince` | **recent**: add, then drop the pending entry |
+  | anything else (still `Starting`, or `Active` for less than 30 s) | wait |
 
 - A pending entry made in this process is judged only by a refresh that started after the start's
   answer (the fence rule of `HubSession`, with the `startedSeq` the starter already captures). One
@@ -291,7 +299,10 @@ Why each spec case holds:
 | stopped, replaced or ended within 30 s | the route is gone from the next snapshot: drop |
 | a failed start | `track` is never called |
 | left the app before 30 s, still playing on return | pending survived; first refresh: `Active`, older than 30 s |
-| moved to another room | a transfer keeps the route id (API 0.1.22) and the start time is not touched |
+| sat in `Starting` for most of 30 s, then played briefly and died | the count began only at the first `Active`, so it is dropped before 30 s of play |
+| left the app while still `Starting`, playing on return | `activeSince` is set by the first refresh on return; it qualifies 30 s later if it still plays (the app cannot know when it began) |
+| moved to another room | a transfer keeps the route id (API 0.1.22) and `activeSince` is not touched |
+| a station picked from "Or pick a source" | started as a hub source, never tracked (spec Assumptions) |
 | several stations sampled in a row | each start replaces the route before it: only the last survives |
 | two stations in two rooms | two pending entries, each with its own route id |
 | started again and stopped sooner | nothing is added, so its place does not change |
@@ -340,8 +351,22 @@ radioFailure(error: HubError): RadioFailure
 | `RadioFailure` | What the radio screen does |
 |---|---|
 | `Catalogue` | "The station catalogue isn't answering" with Retry, above the rows already listed (or inside the sheet that asked) |
-| `HubUnreachable` | asks the session for a refresh. While the session says the hub is unreachable, the app's usual stale banner shows and no catalogue message; when the hub answers again, the failed request is repeated by itself. If the session is live all the same, it is shown as `Catalogue` |
+| `HubUnreachable` | decided by a **fresh** refresh, never by the session's last known state (see below): the hub answers ⇒ shown as `Catalogue`; it does not ⇒ the app's usual stale banner, no catalogue message, and the failed request is repeated by itself once the hub answers again |
 | `Gone` | `RadioAvailability.markGone()`, then the screen closes; Start Playback shows "Radio is no longer available on this hub" once, drops its radio rows and deselects a selected station |
+
+**Telling a silent radio request from an unreachable hub.** When the phone loses its network, the
+radio request fails before the 2.5 s poll does, so the session still says "live" from its last
+success. Reading `session.state` at that moment would blame the catalogue for a hub outage. The
+view model therefore calls `session.awaitFreshSnapshot()` (it asks for a refresh and returns the
+first one that *started after the call*, or null after 5 s):
+
+- a snapshot comes back: the hub is reachable and only the radio request got no answer: show
+  `Catalogue` with Retry;
+- null: the hub is unreachable. Show nothing of the catalogue (the session's own state brings the
+  stale banner), wait for the next successful refresh, then repeat the failed request once.
+
+A filter sheet follows the same rule: with the hub unreachable it shows no catalogue card, keeps
+what it lists (or its loading rows) and repeats its request when the hub answers again.
 
 A 400 can only mean an app bug (R6 and R7 clean every value); it is shown as `Catalogue`, never
 as "invalid parameter" (SC-007). The hub's `title` and `detail` never leave `rejection()`.
@@ -363,7 +388,7 @@ an in-memory one for tests.
 |---|---|---|
 | `radio_recent` | JSON array of stations, most recent first | 10 |
 | `radio_filters` | JSON object: country (code, name), tag, language, order; absent before the first visit | |
-| `radio_pending` | JSON array of pending entries: station, route id, start time (epoch ms) | pruned by every judgement |
+| `radio_pending` | JSON array of pending entries: station, route id, `activeSince` (epoch ms, absent while the playback is still starting) | pruned by every judgement |
 
 - The app keeps one preferences file and DataStore allows one instance per file, so `AppGraph`
   creates the `DataStore<Preferences>` once and hands it to both `DataStoreHubAddressStore` (whose
@@ -431,6 +456,11 @@ key (a station is not navigation state, and the stack would have to be rewritten
   name may shrink and end in "…". This applies to source names too, which the single truncated
   text cuts at the end today, hiding the target.
 - **Saved state**: the selected station is kept in `SavedStateHandle` as JSON (R10).
+- **A selected station counts only while radio is offered.** The rule looks at the present state,
+  not at what it was before: whenever the state is `NotOffered`, a selected station is deselected
+  (also one restored from saved state in a process that never saw `Offered`); while it is
+  `Unknown`, a restored selection is kept but ignored, so Play neither names nor starts it until
+  the hub has answered.
 - **Radio stops being offered** (the state leaves `Offered`, by a later answer of the extensions
   request, by `Gone`, or by a change of hub): the section disappears and a selected station is
   deselected, so nothing is selected that the screen does not show (FR-022b).

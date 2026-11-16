@@ -428,9 +428,11 @@ radio screen: a plain message and a Retry appear instead of stations.
   phone and then played for at least 30 seconds, most recent first, each once, with what a station
   row shows. A station that failed to start, or stopped playing for any reason before 30 seconds
   had passed, MUST NOT be added and MUST NOT change the order.
-- **FR-021a**: The 30 seconds count from the moment the station started playing and are judged by
-  what the hub reports: the station qualifies once the app sees that playback still going at least
-  30 seconds after its start. Moving it to another room does not restart the count. When the app
+- **FR-021a**: The 30 seconds count from the moment the station started playing, which is the
+  moment the app first learns from the hub that the playback is playing (not merely starting),
+  and are judged by what the hub reports: the station qualifies once the app sees that playback
+  still going at least 30 seconds after that moment. Time a playback spends starting does not
+  count. Moving it to another room does not restart the count. When the app
   was not in front at that moment, it judges on its return, and only if the same playback still
   goes on.
 - **FR-022**: The radio screen MUST show them under "Recent" above the list while the search
@@ -552,6 +554,11 @@ radio screen: a plain message and a Retry appear instead of stations.
   anyone hears it.
 - **A station whose first 30 seconds end while the app is closed, and which has stopped before the
   app is opened again**, is not added: the app only knows what the hub reports while it is open.
+- **"Started from this phone" means chosen as a station** in the radio section of Start Playback
+  (the radio screen or a recent row). A station that another client started and that the user
+  then picks from "Or pick a source" is started as that hub source and does not enter "Recent":
+  the source carries no country, codec or bitrate, so its "Recent" row would differ from the
+  others. It can be found by search and enters "Recent" from there (decided 2026-11-16).
 - **"Recent" holds what the phone knew** when the station was started (name and second line). It
   is not refreshed from the catalogue.
 - **The first-visit country** comes from the phone's region setting. No location permission is

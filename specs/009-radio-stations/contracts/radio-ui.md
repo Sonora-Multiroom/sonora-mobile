@@ -39,6 +39,7 @@ know yet, and on a hub without radio, the screen is exactly as before this featu
 | Station could not be started | The screen stays, the station and the target stay selected, and the snackbar says "Couldn't start <station>", as link failures are shown. No cause is given. The canvas's `startFailed` state (a line above Play) is not built: see [research R5](../research.md#r5-starting-a-station-fr-015-to-fr-020) |
 | Other failures of a station start | The existing snackbar and wording ("<room> is turned off", "<room> can't play more at once", "<target> is no longer on the hub", "Couldn't reach the hub") |
 | Radio went away (reported by the radio screen) | Snackbar "Radio is no longer available on this hub"; the section disappears; a selected station is deselected |
+| The screen is restored with a station selected | Until the hub has said whether it offers radio, the station is neither drawn nor named on Play, and Play does not start it; then it shows selected again, or is deselected if radio is not offered |
 | Radio stops being offered for any other reason (a later answer of the hub, another hub address) | The section disappears and a selected station is deselected, without a message |
 | A station of the section that also plays | It is left out of "Or pick a source", so it shows once. A source that is selected is never left out |
 | Restored by the system | The same station selected |
@@ -82,12 +83,13 @@ handle, the scrim).
 | Rows | Min height 52 dp, radius 14: the name (15 sp semibold, one line, "…") and the station count at the right (13 sp, tabular digits, thousands grouped with a comma), which never moves or shrinks. The chosen one has the `selected` background and outline and its count in `accent`. Role radio button |
 | Country | Every country, largest first. The field narrows the list on the phone. Names as the catalogue gives them, in English |
 | Language | Every language, largest first; narrowed on the phone; names as given |
-| Tag | The most used tags first, 50 at a time; "Loading more tags…" while the next page loads. The field asks the hub 0.5 s after the last change; a typed `%` or `/` does not appear. A chosen tag is the first row |
+| Tag | The most used tags first, 50 at a time; "Loading more tags…" while the next page loads. The field asks the hub 0.5 s after the last change; a typed `%` or `/` does not appear. A chosen tag is the first row. Paging ends at the last page or at offset 10,000, without a note |
 | Order | No field, no counts, three rows: "Most voted" with "The catalogue's all-time favourites", "Trending" with "Most plays in the last 24 hours", "Name A–Z" |
 | Opening with a value chosen | That row is in view |
 | Choosing a row | Closes the sheet, applies the value, stores it and reloads the list from its first page |
 | Cancel | "Cancel" at the bottom (44 dp), the scrim and Back close the sheet with nothing changed |
 | Cannot load | The catalogue card with Retry inside the sheet; the list behind is untouched |
+| Hub unreachable while a sheet is open | No catalogue card; the sheet keeps what it lists (or its loading rows) and loads again by itself when the hub answers |
 | Loading | Placeholder rows as on the radio screen |
 
 ## Rooms, Now Playing, Settings (a station that plays)
