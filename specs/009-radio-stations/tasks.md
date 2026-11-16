@@ -454,7 +454,7 @@ voted first; removing the tag shows all German stations again (quickstart §2 ro
 
 ### Tests for User Story 4 (write first, see them fail)
 
-- [ ] T059 [P] [US4] In test/ui/radio/RadioViewModelTest.kt add failing tests: first visit (no
+- [X] T059 [P] [US4] In test/ui/radio/RadioViewModelTest.kt add failing tests: first visit (no
   stored filters) loads the countries, matches the phone's region ignoring case, stores that
   country or none, then loads stations; if the country list fails nothing is stored, and the
   failure follows the rule of T027: the catalogue message with Retry for a catalogue failure;
@@ -464,7 +464,7 @@ voted first; removing the tag shows all German stations again (quickstart §2 ro
   of order reload the first page at once; several filters and a name are sent together; "Clear
   filters" removes country, tag and language, keeps order and name, and is offered only when one is
   chosen; a stored value the catalogue no longer lists is still applied and shown.
-- [ ] T060 [P] [US4] In test/ui/radio/RadioViewModelTest.kt add failing sheet tests: Country and
+- [X] T060 [P] [US4] In test/ui/radio/RadioViewModelTest.kt add failing sheet tests: Country and
   Language lists load once when the sheet first opens, are kept while the screen lives, and the
   field narrows them on the phone; the Tag sheet pages 50 at a time and stops at `nextOffset == null` or
   at 10,000 (`canLoadMore`, never requesting a larger offset), asks the hub for `name` 0.5 s
@@ -474,7 +474,7 @@ voted first; removing the tag shows all German stations again (quickstart §2 ro
   applies and stores; Cancel, scrim and Back change nothing; a sheet that cannot load shows the
   catalogue message inside itself and leaves the list untouched; with the hub unreachable (the
   rule of T027) a sheet shows no catalogue message and loads again by itself when the hub answers.
-- [ ] T061 [P] [US4] In test/ui/radio/RadioTextTest.kt add failing tests: the chips' spoken
+- [X] T061 [P] [US4] In test/ui/radio/RadioTextTest.kt add failing tests: the chips' spoken
   removals ("Remove the country Ukraine", "Remove the tag jazz", "Remove the language german"),
   "Order: Most voted. Change the order", the list heading ("STATIONS IN <COUNTRY>" / "STATIONS"),
   the sheet titles, field labels ("Search countries", "Search tags", "Search languages") and the
@@ -482,11 +482,11 @@ voted first; removing the tag shows all German stations again (quickstart §2 ro
 
 ### Implementation for User Story 4
 
-- [ ] T062 [US4] In `RadioViewModel` and RadioUiState.kt add the filters, the first-visit rule,
+- [X] T062 [US4] In `RadioViewModel` and RadioUiState.kt add the filters, the first-visit rule,
   `Clear filters`, the four sheet kinds (the state type is `FilterSheetState`) with `FilterRow(name, count, detail, selected)` (a country
   row also carries its code), the tag paging (ended by `canLoadMore`) and the 500 ms tag search; persist through
   `RadioStore.saveFilters` (T059, T060). The region comes from the `region` function of T040.
-- [ ] T063 [US4] Create main/ui/radio/FilterSheet.kt: a `ModalBottomSheet` in the style of the Move
+- [X] T063 [US4] Create main/ui/radio/FilterSheet.kt: a `ModalBottomSheet` in the style of the Move
   to room sheet (handle, radius 28, scrim), Sora 22 sp title, the 48 dp field (not for Order, at
   most 100 characters, `%` and `/` dropped in the tag field), rows of at least 52 dp with the name
   on one line ending in "…" and the count at the right never shrinking (thousands grouped, chosen
@@ -494,7 +494,7 @@ voted first; removing the tag shows all German stations again (quickstart §2 ro
   view on opening, "Loading more tags…", the Order sheet without field or counts, "Cancel" at the
   bottom. Add the pair `textMuted` on `surface` (counts) to test/ui/theme/ContrastTest.kt if T036
   did not already.
-- [ ] T064 [US4] In RadioScreen.kt add the chips row (Country, Tag, Language: a `surface` pill with
+- [X] T064 [US4] In RadioScreen.kt add the chips row (Country, Tag, Language: a `surface` pill with
   a chevron when not chosen; when chosen `selected` with the value at most 120 dp wide ending in
   "…", an 40 × 44 dp ✕ and the value opening the sheet; the row scrolls sideways if needed), the
   list heading "STATIONS IN <COUNTRY>" and the 44 dp order control with the sort icon at its

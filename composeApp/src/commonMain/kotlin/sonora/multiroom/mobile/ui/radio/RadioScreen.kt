@@ -1,5 +1,6 @@
 package sonora.multiroom.mobile.ui.radio
 
+import sonora.multiroom.mobile.domain.RadioFilters
 import sonora.multiroom.mobile.domain.stationDetail
 import sonora.multiroom.mobile.ui.rooms.IconCircleButton
 import sonora.multiroom.mobile.ui.rooms.StaleBanner
@@ -8,6 +9,9 @@ import sonora.multiroom.mobile.ui.theme.SonoraIcons
 import sonora.multiroom.mobile.ui.theme.SonoraTheme
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -16,7 +20,10 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
@@ -36,6 +43,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
@@ -46,6 +54,9 @@ import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.Lifecycle
@@ -107,12 +118,29 @@ fun RadioScreen(
             onClear = viewModel::onClearName,
             modifier = Modifier.padding(horizontal = 20.dp, vertical = 12.dp),
         )
+        FilterChips(
+            filters = state.filters,
+            onOpen = viewModel::onOpenSheet,
+            onRemove = viewModel::onRemoveFilter,
+            modifier = Modifier.padding(bottom = 8.dp),
+        )
         StationListView(
             state,
+            onOrder = { viewModel.onOpenSheet(FilterSheetState.Kind.Order) },
+            onClearFilters = viewModel::onClearFilters,
             onChoose = viewModel::onChoose,
             onListPosition = viewModel::onListPosition,
             onRemoveRecent = viewModel::removeRecent,
             modifier = Modifier.weight(1f),
+        )
+    }
+    state.sheet?.let { sheet ->
+        FilterSheet(
+            state = sheet,
+            onSearch = viewModel::onSheetSearch,
+            onChoose = viewModel::onSheetChoose,
+            onListPosition = viewModel::onSheetListPosition,
+            onDismiss = viewModel::onCloseSheet,
         )
     }
 }
@@ -120,6 +148,8 @@ fun RadioScreen(
 @Composable
 private fun StationListView(
     state: RadioUiState,
+    onOrder: () -> Unit,
+    onClearFilters: () -> Unit,
     onChoose: (sonora.multiroom.mobile.domain.Station) -> Unit,
     onListPosition: (Int) -> Unit,
     onRemoveRecent: (String) -> Unit,
@@ -165,12 +195,46 @@ private fun StationListView(
             }
         }
         item(key = "heading") {
-            Text(
-                RadioText.LIST_HEADING,
-                style = type.sectionLabel,
-                color = colors.textMuted,
-                modifier = Modifier.padding(start = 8.dp, top = 4.dp, bottom = 8.dp),
-            )
+            Row(
+                modifier = Modifier.fillMaxWidth().padding(start = 8.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                Text(
+                    listHeading(state.filters.country),
+                    style = type.sectionLabel,
+                    color = colors.textMuted,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.weight(1f),
+                )
+                OrderControl(state.filters.order, onOrder)
+            }
+        }
+        if (list.empty) {
+            item(key = "empty") {
+                Column(
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 16.dp),
+                    verticalArrangement = Arrangement.spacedBy(6.dp),
+                ) {
+                    Text(RadioText.NO_MATCH, style = type.cardTitle.copy(fontSize = 17.sp), color = colors.text)
+                    Text(RadioText.NO_MATCH_HINT, style = type.body14, color = colors.textMuted)
+                    if (state.filters.narrowed) {
+                        Box(
+                            modifier = Modifier
+                                .padding(top = 8.dp)
+                                .heightIn(min = 44.dp)
+                                .clip(SonoraTheme.shapes.pill)
+                                .background(colors.surface)
+                                .clickable(role = Role.Button, onClick = onClearFilters)
+                                .padding(horizontal = 18.dp),
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            Text(RadioText.CLEAR_FILTERS, style = type.body15.copy(fontWeight = FontWeight.SemiBold), color = colors.textSoft)
+                        }
+                    }
+                }
+            }
         }
         if (list.phase == ListPhase.LoadingFirst) {
             item(key = "placeholders") {
@@ -203,6 +267,103 @@ private fun StationListView(
 }
 
 private const val PLACEHOLDER_ROWS = 6
+
+/** The order's name and the sort icon, 44 dp high; opens the Order sheet. */
+@Composable
+private fun OrderControl(order: sonora.multiroom.mobile.domain.StationOrder, onClick: () -> Unit) {
+    val colors = SonoraTheme.colors
+    Row(
+        modifier = Modifier
+            .heightIn(min = 44.dp)
+            .clip(SonoraTheme.shapes.pill)
+            .clickable(role = Role.Button, onClick = onClick)
+            .semantics { contentDescription = orderControlLabel(order) }
+            .padding(horizontal = 8.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(6.dp),
+    ) {
+        Text(orderName(order), style = SonoraTheme.type.body13.copy(fontWeight = FontWeight.Medium), color = colors.textSoft, maxLines = 1)
+        Icon(SonoraIcons.Sort, contentDescription = null, tint = colors.textSoft, modifier = Modifier.size(18.dp))
+    }
+}
+
+/** Country, Tag, Language in one row that scrolls sideways when it must. */
+@Composable
+private fun FilterChips(
+    filters: RadioFilters,
+    onOpen: (FilterSheetState.Kind) -> Unit,
+    onRemove: (FilterSheetState.Kind) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Row(
+        modifier = modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).padding(horizontal = 20.dp),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        FilterChip(FilterSheetState.Kind.Country, filters.country?.name, onOpen, onRemove)
+        FilterChip(FilterSheetState.Kind.Tag, filters.tag, onOpen, onRemove)
+        FilterChip(FilterSheetState.Kind.Language, filters.language, onOpen, onRemove)
+    }
+}
+
+@Composable
+private fun FilterChip(
+    kind: FilterSheetState.Kind,
+    value: String?,
+    onOpen: (FilterSheetState.Kind) -> Unit,
+    onRemove: (FilterSheetState.Kind) -> Unit,
+) {
+    val colors = SonoraTheme.colors
+    val type = SonoraTheme.type
+    val shape = SonoraTheme.shapes.pill
+    if (value == null) {
+        Row(
+            modifier = Modifier
+                .height(44.dp)
+                .clip(shape)
+                .background(colors.surface, shape)
+                .clickable(role = Role.Button) { onOpen(kind) }
+                .padding(start = 16.dp, end = 12.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(6.dp),
+        ) {
+            Text(RadioText.sheetTitle(kind), style = type.body14.copy(fontWeight = FontWeight.Medium), color = colors.textSoft)
+            Icon(SonoraIcons.ChevronDown, contentDescription = null, tint = colors.textSoft, modifier = Modifier.size(16.dp))
+        }
+    } else {
+        Row(
+            modifier = Modifier
+                .height(44.dp)
+                .clip(shape)
+                .background(colors.selectedBg, shape)
+                .border(1.dp, colors.selectedOutline, shape),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text(
+                value,
+                style = type.body14.copy(fontWeight = FontWeight.SemiBold),
+                color = colors.text,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier
+                    .widthIn(max = 120.dp)
+                    .heightIn(min = 44.dp)
+                    .clickable(role = Role.Button) { onOpen(kind) }
+                    .semantics { contentDescription = "${RadioText.sheetTitle(kind)}: $value" }
+                    .padding(start = 16.dp)
+                    .wrapContentHeight(Alignment.CenterVertically),
+            )
+            Box(
+                modifier = Modifier
+                    .size(width = 40.dp, height = 44.dp)
+                    .clickable(role = Role.Button) { onRemove(kind) }
+                    .semantics { contentDescription = removeFilterLabel(kind, value) },
+                contentAlignment = Alignment.Center,
+            ) {
+                Icon(SonoraIcons.Close, contentDescription = null, tint = colors.accent, modifier = Modifier.size(16.dp))
+            }
+        }
+    }
+}
 
 /** The 52 dp search field. Its keyboard action only hides the keyboard: the list follows the text by itself. */
 @Composable

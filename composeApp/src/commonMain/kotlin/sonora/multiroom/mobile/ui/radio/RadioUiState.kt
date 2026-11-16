@@ -32,9 +32,31 @@ data class StationList(
 /** How the radio screen is over; the screen consumes it and navigation pops. */
 enum class RadioExit { Chosen, Gone }
 
-/** The open sheet; filled in with the filters (MOB-009, User Story 4). */
-data class FilterSheetState(val kind: Kind) {
+/** One row of a filter sheet. A country row carries its [code]; an Order row the order's name. */
+data class FilterRow(
+    val name: String,
+    val count: Long?,
+    val detail: String?,
+    val selected: Boolean,
+    val code: String? = null,
+)
+
+/** The open sheet and what it lists. */
+data class FilterSheetState(
+    val kind: Kind,
+    val searchText: String = "",
+    val rows: List<FilterRow> = emptyList(),
+    /** Placeholder rows instead of the list. */
+    val loading: Boolean = false,
+    /** "Loading more tags…" under the last row. */
+    val loadingMore: Boolean = false,
+    /** `Catalogue` shows the message with Retry inside the sheet. */
+    val problem: RadioFailure? = null,
+) {
     enum class Kind { Country, Tag, Language, Order }
+
+    /** The row to bring into view on opening. */
+    val chosenIndex: Int? get() = rows.indexOfFirst { it.selected }.takeIf { it >= 0 }
 }
 
 data class RadioUiState(

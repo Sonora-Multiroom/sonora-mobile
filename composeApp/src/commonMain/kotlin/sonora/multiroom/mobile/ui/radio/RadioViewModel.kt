@@ -3,9 +3,16 @@ package sonora.multiroom.mobile.ui.radio
 import sonora.multiroom.mobile.data.HubRepository
 import sonora.multiroom.mobile.data.HubResult
 import sonora.multiroom.mobile.data.RadioStore
+import sonora.multiroom.mobile.domain.Country
+import sonora.multiroom.mobile.domain.Language
 import sonora.multiroom.mobile.domain.RadioFilters
+import sonora.multiroom.mobile.domain.StationOrder
+import sonora.multiroom.mobile.domain.Tag
+import sonora.multiroom.mobile.domain.TagPage
+import sonora.multiroom.mobile.domain.narrow
+import sonora.multiroom.mobile.domain.regionCountry
+import sonora.multiroom.mobile.domain.tagName
 import sonora.multiroom.mobile.domain.Station
-import sonora.multiroom.mobile.domain.StationPage
 import sonora.multiroom.mobile.domain.StationQuery
 import sonora.multiroom.mobile.domain.canLoadMore
 import sonora.multiroom.mobile.domain.limitReached
@@ -21,7 +28,9 @@ import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -46,7 +55,7 @@ class RadioViewModel(
     private val picker: StationPicker,
     private val store: RadioStore,
     /** The phone's region, for the first visit's country (filters, MOB-009). */
-    @Suppress("unused") private val region: () -> String,
+    private val region: () -> String,
 ) : ViewModel() {
     private val initialName = (savedState.get<String>(NAME_KEY) ?: "").let(::cleanField)
 
@@ -80,9 +89,13 @@ class RadioViewModel(
             }
         }
         viewModelScope.launch {
-            val stored = store.filters.first() ?: RadioFilters()
-            _state.update { it.copy(filters = stored) }
-            filters.value = stored
+            val stored = store.filters.first()
+            if (stored != null) {
+                _state.update { it.copy(filters = stored) }
+                filters.value = stored
+            } else {
+                firstVisit()
+            }
         }
         viewModelScope.launch {
             // A change of the name waits for the typing to stop; a change of filter or order does not.
@@ -116,6 +129,242 @@ class RadioViewModel(
     /** Forgets one recent station at once; nothing else changes, not even a playback. */
     fun removeRecent(uuid: String) {
         viewModelScope.launch { store.removeRecent(uuid) }
+    }
+
+    // ---- The filters ---------------------------------------------------------------------------
+
+    /**
+     * No filters stored yet: the country list is asked for first, the country of the phone's region
+     * (if the catalogue lists it) is chosen and stored, and only then the stations load. If the list
+     * cannot be had nothing is stored, so the next opening is a first visit again.
+     */
+    private suspend fun firstVisit() {
+        retryAction = {
+            retryJob?.cancel()
+            retryJob = viewModelScope.launch { firstVisit() }
+        }
+        _state.update { it.copy(list = StationList(phase = ListPhase.LoadingFirst)) }
+        request(
+            call = { it.radioCountries() },
+            onOk = { list ->
+                val chosen = RadioFilters(country = regionCountry(region(), list))
+                store.saveFilters(chosen)
+                _state.update { it.copy(filters = chosen) }
+                filters.value = chosen
+            },
+            onCatalogue = { _state.update { it.copy(list = StationList(phase = ListPhase.Loaded, problem = RadioFailure.Catalogue)) } },
+        )
+    }
+
+    /** Applies and stores a change; the list reloads from its first page at once. */
+    private fun setFilters(next: RadioFilters) {
+        if (next == _state.value.filters) return
+        _state.update { it.copy(filters = next) }
+        filters.value = next
+        viewModelScope.launch { store.saveFilters(next) }
+    }
+
+    fun onRemoveFilter(kind: FilterSheetState.Kind) {
+        val f = _state.value.filters
+        setFilters(
+            when (kind) {
+                FilterSheetState.Kind.Country -> f.copy(country = null)
+                FilterSheetState.Kind.Tag -> f.copy(tag = null)
+                FilterSheetState.Kind.Language -> f.copy(language = null)
+                FilterSheetState.Kind.Order -> f
+            },
+        )
+    }
+
+    /** Removes country, tag and language; keeps the order and the typed name. */
+    fun onClearFilters() = setFilters(_state.value.filters.cleared())
+
+    // ---- The sheets ----------------------------------------------------------------------------
+
+    private var countries: List<Country>? = null
+    private var languages: List<Language>? = null
+    private var tags: List<Tag> = emptyList()
+    private var tagNext: Int? = null
+    private var tagsFor: String? = null
+    private var sheetJob: Job? = null
+    private var tagSearchJob: Job? = null
+    private var sheetRetry: (() -> Unit)? = null
+
+    private fun updateSheet(change: (FilterSheetState) -> FilterSheetState) {
+        _state.update { s -> s.sheet?.let { s.copy(sheet = change(it)) } ?: s }
+    }
+
+    fun onOpenSheet(kind: FilterSheetState.Kind) {
+        sheetJob?.cancel()
+        tagSearchJob?.cancel()
+        val cached = when (kind) {
+            FilterSheetState.Kind.Country -> countries != null
+            FilterSheetState.Kind.Language -> languages != null
+            else -> true
+        }
+        _state.update { it.copy(sheet = FilterSheetState(kind, loading = !cached)) }
+        rebuildSheet()
+        when (kind) {
+            FilterSheetState.Kind.Order -> Unit
+            FilterSheetState.Kind.Country -> if (countries == null) loadCountries()
+            FilterSheetState.Kind.Language -> if (languages == null) loadLanguages()
+            FilterSheetState.Kind.Tag -> loadTagsFirst(null)
+        }
+    }
+
+    /** Cancel, the scrim and Back: nothing changes. */
+    fun onCloseSheet() {
+        sheetJob?.cancel()
+        tagSearchJob?.cancel()
+        _state.update { it.copy(sheet = null) }
+    }
+
+    fun onSheetSearch(text: String) {
+        val sheet = _state.value.sheet ?: return
+        when (sheet.kind) {
+            FilterSheetState.Kind.Order -> return
+            FilterSheetState.Kind.Tag -> {
+                val clean = text.replace("%", "").replace("/", "").take(100)
+                updateSheet { it.copy(searchText = clean) }
+                tagSearchJob?.cancel()
+                tagSearchJob = viewModelScope.launch {
+                    delay(NAME_WAIT_MILLIS)
+                    loadTagsFirst(tagName(clean))
+                }
+            }
+            else -> {
+                updateSheet { it.copy(searchText = text.take(100)) }
+                rebuildSheet()
+            }
+        }
+    }
+
+    fun onSheetChoose(row: FilterRow) {
+        val sheet = _state.value.sheet ?: return
+        val f = _state.value.filters
+        val next = when (sheet.kind) {
+            FilterSheetState.Kind.Country -> row.code?.let { f.copy(country = Country(it, row.name, row.count ?: 0)) }
+            FilterSheetState.Kind.Tag -> f.copy(tag = row.name)
+            FilterSheetState.Kind.Language -> f.copy(language = row.name)
+            FilterSheetState.Kind.Order -> StationOrder.entries.firstOrNull { it.name == row.code }?.let { f.copy(order = it) }
+        }
+        onCloseSheet()
+        if (next != null) setFilters(next)
+    }
+
+    fun retrySheet() {
+        sheetRetry?.invoke()
+    }
+
+    /** The tag sheet scrolled: [lastVisible] is the index of the last row on screen. */
+    fun onSheetListPosition(lastVisible: Int) {
+        val sheet = _state.value.sheet ?: return
+        if (sheet.kind != FilterSheetState.Kind.Tag || sheet.loading || sheet.loadingMore || sheet.problem != null) return
+        if (!canLoadMore(tagNext) || lastVisible < sheet.rows.size - NEAR_END_ROWS) return
+        loadTagsNext()
+    }
+
+    private fun sheetProblem() = updateSheet { it.copy(loading = false, loadingMore = false, problem = RadioFailure.Catalogue) }
+
+    private fun loadCountries() {
+        sheetRetry = { loadCountries() }
+        updateSheet { it.copy(loading = true, problem = null) }
+        sheetJob = viewModelScope.launch {
+            request(
+                call = { it.radioCountries() },
+                onOk = { list ->
+                    countries = list
+                    updateSheet { it.copy(loading = false) }
+                    rebuildSheet()
+                },
+                onCatalogue = ::sheetProblem,
+            )
+        }
+    }
+
+    private fun loadLanguages() {
+        sheetRetry = { loadLanguages() }
+        updateSheet { it.copy(loading = true, problem = null) }
+        sheetJob = viewModelScope.launch {
+            request(
+                call = { it.radioLanguages() },
+                onOk = { list ->
+                    languages = list
+                    updateSheet { it.copy(loading = false) }
+                    rebuildSheet()
+                },
+                onCatalogue = ::sheetProblem,
+            )
+        }
+    }
+
+    private fun loadTagsFirst(name: String?) {
+        sheetJob?.cancel()
+        tags = emptyList()
+        tagNext = null
+        tagsFor = name
+        sheetRetry = { loadTagsFirst(name) }
+        updateSheet { it.copy(loading = true, loadingMore = false, problem = null) }
+        rebuildSheet()
+        sheetJob = viewModelScope.launch {
+            request(
+                call = { it.radioTags(name, 0) },
+                onOk = { page ->
+                    tags = page.tags
+                    tagNext = page.nextOffset
+                    updateSheet { it.copy(loading = false) }
+                    rebuildSheet()
+                },
+                onCatalogue = ::sheetProblem,
+            )
+        }
+    }
+
+    private fun loadTagsNext() {
+        val offset = tagNext ?: return
+        val name = tagsFor
+        sheetRetry = { loadTagsNext() }
+        updateSheet { it.copy(loadingMore = true, problem = null) }
+        sheetJob = viewModelScope.launch {
+            request(
+                call = { it.radioTags(name, offset) },
+                onOk = { page: TagPage ->
+                    val seen = tags.mapTo(HashSet()) { it.name }
+                    tags = tags + page.tags.filter { seen.add(it.name) }
+                    tagNext = page.nextOffset
+                    updateSheet { it.copy(loadingMore = false) }
+                    rebuildSheet()
+                },
+                onCatalogue = ::sheetProblem,
+            )
+        }
+    }
+
+    /** Works out the rows from what is loaded, the field's text and the chosen filters. */
+    private fun rebuildSheet() {
+        val sheet = _state.value.sheet ?: return
+        val f = _state.value.filters
+        val rows = when (sheet.kind) {
+            FilterSheetState.Kind.Country -> narrow(countries.orEmpty(), sheet.searchText) { it.name }.map {
+                FilterRow(it.name, it.stationCount, null, f.country?.code.equals(it.code, ignoreCase = true), it.code)
+            }
+            FilterSheetState.Kind.Language -> narrow(languages.orEmpty(), sheet.searchText) { it.name }.map {
+                FilterRow(it.name, it.stationCount, null, f.language.equals(it.name, ignoreCase = true))
+            }
+            FilterSheetState.Kind.Order -> StationOrder.entries.map {
+                FilterRow(orderName(it), null, orderDetail(it), it == f.order, it.name)
+            }
+            FilterSheetState.Kind.Tag -> {
+                val chosen = f.tag
+                val wanted = tagName(sheet.searchText)
+                val first = chosen?.takeIf { wanted == null || it.contains(wanted, ignoreCase = true) }?.let { name ->
+                    FilterRow(name, tags.firstOrNull { it.name.equals(name, ignoreCase = true) }?.stationCount, null, true)
+                }
+                listOfNotNull(first) + tags.filterNot { chosen != null && it.name.equals(chosen, ignoreCase = true) }
+                    .map { FilterRow(it.name, it.stationCount, null, false) }
+            }
+        }
+        updateSheet { it.copy(rows = rows) }
     }
 
     // ---- The list ------------------------------------------------------------------------------
@@ -193,14 +442,16 @@ class RadioViewModel(
      * the phone loses its network): if the hub answers, the catalogue is the problem; if not, the
      * request is repeated after the first successful refresh that started after the failure.
      */
-    private suspend fun request(
-        call: suspend (HubRepository) -> HubResult<StationPage>,
-        onOk: (StationPage) -> Unit,
+    private suspend fun <T> request(
+        call: suspend (HubRepository) -> HubResult<T>,
+        onOk: suspend (T) -> Unit,
         onCatalogue: () -> Unit,
     ) {
         while (true) {
             val repo = session.repository ?: return
-            when (val result = call(repo)) {
+            val result = call(repo)
+            currentCoroutineContext().ensureActive()
+            when (result) {
                 is HubResult.Ok -> {
                     if (session.repository === repo) onOk(result.value)
                     return

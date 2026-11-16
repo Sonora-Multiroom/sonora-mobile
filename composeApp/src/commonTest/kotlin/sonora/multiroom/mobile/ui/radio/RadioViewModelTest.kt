@@ -4,7 +4,12 @@ import sonora.multiroom.mobile.data.HubError
 import sonora.multiroom.mobile.data.HubResult
 import sonora.multiroom.mobile.data.InMemoryHubAddressStore
 import sonora.multiroom.mobile.data.InMemoryRadioStore
+import sonora.multiroom.mobile.domain.Country
 import sonora.multiroom.mobile.domain.HubAddress
+import sonora.multiroom.mobile.domain.Language
+import sonora.multiroom.mobile.domain.RadioFilters
+import sonora.multiroom.mobile.domain.Tag
+import sonora.multiroom.mobile.domain.TagPage
 import sonora.multiroom.mobile.domain.Station
 import sonora.multiroom.mobile.domain.StationOrder
 import sonora.multiroom.mobile.domain.StationPage
@@ -21,6 +26,7 @@ import sonora.multiroom.mobile.ui.session.StationPicker
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.cancel
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.advanceTimeBy
 import kotlinx.coroutines.test.currentTime
@@ -59,6 +65,7 @@ class RadioViewModelTest {
         handle: SavedStateHandle = SavedStateHandle(),
         store: InMemoryRadioStore = InMemoryRadioStore(),
         visible: Boolean = true,
+        region: String = "UA",
         script: (FakeRepository) -> Unit = { it.stationsResult = { _, offset -> page(offset) } },
     ): Setup {
         val factory = FakeFactory { currentTime }
@@ -67,7 +74,7 @@ class RadioViewModelTest {
         script(factory.last)
         val availability = RadioAvailability(session, backgroundScope)
         val picker = StationPicker()
-        val vm = RadioViewModel(handle, session, availability, picker, store) { "UA" }
+        val vm = RadioViewModel(handle, session, availability, picker, store) { region }
         if (visible) vm.onVisible()
         runCurrent()
         return Setup(vm, session, factory, availability, picker, store, handle)
@@ -436,6 +443,422 @@ class RadioViewModelTest {
         val s = live(store = InMemoryRadioStore(recent = recent("a", "b", "c")))
         s.vm.removeRecent("b"); runCurrent()
         assertEquals(recent("a", "c"), s.ui.recent)
+        s.vm.onHidden()
+    }
+
+    // ---- Filters (MOB-009) -----------------------------------------------------------------------
+
+    private val ukraine = Country("UA", "Ukraine", 1_200)
+    private val germany = Country("DE", "Germany", 6_965)
+    private val france = Country("FR", "France", 900)
+    private val countries = listOf(germany, ukraine, france)
+
+    private suspend fun Setup.storedFilters() = store.filters.first()
+
+    private val someFilters = RadioFilters(germany, "jazz", "german", StationOrder.Trending)
+
+    @Test
+    fun theFirstVisitChoosesTheCountryOfThePhonesRegionIgnoringCaseStoresItAndThenLoads() = runViewModelTest {
+        val s = live(region = "ua") { it.countriesResult = { HubResult.Ok(countries) }; it.stationsResult = { _, o -> page(o) } }
+        assertEquals(RadioFilters(country = ukraine), s.ui.filters)
+        assertEquals(RadioFilters(country = ukraine), s.storedFilters())
+        assertEquals(listOf(everything.copy(countryCode = "UA") to 0), s.repo.searches)
+        assertEquals(1, s.repo.countriesCalls)
+        s.vm.onHidden()
+    }
+
+    @Test
+    fun aRegionTheCatalogueDoesNotListStoresNoCountry() = runViewModelTest {
+        val s = live(region = "ZZ") { it.countriesResult = { HubResult.Ok(countries) }; it.stationsResult = { _, o -> page(o) } }
+        assertEquals(RadioFilters(), s.storedFilters())
+        assertEquals(listOf(everything to 0), s.repo.searches)
+        s.vm.onHidden()
+        val unknown = live(region = "") { it.countriesResult = { HubResult.Ok(countries) }; it.stationsResult = { _, o -> page(o) } }
+        assertEquals(RadioFilters(), unknown.storedFilters())
+        unknown.vm.onHidden()
+    }
+
+    @Test
+    fun ifTheCountryListFailsNothingIsStoredTheCatalogueMessageShowsAndRetryTriesAgain() = runViewModelTest {
+        var up = false
+        val s = live {
+            it.countriesResult = { if (up) HubResult.Ok(countries) else catalogueDown }
+            it.stationsResult = { _, o -> page(o) }
+        }
+        assertEquals(RadioFailure.Catalogue, s.list.problem)
+        assertNull(s.storedFilters())
+        assertTrue(s.repo.searches.isEmpty())
+        up = true
+        s.vm.retry(); runCurrent()
+        assertNull(s.list.problem)
+        assertEquals(RadioFilters(country = ukraine), s.storedFilters())
+        assertEquals(1, s.repo.searches.size)
+        s.vm.onHidden()
+    }
+
+    @Test
+    fun withTheHubUnreachableTheFirstVisitShowsNoMessageAndLooksUpAgainByItself() = runViewModelTest {
+        var up = false
+        val s = live {
+            it.countriesResult = { if (up) HubResult.Ok(countries) else unreachable }
+            it.stationsResult = { _, o -> page(o) }
+            it.snapshotResult = { unreachable }
+        }
+        advanceTimeBy(20_000); runCurrent()
+        assertNull(s.list.problem)
+        assertNull(s.storedFilters())
+        up = true
+        s.repo.snapshotResult = { HubResult.Ok(sonora.multiroom.mobile.ui.rooms.oneRoomSnapshot) }
+        advanceTimeBy(10_000); runCurrent()
+        assertEquals(RadioFilters(country = ukraine), s.storedFilters())
+        assertEquals(1, s.repo.searches.size)
+        s.vm.onHidden()
+    }
+
+    @Test
+    fun aMissingRadioExtensionDuringTheFirstVisitClosesTheScreen() = runViewModelTest {
+        val s = live { it.countriesResult = { HubResult.Err(HubError.Rejected(404, null)) } }
+        assertEquals(RadioExit.Gone, s.ui.exit)
+        assertNull(s.storedFilters())
+        s.vm.onHidden()
+    }
+
+    @Test
+    fun storedFiltersAndOrderOpenTheScreenWithoutAskingForCountriesAndNoNameIsKept() = runViewModelTest {
+        val s = live(store = InMemoryRadioStore(filters = someFilters))
+        assertEquals(someFilters, s.ui.filters)
+        assertEquals(0, s.repo.countriesCalls)
+        assertEquals(listOf(StationQuery(null, "DE", "jazz", "german", StationOrder.Trending) to 0), s.repo.searches)
+        assertEquals("", s.ui.nameText)
+        s.vm.onHidden()
+    }
+
+    @Test
+    fun severalFiltersAndANameAreSentTogether() = runViewModelTest {
+        val s = live(store = InMemoryRadioStore(filters = someFilters))
+        s.vm.onNameChange("mango"); runCurrent()
+        advanceTimeBy(500); runCurrent()
+        assertEquals(StationQuery("mango", "DE", "jazz", "german", StationOrder.Trending) to 0, s.repo.searches.last())
+        s.vm.onHidden()
+    }
+
+    @Test
+    fun removingAChipReloadsAtOnceStoresItAndKeepsTheRest() = runViewModelTest {
+        val s = live(store = InMemoryRadioStore(filters = someFilters))
+        s.vm.onRemoveFilter(FilterSheetState.Kind.Tag); runCurrent()
+        val expected = someFilters.copy(tag = null)
+        assertEquals(expected, s.ui.filters)
+        assertEquals(expected, s.storedFilters())
+        assertEquals(StationQuery(null, "DE", null, "german", StationOrder.Trending) to 0, s.repo.searches.last())
+        s.vm.onRemoveFilter(FilterSheetState.Kind.Country); runCurrent()
+        s.vm.onRemoveFilter(FilterSheetState.Kind.Language); runCurrent()
+        assertEquals(RadioFilters(order = StationOrder.Trending), s.storedFilters())
+        assertEquals(StationQuery(null, null, null, null, StationOrder.Trending) to 0, s.repo.searches.last())
+        s.vm.onHidden()
+    }
+
+    @Test
+    fun clearFiltersRemovesTheThreeKeepsOrderAndNameAndIsOfferedOnlyWhenOneIsChosen() = runViewModelTest {
+        val s = live(store = InMemoryRadioStore(filters = someFilters))
+        s.vm.onNameChange("mango"); runCurrent()
+        advanceTimeBy(500); runCurrent()
+        assertTrue(s.ui.filters.narrowed)
+        s.vm.onClearFilters(); runCurrent()
+        assertEquals(RadioFilters(order = StationOrder.Trending), s.ui.filters)
+        assertEquals(RadioFilters(order = StationOrder.Trending), s.storedFilters())
+        assertEquals(StationQuery("mango", null, null, null, StationOrder.Trending) to 0, s.repo.searches.last())
+        assertFalse(s.ui.filters.narrowed)
+        val calls = s.repo.searches.size
+        s.vm.onClearFilters(); runCurrent()
+        assertEquals(calls, s.repo.searches.size)
+        s.vm.onHidden()
+    }
+
+    @Test
+    fun aStoredValueTheCatalogueNoLongerListsIsStillAppliedAndShown() = runViewModelTest {
+        val gone = Country("XX", "Atlantis", 0)
+        val s = live(store = InMemoryRadioStore(filters = RadioFilters(country = gone, tag = "lost"))) {
+            it.countriesResult = { HubResult.Ok(countries) }
+            it.stationsResult = { _, o -> page(o) }
+        }
+        assertEquals(gone, s.ui.filters.country)
+        assertEquals(StationQuery(null, "XX", "lost", null, StationOrder.MostVoted) to 0, s.repo.searches.first())
+        s.vm.onOpenSheet(FilterSheetState.Kind.Country); runCurrent()
+        assertTrue(s.ui.sheet!!.rows.none { it.selected })
+        assertEquals(gone, s.ui.filters.country)
+        s.vm.onHidden()
+    }
+
+    // ---- The sheets ------------------------------------------------------------------------------
+
+    private val kinds = FilterSheetState.Kind.entries
+
+    private fun withSheetData(repo: FakeRepository) {
+        repo.countriesResult = { HubResult.Ok(countries) }
+        repo.languagesResult = { HubResult.Ok(listOf(Language("german", 7_000), Language("English", 5_000), Language("ukrainian", 800))) }
+        repo.stationsResult = { _, o -> page(o) }
+    }
+
+    @Test
+    fun countryAndLanguageListsLoadOnceWhenTheSheetFirstOpensAndAreKeptWhileTheScreenLives() = runViewModelTest {
+        val s = live(store = InMemoryRadioStore(filters = RadioFilters()), script = ::withSheetData)
+        assertEquals(0, s.repo.countriesCalls)
+        s.vm.onOpenSheet(FilterSheetState.Kind.Country)
+        assertTrue(s.ui.sheet!!.loading)
+        runCurrent()
+        assertEquals(listOf("Germany", "Ukraine", "France"), s.ui.sheet!!.rows.map { it.name })
+        assertEquals(listOf<Long?>(6_965, 1_200, 900), s.ui.sheet!!.rows.map { it.count })
+        assertEquals(listOf("DE", "UA", "FR"), s.ui.sheet!!.rows.map { it.code })
+        s.vm.onCloseSheet()
+        s.vm.onOpenSheet(FilterSheetState.Kind.Country); runCurrent()
+        assertFalse(s.ui.sheet!!.loading)
+        assertEquals(1, s.repo.countriesCalls)
+        s.vm.onCloseSheet()
+        s.vm.onOpenSheet(FilterSheetState.Kind.Language); runCurrent()
+        s.vm.onCloseSheet()
+        s.vm.onOpenSheet(FilterSheetState.Kind.Language); runCurrent()
+        assertEquals(1, s.repo.languagesCalls)
+        s.vm.onHidden()
+    }
+
+    @Test
+    fun theFieldNarrowsCountriesAndLanguagesOnThePhoneIgnoringCase() = runViewModelTest {
+        val s = live(store = InMemoryRadioStore(filters = RadioFilters()), script = ::withSheetData)
+        s.vm.onOpenSheet(FilterSheetState.Kind.Country); runCurrent()
+        s.vm.onSheetSearch("AN"); runCurrent()
+        assertEquals(listOf("Germany", "France"), s.ui.sheet!!.rows.map { it.name })
+        s.vm.onSheetSearch("ger"); runCurrent()
+        assertEquals(listOf("Germany"), s.ui.sheet!!.rows.map { it.name })
+        assertEquals("ger", s.ui.sheet!!.searchText)
+        assertEquals(1, s.repo.countriesCalls)
+        s.vm.onCloseSheet()
+        s.vm.onOpenSheet(FilterSheetState.Kind.Language); runCurrent()
+        s.vm.onSheetSearch("ENG"); runCurrent()
+        assertEquals(listOf("English"), s.ui.sheet!!.rows.map { it.name })
+        s.vm.onHidden()
+    }
+
+    @Test
+    fun theFieldStopsAtOneHundredCharactersAndTheTagFieldDropsPercentAndSlash() = runViewModelTest {
+        val s = live(store = InMemoryRadioStore(filters = RadioFilters()), script = ::withSheetData)
+        s.vm.onOpenSheet(FilterSheetState.Kind.Country); runCurrent()
+        s.vm.onSheetSearch("x".repeat(130))
+        assertEquals(100, s.ui.sheet!!.searchText.length)
+        s.vm.onCloseSheet()
+        s.vm.onOpenSheet(FilterSheetState.Kind.Tag); runCurrent()
+        s.vm.onSheetSearch("ja%z/z")
+        assertEquals("jazz", s.ui.sheet!!.searchText)
+        s.vm.onHidden()
+    }
+
+    private fun tagPage(offset: Int, count: Int = 50, next: Int? = offset + count) =
+        HubResult.Ok(TagPage((0 until count).map { Tag("tag${offset + it}", (1000 - it).toLong()) }, next))
+
+    @Test
+    fun theTagSheetPagesFiftyAtATimeAndStopsWhenThereIsNoNextOffset() = runViewModelTest {
+        val s = live(store = InMemoryRadioStore(filters = RadioFilters())) {
+            it.stationsResult = { _, o -> page(o) }
+            it.tagsResult = { _, o -> if (o < 100) tagPage(o) else tagPage(o, count = 10, next = null) }
+        }
+        s.vm.onOpenSheet(FilterSheetState.Kind.Tag); runCurrent()
+        assertEquals(null to 0, s.repo.tagSearches.first())
+        assertEquals(50, s.ui.sheet!!.rows.size)
+        s.vm.onSheetListPosition(10); runCurrent()
+        assertEquals(1, s.repo.tagSearches.size)
+        s.vm.onSheetListPosition(45); runCurrent()
+        assertEquals(100, s.ui.sheet!!.rows.size)
+        s.vm.onSheetListPosition(95); runCurrent()
+        assertEquals(110, s.ui.sheet!!.rows.size)
+        s.vm.onSheetListPosition(109); runCurrent()
+        assertEquals(listOf(0, 50, 100), s.repo.tagSearches.map { it.second })
+        s.vm.onHidden()
+    }
+
+    @Test
+    fun theTagSheetNeverRequestsAnOffsetOfTenThousand() = runViewModelTest {
+        val s = live(store = InMemoryRadioStore(filters = RadioFilters())) {
+            it.stationsResult = { _, o -> page(o) }
+            it.tagResults += tagPage(0, next = 9_950)
+            it.tagResults += tagPage(9_950, next = 10_000)
+        }
+        s.vm.onOpenSheet(FilterSheetState.Kind.Tag); runCurrent()
+        s.vm.onSheetListPosition(45); runCurrent()
+        s.vm.onSheetListPosition(99); runCurrent()
+        s.vm.onSheetListPosition(99); runCurrent()
+        assertEquals(listOf(0, 9_950), s.repo.tagSearches.map { it.second })
+        s.vm.onHidden()
+    }
+
+    @Test
+    fun theTagFieldAsksTheHubHalfASecondAfterTheLastChangeWithPercentAndSlashRemoved() = runViewModelTest {
+        val s = live(store = InMemoryRadioStore(filters = RadioFilters())) {
+            it.stationsResult = { _, o -> page(o) }
+            it.tagsResult = { name, _ -> HubResult.Ok(TagPage(listOf(Tag(name ?: "all", 5)), null)) }
+        }
+        s.vm.onOpenSheet(FilterSheetState.Kind.Tag); runCurrent()
+        s.vm.onSheetSearch("ja"); runCurrent()
+        advanceTimeBy(400); runCurrent()
+        s.vm.onSheetSearch("ja%z/z"); runCurrent()
+        advanceTimeBy(499); runCurrent()
+        assertEquals(1, s.repo.tagSearches.size)
+        advanceTimeBy(1); runCurrent()
+        assertEquals(null to 0, s.repo.tagSearches.first())
+        assertEquals("jazz" to 0, s.repo.tagSearches.last())
+        assertEquals(listOf("jazz"), s.ui.sheet!!.rows.map { it.name })
+        s.vm.onHidden()
+    }
+
+    @Test
+    fun aChosenTagIsTheFirstRowAndIsLeftOutOfItsOwnPlace() = runViewModelTest {
+        val s = live(store = InMemoryRadioStore(filters = RadioFilters(tag = "tag3"))) {
+            it.stationsResult = { _, o -> page(o) }
+            it.tagResults += tagPage(0, count = 5, next = null)
+        }
+        s.vm.onOpenSheet(FilterSheetState.Kind.Tag); runCurrent()
+        val rows = s.ui.sheet!!.rows
+        assertEquals(listOf("tag3", "tag0", "tag1", "tag2", "tag4"), rows.map { it.name })
+        assertTrue(rows[0].selected)
+        assertEquals(997L, rows[0].count)
+        assertTrue(rows.drop(1).none { it.selected })
+        assertEquals(0, s.ui.sheet!!.chosenIndex)
+        s.vm.onHidden()
+    }
+
+    @Test
+    fun aChosenTagNotYetLoadedShowsFirstWithoutACount() = runViewModelTest {
+        val s = live(store = InMemoryRadioStore(filters = RadioFilters(tag = "deep"))) {
+            it.stationsResult = { _, o -> page(o) }
+            it.tagResults += tagPage(0, count = 3, next = 3)
+        }
+        s.vm.onOpenSheet(FilterSheetState.Kind.Tag); runCurrent()
+        assertEquals("deep", s.ui.sheet!!.rows.first().name)
+        assertNull(s.ui.sheet!!.rows.first().count)
+        assertEquals(4, s.ui.sheet!!.rows.size)
+        s.vm.onHidden()
+    }
+
+    @Test
+    fun theOrderSheetHasThreeRowsAndReportsTheChosenOneToShow() = runViewModelTest {
+        val s = live(store = InMemoryRadioStore(filters = RadioFilters(order = StationOrder.NameAZ)), script = ::withSheetData)
+        s.vm.onOpenSheet(FilterSheetState.Kind.Order)
+        val sheet = s.ui.sheet!!
+        assertFalse(sheet.loading)
+        assertEquals(listOf("Most voted", "Trending", "Name A–Z"), sheet.rows.map { it.name })
+        assertTrue(sheet.rows.all { it.count == null })
+        assertEquals(listOf(true, true, false), sheet.rows.map { it.detail != null })
+        assertEquals(2, sheet.chosenIndex)
+        s.vm.onHidden()
+    }
+
+    @Test
+    fun choosingARowClosesTheSheetAppliesStoresAndReloadsFromTheFirstPage() = runViewModelTest {
+        val s = live(store = InMemoryRadioStore(filters = RadioFilters()), script = ::withSheetData)
+        s.vm.onOpenSheet(FilterSheetState.Kind.Order)
+        s.vm.onSheetChoose(s.ui.sheet!!.rows[1]); runCurrent()
+        assertNull(s.ui.sheet)
+        assertEquals(StationOrder.Trending, s.ui.filters.order)
+        assertEquals(StationOrder.Trending, s.storedFilters()!!.order)
+        assertEquals(everything.copy(order = StationOrder.Trending) to 0, s.repo.searches.last())
+
+        s.vm.onOpenSheet(FilterSheetState.Kind.Country); runCurrent()
+        s.vm.onSheetChoose(s.ui.sheet!!.rows.first { it.code == "DE" }); runCurrent()
+        assertEquals(germany, s.ui.filters.country)
+        assertEquals(germany, s.storedFilters()!!.country)
+        assertEquals("DE", s.repo.searches.last().first.countryCode)
+
+        s.vm.onOpenSheet(FilterSheetState.Kind.Language); runCurrent()
+        s.vm.onSheetChoose(s.ui.sheet!!.rows.first { it.name == "English" }); runCurrent()
+        assertEquals("English", s.storedFilters()!!.language)
+
+        s.repo.tagsResult = { _, _ -> tagPage(0, count = 3, next = null) }
+        s.vm.onOpenSheet(FilterSheetState.Kind.Tag); runCurrent()
+        s.vm.onSheetChoose(s.ui.sheet!!.rows.first()); runCurrent()
+        assertEquals(s.storedFilters()!!.tag, s.repo.searches.last().first.tag)
+        assertEquals(50, s.list.stations.size)
+        s.vm.onHidden()
+    }
+
+    @Test
+    fun cancelScrimAndBackChangeNothing() = runViewModelTest {
+        val s = live(store = InMemoryRadioStore(filters = someFilters), script = ::withSheetData)
+        val calls = s.repo.searches.size
+        for (kind in kinds) {
+            s.vm.onOpenSheet(kind); runCurrent()
+            s.vm.onCloseSheet(); runCurrent()
+            assertNull(s.ui.sheet)
+        }
+        assertEquals(someFilters, s.ui.filters)
+        assertEquals(someFilters, s.storedFilters())
+        assertEquals(calls, s.repo.searches.size)
+        s.vm.onHidden()
+    }
+
+    @Test
+    fun aSheetThatCannotLoadShowsTheCatalogueMessageInsideItselfAndLeavesTheListAlone() = runViewModelTest {
+        var up = false
+        val s = live(store = InMemoryRadioStore(filters = RadioFilters())) {
+            it.stationsResult = { _, o -> page(o) }
+            it.countriesResult = { if (up) HubResult.Ok(countries) else catalogueDown }
+        }
+        val before = s.list
+        s.vm.onOpenSheet(FilterSheetState.Kind.Country); runCurrent()
+        assertEquals(RadioFailure.Catalogue, s.ui.sheet!!.problem)
+        assertFalse(s.ui.sheet!!.loading)
+        assertEquals(before, s.list)
+        up = true
+        s.vm.retrySheet(); runCurrent()
+        assertNull(s.ui.sheet!!.problem)
+        assertEquals(3, s.ui.sheet!!.rows.size)
+        assertEquals(before, s.list)
+        s.vm.onHidden()
+    }
+
+    @Test
+    fun aFailedTagPageKeepsTheRowsAndRetryRepeatsThatPage() = runViewModelTest {
+        val s = live(store = InMemoryRadioStore(filters = RadioFilters())) {
+            it.stationsResult = { _, o -> page(o) }
+            it.tagResults += tagPage(0)
+            it.tagResults += catalogueDown
+            it.tagResults += tagPage(50, count = 5, next = null)
+        }
+        s.vm.onOpenSheet(FilterSheetState.Kind.Tag); runCurrent()
+        s.vm.onSheetListPosition(45); runCurrent()
+        assertEquals(RadioFailure.Catalogue, s.ui.sheet!!.problem)
+        assertEquals(50, s.ui.sheet!!.rows.size)
+        s.vm.retrySheet(); runCurrent()
+        assertNull(s.ui.sheet!!.problem)
+        assertEquals(55, s.ui.sheet!!.rows.size)
+        s.vm.onHidden()
+    }
+
+    @Test
+    fun withTheHubUnreachableASheetShowsNoMessageAndLoadsAgainByItself() = runViewModelTest {
+        var up = false
+        val s = live(store = InMemoryRadioStore(filters = RadioFilters())) {
+            it.stationsResult = { _, o -> page(o) }
+            it.countriesResult = { if (up) HubResult.Ok(countries) else unreachable }
+            it.snapshotResult = { unreachable }
+        }
+        s.vm.onOpenSheet(FilterSheetState.Kind.Country); runCurrent()
+        advanceTimeBy(20_000); runCurrent()
+        assertNull(s.ui.sheet!!.problem)
+        assertTrue(s.ui.sheet!!.loading)
+        up = true
+        s.repo.snapshotResult = { HubResult.Ok(sonora.multiroom.mobile.ui.rooms.oneRoomSnapshot) }
+        advanceTimeBy(10_000); runCurrent()
+        assertNull(s.ui.sheet!!.problem)
+        assertEquals(3, s.ui.sheet!!.rows.size)
+        s.vm.onHidden()
+    }
+
+    @Test
+    fun anAnswerForASheetThatWasClosedIsNeverUsed() = runViewModelTest {
+        val s = live(store = InMemoryRadioStore(filters = RadioFilters()), script = ::withSheetData)
+        s.repo.radioDelayMs = 1_000
+        s.vm.onOpenSheet(FilterSheetState.Kind.Country); runCurrent()
+        s.vm.onCloseSheet()
+        advanceTimeBy(2_000); runCurrent()
+        assertNull(s.ui.sheet)
         s.vm.onHidden()
     }
 }

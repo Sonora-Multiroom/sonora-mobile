@@ -56,6 +56,11 @@ data class RadioFilters(
     val order: StationOrder = StationOrder.MostVoted,
 ) {
     fun toQuery(name: String?) = StationQuery(name, country?.code, tag, language, order)
+
+    /** A country, tag or language is chosen: "Clear filters" has something to clear. */
+    val narrowed: Boolean get() = country != null || tag != null || language != null
+
+    fun cleared() = copy(country = null, tag = null, language = null)
 }
 
 /**

@@ -53,6 +53,13 @@ class ContrastTest {
     }
 
     @Test
+    fun filterControls() {
+        assertText("textSoft on surface (chips, order control)", c.textSoft, c.surface)
+        assertText("textMuted on surface (sheet counts)", c.textMuted, c.surface)
+        assertText("accent on selectedBg (chip remove, chosen count)", c.accent, c.selectedBg)
+    }
+
+    @Test
     fun accentPairs() {
         assertText("onAccent on accent", c.onAccent, c.accent)
         assertText("accent on background", c.accent, c.background)
