@@ -176,9 +176,9 @@ unchanged and also carries a station's address.
 |---|---|---|
 | `radio` | `RadioRows?` (new) | null ⇒ no "Or a radio station" section |
 | `selectedStation` | `Station?` (new) | excludes `selectedSourceId` and a non-empty `linkText` |
-| `stationFailure` | `String?` (new) | "Couldn't start <station>", shown above Play until Play is pressed again or the station, source, link or target changes |
 | `openRadio` | `Boolean` (new) | one-shot request to push `Destination.Radio`; consumed by the screen |
 | `playLabel` | `PlayLabel` | `PlaySource(stationDisplayName, target)` for a station |
+| `message` | `String?` | unchanged: the one-shot snackbar text; also carries "Couldn't start <station>" and "Radio is no longer available on this hub" |
 
 Saved state keys: existing `sourceId`, `target`, `link`, `preselected`, `fixedName`; new `station`
 (JSON).
@@ -240,7 +240,7 @@ any state, query changed again ─► the request in flight is cancelled; its an
 ```text
 Radio: tap a row ─► StationPicker.pick ─► [.., StartPlayback] selectedStation = S
 Play ─► PlaybackStarter.start(StartWhat.Station(S))
-  ├─ failed (no reason) ─► stationFailure = "Couldn't start S"; S stays selected; nothing tracked
+  ├─ failed (no reason) ─► snackbar "Couldn't start S"; S stays selected; nothing tracked
   └─ started (route r) ──► tracker.track(S, r) ; Now Playing(r)
         each refresh: judgeRecent
           ├─ r gone / Failed / another input ─► dropped

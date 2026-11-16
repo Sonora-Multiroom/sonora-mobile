@@ -36,7 +36,7 @@ know yet, and on a hub without radio, the screen is exactly as before this featu
 | Already playing | "<station> is already playing in <target>", Play disabled, when that station plays on the chosen target, whichever client started it |
 | Play button | "Play <station> in <target>" in three parts: "Play " and " in <target>" never shrink, the name shrinks and ends in "…". The same for source names. "Play link in <target>" and "Starting…" unchanged |
 | Starting | "Starting…", selections locked, as for a link; up to 30 s |
-| Station could not be started | The screen stays, the station stays selected, and "Couldn't start <station>" shows above Play in `warningText` with the info icon, in place of the "will stop" line. It goes when Play is pressed again or the station, source, link or target changes. Spoken once when it appears |
+| Station could not be started | The screen stays, the station and the target stay selected, and the snackbar says "Couldn't start <station>", as link failures are shown. No cause is given. The canvas's `startFailed` state (a line above Play) is not built: see [research R5](../research.md#r5-starting-a-station-fr-015-to-fr-020) |
 | Other failures of a station start | The existing snackbar and wording ("<room> is turned off", "<room> can't play more at once", "<target> is no longer on the hub", "Couldn't reach the hub") |
 | Radio went away (reported by the radio screen) | Snackbar "Radio is no longer available on this hub"; the section disappears; a selected station is deselected |
 | Restored by the system | The same station selected |

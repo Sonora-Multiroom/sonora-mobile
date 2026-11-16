@@ -156,22 +156,25 @@ backlog item chose "Radio").
 - The Play button's label is `PlayLabel.PlaySource(name, target)`; the starting state is the
   existing one.
 
-**Where the failure is shown**: the canvas (`StartPlaybackRadio.dc.html`, property
-`startFailed`) draws "Couldn't start <station>" as a line above Play, in the warning colour with
-the info icon, in place of the "will stop" line. The spec says "where link failures are shown
-today", which is a snackbar. The plan follows the canvas for `StationFailed` only: the line stays
-until the user presses Play again or changes the station, source, link or target. Every other
-failure stays a snackbar. A start whose screen was closed reports to Rooms as today
-(`AppMessages`). **This departs from one sentence of the spec and needs the owner's confirmation
-before `/speckit-tasks`** (see plan.md "Decisions made in this plan").
+**Where the failure is shown** (decided by the owner on 2026-11-16): in the snackbar, as the spec
+says ("where link failures are shown today") and as every other start failure is shown. The
+station stays selected and the screen stays open. A start whose screen was closed reports to
+Rooms as today (`AppMessages`).
 
-**Rationale**: the canvas was drawn after the spec sentence and is the visual source of truth
-(Constitution VI). A station failure keeps the selection for another try, and a line that stays
-serves that better than a notice that leaves after a few seconds, above all with a long station
-name.
+The canvas (`StartPlaybackRadio.dc.html`, property `startFailed`) draws the message as a line
+above Play instead. That state is **not built** in this feature: it would make a failed station
+start look different from a failed link start on the same screen. Showing every start failure as
+a line above Play is the backlog item
+[start-failure-above-play.md](../../docs/backlog/start-failure-above-play.md); until it ships,
+the canvas's `startFailed` state is ahead of the app, a departure from the design that this
+paragraph records (Constitution VI).
+
+**Rationale**: one way of showing start failures on one screen; no new pattern introduced by a
+feature about radio.
 
 **Alternatives considered**: a new repository method `playStation` (the same HTTP call under a
-second name); a snackbar for every failure (matches the spec sentence, contradicts the canvas).
+second name); the canvas's line above Play for a station failure only (two ways of showing the
+same kind of failure on one screen).
 
 ## R6. The radio screen's list (FR-003, FR-004, FR-005, FR-012)
 
@@ -459,7 +462,7 @@ Test-first, in `commonTest`, each seen failing before its implementation:
 | `RadioAvailabilityTest`, `RecentStationTrackerTest`, `StationPickerTest` (new, `ui/session/`) | R3 and R8 with the fake session and virtual time |
 | `PlaybackStarterTest` (extended) | a station start calls `playLink` with the station address, tracks on success, recovers by address, fails as `StationFailed` |
 | `RadioViewModelTest` (new) | debounce and "latest wins", paging, dedupe, the limit note, first visit, filter persistence, sheets, Recent visibility, removal, the three failures, nothing after the screen is cleared |
-| `StartPlaybackViewModelTest`, `StartPlaybackTextTest` (extended) | the row only when offered, three recent rows, selection exclusivity, the selected row rule, Play label parts, the inline failure, saved state |
+| `StartPlaybackViewModelTest`, `StartPlaybackTextTest` (extended) | the row only when offered, three recent rows, selection exclusivity, the selected row rule, Play label parts, the failure message with the station kept selected, saved state |
 | `AppBackStackTest` (extended) | `radio` encodes and decodes; the bottom bar is hidden on it |
 | `ContrastTest` (extended) | the new text and background pairs of the canvas |
 

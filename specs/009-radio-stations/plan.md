@@ -85,7 +85,7 @@ production files and 20 edited ones; 8 new and 12 extended test files.
 | III. Shared-First | ✅ | Everything in `commonMain` / `commonTest`. The phone's region comes from Compose's common `Locale`, so no `expect`/`actual`; `androidMain`, `iosMain` and `androidApp` are untouched |
 | IV. Test-First | ✅ | Every rule is a pure function or a view model with tests written first ([R14](research.md#r14-testing)): kind and live-stream inference, name cleaning, paging and duplicates, the recent-station verdict, availability, error mapping. The repository additions are tested against `MockEngine` with the contract's shapes, RFC 7807 bodies and network failures ([contract tests](contracts/hub-repository.md#contract-tests-mockengine)). The build and all three test tasks gate the change |
 | V. Resilient LAN Networking | ✅ (one recorded deviation) | A missing extension, a slow or broken catalogue and an unreachable hub are three distinct, plain states with a way forward ([R9](research.md#r9-radio-errors-in-plain-words-fr-029-to-fr-034)); none crashes or hangs. Unknown JSON fields are ignored; an unknown radio problem type is the catalogue message. Problem details never reach the screen. The radio screen polls nothing of its own. **Timeouts**: radio requests wait 6 s, because the hub itself waits up to 5 s for the catalogue and then answers 503 (Complexity Tracking) |
-| VI. Design Fidelity & Accessibility | ✅ | The canvas was drawn first (commit `15c65e7`: `Radio.dc.html`, `RadioFilterSheet.dc.html`, `StartPlaybackRadio.dc.html`) and the [UI contract](contracts/radio-ui.md) follows it; colours and type from tokens, no new token. Targets ≥ 44 dp, every icon-only control has a spoken label, new colour pairs go into `ContrastTest`. Agreed details kept: "will stop" notice, live-stream wording, marquee rules (MOB-007). One point where the canvas and a spec sentence differ is flagged below |
+| VI. Design Fidelity & Accessibility | ✅ | The canvas was drawn first (commit `15c65e7`: `Radio.dc.html`, `RadioFilterSheet.dc.html`, `StartPlaybackRadio.dc.html`) and the [UI contract](contracts/radio-ui.md) follows it; colours and type from tokens, no new token. Targets ≥ 44 dp, every icon-only control has a spoken label, new colour pairs go into `ContrastTest`. Agreed details kept: "will stop" notice, live-stream wording, marquee rules (MOB-007). One recorded departure: the canvas's `startFailed` state is not built, a failed station start uses the snackbar as the spec says (decision 1 below) |
 | VII. Minimal Dependencies | ✅ | None added, no version changed ([R13](research.md#r13-dependencies-and-versions)) |
 | Full app test gate | ✅ planned | The final task updates `docs/testing/full-app-test.md`: a new section for radio with rows for quickstart §2, the fixture extended (the `radio` extension `ACTIVE`, a known-good station), rows that read a source's kind or the Start Playback layout updated, header to MOB-009 / 0.9.0-alpha / API 0.1.34 |
 
@@ -100,12 +100,11 @@ production files and 20 edited ones; 8 new and 12 extended test files.
 **Decisions made in this plan that the spec does not spell out** (for review before
 `/speckit-tasks`):
 
-1. **Where "Couldn't start <station>" is shown.** The spec says "where link failures are shown
-   today" (a snackbar); the canvas draws a line above Play that stays. The plan follows the canvas
-   for this one failure and keeps the snackbar for every other
-   ([R5](research.md#r5-starting-a-station-fr-015-to-fr-020)). If the snackbar is wanted, it is a
-   one-line change of the UI contract and the spec stands as written; if the line is wanted, the
-   spec sentence (User Story 5, scenario 9) should be updated.
+1. **Where "Couldn't start <station>" is shown: settled by the owner on 2026-11-16.** In the
+   snackbar, as the spec says and as link failures are shown. The canvas's `startFailed` state (a
+   line above Play) is not built; showing every start failure that way is the backlog item
+   [start-failure-above-play.md](../../docs/backlog/start-failure-above-play.md)
+   ([R5](research.md#r5-starting-a-station-fr-015-to-fr-020)).
 2. **The list heading**: "Stations in <country>" as on the canvas, and "Stations" when no country
    is chosen (the canvas shows only the first).
 3. **"Clear filters"** removes country, tag and language, keeps the order and the typed name, and
@@ -181,7 +180,7 @@ composeApp/src/commonMain/kotlin/sonora/multiroom/mobile/
     │   ├── FilterSheet.kt                          # Country, Tag, Language, Order
     │   └── RadioText.kt                            # all radio wording and spoken labels
     ├── startplayback/
-    │   ├── StartPlaybackViewModel.kt               # radio rows, selected station, inline failure, saved state
+    │   ├── StartPlaybackViewModel.kt               # radio rows, selected station, saved state
     │   ├── StartPlaybackUiState.kt
     │   ├── StartPlaybackScreen.kt                  # the section; the three-part Play label
     │   ├── RadioRows.kt                            # new: the "Find a radio station" row and the selected row
