@@ -1,0 +1,232 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Start playback with radio</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Sora:wght@500;600;700&amp;family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600&amp;display=swap">
+<style>
+body{margin:0;background:#0E0F12}
+a{color:inherit;text-decoration:none}a:hover{color:inherit}
+button{font:inherit;border:0;padding:0;cursor:pointer}
+a:focus-visible,button:focus-visible{outline:2px solid #F2A541;outline-offset:2px}
+input[type=radio]:focus-visible{outline:2px solid #F2A541;outline-offset:2px}
+input::placeholder{color:#7C808A}
+.n2{display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;overflow:hidden;overflow-wrap:anywhere}
+.mq{display:block;overflow:hidden;white-space:nowrap}
+.mqi{display:inline-flex;gap:48px;padding-right:48px;animation:mq 12s linear infinite}
+@keyframes mq{0%,14%{transform:translateX(0)}100%{transform:translateX(-50%)}}
+@media (prefers-reduced-motion:reduce){.mqi{animation:none}}
+.field:focus-within{box-shadow:inset 0 0 0 2px #F2A541}
+.i{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;flex-shrink:0}
+</style>
+</helmet>
+<div style="width: 390px; height: 844px; box-sizing: border-box; background: #0E0F12; color: #F2F1EE; font-family: 'DM Sans', sans-serif; display: flex; flex-direction: column; overflow: hidden">
+
+<div style="padding: 16px 12px 0; display: flex; align-items: center; gap: 4px">
+<a href="Main.dc.html" aria-label="Close" style="width: 44px; height: 44px; border-radius: 22px; display: flex; align-items: center; justify-content: center; color: #C9CBD1">
+<svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"></path></svg>
+</a>
+<h1 style="margin: 0; font-family: Sora, sans-serif; font-size: 20px; font-weight: 600">Play something</h1>
+</div>
+
+<main style="flex-grow: 1; min-height: 0; overflow-y: auto; padding: 12px 20px 0; display: flex; flex-direction: column; gap: 10px">
+<label for="link" style="font-size: 12px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: #9A9DA6">Paste a link</label>
+<div class="field" style="height: 52px; flex-shrink: 0; box-sizing: border-box; padding: 0 14px; border-radius: 16px; background: #17191E; display: flex; align-items: center; gap: 10px; color: #9A9DA6">
+<svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1"></path><path d="M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1"></path></svg>
+<input id="link" type="url" placeholder="SoundCloud, YouTube or stream URL" style="flex-grow: 1; min-width: 0; height: 44px; background: transparent; border: 0; outline: none; color: #F2F1EE; font: inherit; font-size: 15px">
+</div>
+
+<fieldset style="margin: 6px 0 0; padding: 0; border: 0; display: flex; flex-direction: column; gap: 4px">
+<legend style="padding: 0; margin-bottom: 8px; font-size: 12px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: #9A9DA6">Or a radio station</legend>
+
+<sc-if value="{{showFind}}" hint-placeholder-val="{{ true }}">
+<a href="Radio.dc.html" style="min-height: 54px; padding: 0 8px 0 8px; border-radius: 14px; display: flex; align-items: center; gap: 12px; background: #17191E">
+<div style="width: 38px; height: 38px; border-radius: 10px; display: flex; align-items: center; justify-content: center; background: #22252B; color: #C9CBD1">
+<svg class="i" viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="6.5"></circle><path d="M16 16l4.5 4.5"></path></svg>
+</div>
+<div style="flex: 1 1 0; min-width: 0; display: flex; flex-direction: column; gap: 1px">
+<span style="font-size: 15px; font-weight: 600">Find a radio station</span>
+<span style="font-size: 12px; color: #9A9DA6">Search by name, country, tag or language</span>
+</div>
+<div style="width: 28px; height: 44px; display: flex; align-items: center; justify-content: center; color: #9A9DA6">
+<svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6l6 6-6 6"></path></svg>
+</div>
+</a>
+</sc-if>
+
+<sc-if value="{{showFound}}" hint-placeholder-val="{{ false }}">
+<a href="Radio.dc.html" aria-label="Radio Swiss Jazz, selected. Choose another station" style="min-height: 54px; box-sizing: border-box; padding: 6px 12px 6px 8px; border-radius: 14px; display: flex; align-items: center; gap: 12px; background: #1F1A12; box-shadow: inset 0 0 0 1px #6B4C1F">
+<div style="width: 38px; height: 38px; flex-shrink: 0; border-radius: 10px; display: flex; align-items: center; justify-content: center; background: #3A2A12; color: #F2A541">
+<svg class="i" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="2"></circle><path d="M8.5 8.5a5 5 0 0 0 0 7M15.5 8.5a5 5 0 0 1 0 7M5.6 5.6a9 9 0 0 0 0 12.8M18.4 5.6a9 9 0 0 1 0 12.8"></path></svg>
+</div>
+<div style="flex: 1 1 0; min-width: 0; display: flex; flex-direction: column; gap: 1px">
+<span style="font-size: 15px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">Radio Swiss Jazz</span>
+<span style="font-size: 12px; color: #9A9DA6">Radio · CH · AAC+ · 96 kbps</span>
+</div>
+<span style="font-size: 13px; font-weight: 600; color: #F2A541">Change</span>
+</a>
+</sc-if>
+
+<sc-for list="{{recents}}" as="r" hint-placeholder-count="3">
+<label style="min-height: 54px; box-sizing: border-box; padding: 6px 12px 6px 8px; border-radius: 14px; display: flex; align-items: center; gap: 12px; cursor: pointer; background: {{r.rowBg}}; box-shadow: inset 0 0 0 1px {{r.ring}}">
+<div style="width: 38px; height: 38px; flex-shrink: 0; border-radius: 10px; display: flex; align-items: center; justify-content: center; background: #3A2A12; color: #F2A541">
+<svg class="i" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="2"></circle><path d="M8.5 8.5a5 5 0 0 0 0 7M15.5 8.5a5 5 0 0 1 0 7M5.6 5.6a9 9 0 0 0 0 12.8M18.4 5.6a9 9 0 0 1 0 12.8"></path></svg>
+</div>
+<div style="flex: 1 1 0; min-width: 0; display: flex; flex-direction: column; gap: 1px">
+<sc-if value="{{r.scrolls}}" hint-placeholder-val="{{ false }}">
+<span class="mq" aria-label="{{r.name}}" style="font-size: 15px; font-weight: 600"><span class="mqi"><span aria-hidden="true">{{r.name}}</span><span aria-hidden="true">{{r.name}}</span></span></span>
+</sc-if>
+<sc-if value="{{r.still}}" hint-placeholder-val="{{ true }}">
+<span style="font-size: 15px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">{{r.name}}</span>
+</sc-if>
+<span style="font-size: 12px; color: #9A9DA6">{{r.sub}}</span>
+</div>
+<input type="radio" name="source" checked="{{r.checked}}" onChange="{{r.pick}}" style="width: 20px; height: 20px; flex-shrink: 0; margin: 0; accent-color: #F2A541">
+</label>
+</sc-for>
+</fieldset>
+
+<fieldset style="margin: 6px 0 0; padding: 0; border: 0; display: flex; flex-direction: column; gap: 4px">
+<legend style="padding: 0; margin-bottom: 8px; font-size: 12px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: #9A9DA6">Or pick a source</legend>
+<sc-for list="{{sources}}" as="s" hint-placeholder-count="2">
+<label style="min-height: 54px; box-sizing: border-box; padding: 6px 12px 6px 8px; border-radius: 14px; display: flex; align-items: center; gap: 12px; cursor: pointer; background: {{s.rowBg}}; box-shadow: inset 0 0 0 1px {{s.ring}}">
+<div style="width: 38px; height: 38px; border-radius: 10px; display: flex; align-items: center; justify-content: center; background: {{s.tileBg}}; color: {{s.tileFg}}">
+<sc-if value="{{s.isStream}}" hint-placeholder-val="{{ true }}">
+<svg class="i" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="2"></circle><path d="M8.5 8.5a5 5 0 0 0 0 7M15.5 8.5a5 5 0 0 1 0 7M5.6 5.6a9 9 0 0 0 0 12.8M18.4 5.6a9 9 0 0 1 0 12.8"></path></svg>
+</sc-if>
+<sc-if value="{{s.isLine}}" hint-placeholder-val="{{ false }}">
+<svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v6M9 9h6v5a3 3 0 0 1-6 0zM12 17v4"></path></svg>
+</sc-if>
+</div>
+<div style="flex-grow: 1; display: flex; flex-direction: column; gap: 1px">
+<span style="font-size: 15px; font-weight: 600">{{s.name}}</span>
+<span style="font-size: 12px; color: #9A9DA6">{{s.kind}}</span>
+</div>
+<input type="radio" name="source" checked="{{s.checked}}" onChange="{{s.pick}}" style="width: 20px; height: 20px; margin: 0; accent-color: #F2A541">
+</label>
+</sc-for>
+</fieldset>
+
+<fieldset style="margin: 6px 0 12px; padding: 0; border: 0">
+<legend style="padding: 0; margin-bottom: 8px; font-size: 12px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: #9A9DA6">Play in</legend>
+<div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px">
+<sc-for list="{{targets}}" as="t" hint-placeholder-count="4">
+<label style="min-height: 64px; box-sizing: border-box; padding: 10px 12px; border-radius: 14px; display: flex; align-items: flex-start; gap: 8px; cursor: {{t.cursor}}; opacity: {{t.opacity}}; background: {{t.rowBg}}; box-shadow: inset 0 0 0 1px {{t.ring}}">
+<div style="flex-grow: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px">
+<span style="font-size: 15px; font-weight: 600">{{t.name}}</span>
+<span style="font-size: 12px; color: #9A9DA6; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">{{t.sub}}</span>
+</div>
+<input type="radio" name="target" checked="{{t.checked}}" disabled="{{t.disabled}}" onChange="{{t.pick}}" style="width: 18px; height: 18px; margin: 2px 0 0; accent-color: #F2A541">
+</label>
+</sc-for>
+</div>
+</fieldset>
+</main>
+
+<div style="padding: 12px 20px 28px; display: flex; flex-direction: column; gap: 10px; border-top: 1px solid #1F2228">
+<sc-if value="{{hasWarning}}" hint-placeholder-val="{{ false }}">
+<p style="margin: 0; font-size: 13px; color: #F2D3A4; display: flex; align-items: center; gap: 6px">
+<svg class="i" style="width: 16px; height: 16px" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><path d="M12 8v5M12 16h.01"></path></svg>
+{{warning}}
+</p>
+</sc-if>
+<sc-if value="{{hasFailure}}" hint-placeholder-val="{{ false }}">
+<p style="margin: 0; font-size: 13px; color: #F2D3A4; display: flex; align-items: center; gap: 6px">
+<svg class="i" style="width: 16px; height: 16px" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><path d="M12 8v5M12 16h.01"></path></svg>
+{{failure}}
+</p>
+</sc-if>
+<button style="height: 56px; border-radius: 28px; background: #F2A541; color: #1A1206; font-size: 16px; font-weight: 600; display: flex; align-items: center; justify-content: center; gap: 8px; padding: 0 20px">
+<svg class="i" style="fill: currentColor; stroke: none" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5l11 7-11 7z"></path></svg>
+<span style="min-width: 0; display: flex; white-space: nowrap"><span style="flex-shrink: 0">{{ctaPlay}}</span><span style="min-width: 0; overflow: hidden; text-overflow: ellipsis">{{ctaName}}</span><span style="flex-shrink: 0">{{ctaIn}}</span></span>
+</button>
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"picked":{"editor":"enum","options":["A recent station","A station from search","Nothing from radio"],"default":"A recent station"},"startFailed":{"editor":"boolean","default":false},"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    this.state = { source: null, target: 'bedroom' };
+  }
+  renderVals() {
+    const s = this.state;
+    const mode = this.props.picked ?? 'A recent station';
+    const initial = mode === 'A recent station' ? 'kexp' : mode === 'A station from search' ? 'found' : 'jazz';
+    const sourceId = s.source ?? initial;
+    const showFound = mode === 'A station from search' && sourceId === 'found';
+    const kinds = {
+      stream: { label: 'Stream', bg: '#3A2A12', fg: '#F2A541' },
+      line: { label: 'Line-in', bg: '#12302E', fg: '#5FD3C4' }
+    };
+    const recentList = [
+      { id: 'kexp', name: 'KEXP 90.3 FM Seattle, where the music matters', sub: 'Radio · US' },
+      { id: 'ofr', name: 'Old Fashioned Radio – Jazz, swing and big band classics', sub: 'Radio · UA · MP3 · 192 kbps' },
+      { id: 'mango', name: 'MANGORADIO', sub: 'Radio · DE · MP3 · 128 kbps' }
+    ];
+    const srcs = [
+      { id: 'jazz', name: 'Jazz24', kind: 'stream' },
+      { id: 'turntable', name: 'Turntable', kind: 'line' }
+    ];
+    const tgts = [
+      { id: 'downstairs', name: 'Downstairs', sub: 'Group · Radio Paradise', busy: 'Radio Paradise' },
+      { id: 'living', name: 'Living Room', sub: 'In Downstairs', busy: 'Radio Paradise' },
+      { id: 'bedroom', name: 'Bedroom', sub: 'Idle' },
+      { id: 'office', name: 'Office', sub: 'Paused · Morning playlist', busy: 'Morning playlist' }
+    ];
+    const recents = recentList.map((x) => {
+      const on = x.id === sourceId;
+      return {
+        name: x.name, sub: x.sub, checked: on,
+        scrolls: on && x.name.length > 28, still: !(on && x.name.length > 28),
+        rowBg: on ? '#1F1A12' : 'transparent', ring: on ? '#6B4C1F' : 'transparent',
+        pick: () => this.setState({ source: x.id })
+      };
+    });
+    const sources = srcs.map((x) => {
+      const k = kinds[x.kind];
+      const on = x.id === sourceId;
+      return {
+        name: x.name, kind: k.label, tileBg: k.bg, tileFg: k.fg,
+        isStream: x.kind === 'stream', isLine: x.kind === 'line',
+        checked: on, rowBg: on ? '#1F1A12' : 'transparent', ring: on ? '#6B4C1F' : 'transparent',
+        pick: () => this.setState({ source: x.id })
+      };
+    });
+    const targets = tgts.map((x) => {
+      const on = x.id === s.target;
+      return {
+        name: x.name, sub: x.sub, checked: on, disabled: !!x.disabled,
+        cursor: x.disabled ? 'not-allowed' : 'pointer', opacity: x.disabled ? '0.5' : '1',
+        rowBg: on ? '#1F1A12' : '#17191E', ring: on ? '#6B4C1F' : 'transparent',
+        pick: () => this.setState({ target: x.id })
+      };
+    });
+    const names = { found: 'Radio Swiss Jazz' };
+    recentList.concat(srcs).forEach((x) => { names[x.id] = x.name; });
+    const tgt = tgts.find((x) => x.id === s.target);
+    const failed = !!this.props.startFailed;
+    return {
+      showFind: !showFound,
+      showFound,
+      recents,
+      sources,
+      targets,
+      hasWarning: !!tgt.busy && !failed,
+      warning: tgt.busy ? tgt.busy + ' will stop in ' + tgt.name : '',
+      hasFailure: failed,
+      failure: 'Couldn’t start ' + names[sourceId],
+      ctaPlay: 'Play ',
+      ctaName: names[sourceId],
+      ctaIn: ' in ' + tgt.name
+    };
+  }
+}
+</script>
+</body>
+</html>
