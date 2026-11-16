@@ -124,7 +124,7 @@ the station is audible and Now Playing shows it.
 ### User Story 2 - A playing station looks like a station (Priority: P2)
 
 When a station plays, in a room of mine or started by someone else in the house from another
-client, the app shows it for what it is: a live radio stream. I see "Live stream" on its Rooms
+client, the app shows it for what it is: a live radio stream. I see "Radio · Live stream" on its Rooms
 card, I am told it cannot be paused, and nowhere do I see a technical address in place of a
 description.
 
@@ -133,13 +133,13 @@ and does not explain why there is no Pause, which is untruthful and confusing. I
 stations started from other clients, so it has value even on its own.
 
 **Independent Test**: Start a station on the hub from another client. In the app, the Rooms card
-shows "Live stream", Now Playing shows the station's name, the kind "Radio", Stop without Pause,
+shows "Radio · Live stream", Now Playing shows the station's name, the kind "Radio", Stop without Pause,
 and the line "Live streams can't be paused".
 
 **Acceptance Scenarios**:
 
 1. **Given** a station plays in a room, **When** the user looks at Rooms, **Then** the card shows
-   the station's name and the status "Live stream".
+   the station's name and the status "Radio · Live stream".
 2. **Given** a station plays, **When** the user opens its Now Playing, **Then** it shows Stop and
    no Pause, the line "Live streams can't be paused", and the description "Radio" with no address
    after it.
@@ -457,7 +457,7 @@ radio screen: a plain message and a Retry appear instead of stations.
 **How a playing station is shown**
 
 - **FR-025**: A playing station MUST be treated as a live stream on every screen: the status
-  "Live stream" on its Rooms card, and on Now Playing Stop without Pause and the line "Live
+  "Radio · Live stream" on its Rooms card (a group says "<rooms> · Live stream"), and on Now Playing Stop without Pause and the line "Live
   streams can't be paused".
 - **FR-026**: Wherever a source's kind is shown, a station's kind MUST read "Radio", with the
   stream colours, and MUST NOT be followed by the station's technical address.

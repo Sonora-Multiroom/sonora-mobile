@@ -18,7 +18,7 @@ Find and play radio stations ([spec](specs/009-radio-stations/), pull request to
   without radio.
 - Your last ten stations ("Recent"), kept on the phone: a station counts after it has played for
   30 seconds. The three newest are listed in Start Playback.
-- A playing station is shown as a live radio stream on Rooms, Now Playing and in Settings.
+- A playing station is shown as a live radio stream ("Radio · Live stream") on Rooms, Now Playing and in Settings.
 - Plain messages when the station catalogue isn't answering (with Retry), when nothing matches and
   when radio is no longer available on the hub.
 
