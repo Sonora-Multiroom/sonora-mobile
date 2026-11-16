@@ -590,7 +590,7 @@ states.
   replaces what plays in `A` and `B`; rows marked **User** are done by the user or marked `n/a`).
   Record each row's evidence in verification.md; issues under "Issues found", hub-side ones as
   observations.
-- [ ] T077 Update docs/testing/full-app-test.md for this feature: a new section for radio with rows
+- [X] T077 Update docs/testing/full-app-test.md for this feature: a new section for radio with rows
   for quickstart §2, the fixture extended (the `radio` extension `ACTIVE`, a known-good station),
   rows that read a source's kind or the Start Playback layout updated, the header to MOB-009 /
   0.9.0-alpha / API 0.1.34 ("Keeping this script current" in the script). Last task.
