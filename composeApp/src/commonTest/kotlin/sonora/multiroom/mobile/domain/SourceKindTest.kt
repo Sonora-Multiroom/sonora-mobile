@@ -47,4 +47,37 @@ class SourceKindTest {
         assertFalse(isLiveStream(false, "/a.flac"))
         assertFalse(isLiveStream(false, null))
     }
+
+    // ---- A radio station (MOB-009) ---------------------------------------------------------------
+
+    @Test
+    fun aStationAddressIsRadioWhateverTheOrigin() {
+        for (origin in SourceOrigin.entries) {
+            assertEquals(SourceKind.Radio, kind(origin, "radiobrowser://9617a958-0601"), origin.name)
+            assertEquals(SourceKind.Radio, kind(origin, "  RadioBrowser://ABC "), origin.name)
+        }
+    }
+
+    @Test
+    fun theStationRuleComesBeforeRuntimeMeansLink() {
+        assertEquals(SourceKind.Link, kind(SourceOrigin.Runtime, "https://soundcloud.com/x"))
+        assertEquals(SourceKind.Radio, kind(SourceOrigin.Runtime, "radiobrowser://u1"))
+    }
+
+    @Test
+    fun aStationIsLiveWhenItCannotBePaused() {
+        assertTrue(isLiveStream(false, "radiobrowser://u1"))
+        assertTrue(isLiveStream(false, " RADIOBROWSER://u1"))
+        assertFalse(isLiveStream(true, "radiobrowser://u1"))
+    }
+
+    @Test
+    fun theOtherRulesAreUnchanged() {
+        assertEquals(SourceKind.Stream, kind(SourceOrigin.Configured, "https://x"))
+        assertEquals(SourceKind.LineIn, kind(SourceOrigin.Configured, "alsa:hw:1"))
+        assertEquals(SourceKind.File, kind(SourceOrigin.Configured, "/a.mp3"))
+        assertFalse(isLiveStream(false, "alsa:hw:1"))
+    }
+
+    @Test fun theKindIsLabelledRadio() = assertEquals("Radio", kindLabel(SourceKind.Radio))
 }

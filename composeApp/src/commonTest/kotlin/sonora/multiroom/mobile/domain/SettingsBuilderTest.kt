@@ -303,4 +303,17 @@ class SettingsBuilderTest {
         assertEquals(RoomStatus.InGroups(listOf("G")), statusOf(s, "a"))
         assertEquals(RoomStatus.Playing(listOf("Radio Paradise")), statusOf(s, "b"))
     }
+
+    @Test
+    fun aRuntimeStationCarriesTheRadioKindAndOtherRuntimeSourcesTheLinkKind() {
+        val s = snapshot(
+            sources = listOf(
+                source("link", "A link", SourceOrigin.Runtime, "https://soundcloud.com/x"),
+                source("station", "MANGORADIO", SourceOrigin.Runtime, "radiobrowser://u1"),
+            ),
+        )
+        val kinds = build(s).runtimeSources.associate { it.id to it.kind }
+        assertEquals(SourceKind.Link, kinds.getValue("link"))
+        assertEquals(SourceKind.Radio, kinds.getValue("station"))
+    }
 }

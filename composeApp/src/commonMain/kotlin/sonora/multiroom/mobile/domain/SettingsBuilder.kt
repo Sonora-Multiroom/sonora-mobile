@@ -54,7 +54,14 @@ data class ConfiguredSourceRow(
 )
 
 /** A source added at run time; [added] is the line under its name. */
-data class RuntimeSourceRow(val id: String, val name: String, val enabled: Boolean, val added: AddedLine)
+data class RuntimeSourceRow(
+    val id: String,
+    val name: String,
+    val enabled: Boolean,
+    val added: AddedLine,
+    /** Only for the tile: [SourceKind.Radio] for a station, [SourceKind.Link] for anything else added at run time. */
+    val kind: SourceKind,
+)
 
 /** The parts of "Off · Added today 14:30 · removed when it stops". */
 data class AddedLine(val off: Boolean, val at: AddedAt?, val autoRemove: Boolean)
@@ -117,7 +124,7 @@ object SettingsBuilder {
             .sortedWith(
                 compareByDescending<Source> { it.createdAt }.then(ByName { it.name to it.id }),
             )
-            .map { RuntimeSourceRow(it.id, it.name, it.enabled, addedLine(it, now, zone)) }
+            .map { RuntimeSourceRow(it.id, it.name, it.enabled, addedLine(it, now, zone), if (it.kind == SourceKind.Radio) SourceKind.Radio else SourceKind.Link) }
 
         return SettingsContent(rooms, groups, configured, runtime)
     }

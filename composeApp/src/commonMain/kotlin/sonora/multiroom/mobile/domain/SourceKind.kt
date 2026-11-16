@@ -4,9 +4,12 @@ package sonora.multiroom.mobile.domain
  * The hub has no "kind" field on inputs (a known hub gap), so kind is inferred here and **only**
  * here. [origin] `Runtime` means the input was added at run time (a played link) and wins; an
  * unknown origin is treated like a configured one. Then the address decides: http(s) is a stream,
- * `file:` or a filesystem path is a file, anything else (including no address) is a line-in.
+ * `file:` or a filesystem path is a file, anything else (including no address) is a line-in. A
+ * radio station's address (`radiobrowser://`) is [SourceKind.Radio] before any of that.
  */
 fun inferSourceKind(origin: SourceOrigin, uri: String?): SourceKind {
+    // A station is Radio whatever its origin: the played one is a run-time input too (MOB-009).
+    if (isStationAddress(uri)) return SourceKind.Radio
     if (origin == SourceOrigin.Runtime) return SourceKind.Link
     val address = uri?.trim().orEmpty()
     return when {
@@ -17,17 +20,18 @@ fun inferSourceKind(origin: SourceOrigin, uri: String?): SourceKind {
 }
 
 /**
- * The only place a route is judged live: it cannot be paused and its input address is http(s),
- * whatever the origin. Line-in and files are never labelled live.
+ * The only place a route is judged live: it cannot be paused and its input address is http(s) or a
+ * radio station's, whatever the origin. Line-in and files are never labelled live.
  */
 fun isLiveStream(pauseable: Boolean, uri: String?): Boolean =
-    !pauseable && uri?.trim().orEmpty().isHttp()
+    !pauseable && (uri?.trim().orEmpty().isHttp() || isStationAddress(uri))
 
 fun kindLabel(kind: SourceKind): String = when (kind) {
     SourceKind.Stream -> "Stream"
     SourceKind.LineIn -> "Line-in"
     SourceKind.File -> "File"
     SourceKind.Link -> "Link"
+    SourceKind.Radio -> "Radio"
 }
 
 /**
@@ -38,7 +42,7 @@ fun kindLabel(kind: SourceKind): String = when (kind) {
  */
 fun addressDetail(kind: SourceKind, uri: String?): String? {
     val address = uri?.trim().orEmpty()
-    if (address.isEmpty() || kind == SourceKind.LineIn) return null
+    if (address.isEmpty() || kind == SourceKind.LineIn || kind == SourceKind.Radio) return null
     return when (kind) {
         SourceKind.File -> lastSegment(address) ?: address
         else -> if (address.isHttp()) hostOf(address) ?: address else address
@@ -52,7 +56,7 @@ fun addressDetail(kind: SourceKind, uri: String?): String? {
  */
 fun sourceDetail(kind: SourceKind, uri: String?): String? {
     val address = uri?.trim().orEmpty()
-    if (address.isEmpty()) return null
+    if (address.isEmpty() || kind == SourceKind.Radio) return null
     return when (kind) {
         SourceKind.LineIn -> address.substringAfter("://", missingDelimiterValue = address).takeIf { it.isNotEmpty() }
         else -> addressDetail(kind, address)

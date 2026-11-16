@@ -60,4 +60,10 @@ class StatusTextTest {
     fun aGroupWithoutKnownMembersShowsJustTheStatusWord() {
         assertEquals("Playing", statusLine(card(CardStatus.Playing, isGroup = true)))
     }
+
+    @Test
+    fun aStationReadsAsALiveStream() {
+        assertEquals("Live stream", statusLine(card(CardStatus.LiveStream, SourceKind.Radio)))
+        assertEquals("Living Room + Kitchen · Live stream", statusLine(card(CardStatus.LiveStream, SourceKind.Radio, members = listOf("Living Room", "Kitchen"))))
+    }
 }

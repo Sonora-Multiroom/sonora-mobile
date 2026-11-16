@@ -480,4 +480,21 @@ class RoomsBuilderTest {
         assertEquals(listOf("a", "c"), c.cards.single().memberVolumes.keys.toList())
         assertEquals(listOf("b"), c.idle.map { it.roomId })
     }
+
+    // ---- A radio station (MOB-009) ---------------------------------------------------------------
+
+    @Test
+    fun aStationThatCannotBePausedIsALiveStreamOfKindRadioWithStopOnly() {
+        val station = source("link-1", "radiobrowser://u1", name = "MANGORADIO", origin = SourceOrigin.Runtime)
+        val s = snapshot(
+            rooms = listOf(room("living", "Living Room")),
+            routes = listOf(route("r1", "link-1", Target.Room("living"))),
+            sources = listOf(station),
+        )
+        val card = build(s).cards.single()
+        assertEquals("MANGORADIO", card.sourceName)
+        assertEquals(SourceKind.Radio, card.kind)
+        assertEquals(CardStatus.LiveStream, card.status)
+        assertEquals(CardAction.Stop, card.action)
+    }
 }

@@ -328,33 +328,33 @@ by T021 and T029.
 
 ### Tests for User Story 2 (write first, see them fail)
 
-- [ ] T041 [P] [US2] In test/domain/SourceKindTest.kt add failing tests: a `radiobrowser://` address
+- [X] T041 [P] [US2] In test/domain/SourceKindTest.kt add failing tests: a `radiobrowser://` address
   is `SourceKind.Radio` for an EPHEMERAL and a STATIC input, in any letter case, checked before the
   run-time-means-Link rule; `isLiveStream` is true for a non-pauseable station address and false
   for a pauseable one; `http(s)` and line-in rules unchanged; `kindLabel(Radio)` = "Radio".
-- [ ] T042 [P] [US2] In test/domain/AddressDetailTest.kt and test/domain/SourceDetailTest.kt add
+- [X] T042 [P] [US2] In test/domain/AddressDetailTest.kt and test/domain/SourceDetailTest.kt add
   failing tests: `addressDetail` and `sourceDetail` for `Radio` are null, so the Now Playing
   subtitle is "Radio" alone.
-- [ ] T043 [P] [US2] In test/domain/SettingsBuilderTest.kt add a failing test that
+- [X] T043 [P] [US2] In test/domain/SettingsBuilderTest.kt add a failing test that
   `RuntimeSourceRow.kind` is `Radio` for a station input and `Link` for other run-time sources; in
   test/data/KtorHubRepositorySnapshotTest.kt (with Fixtures.kt) add contract test 17 (an input
   with `uri: "radiobrowser://…"` maps to kind `Radio`, EPHEMERAL and STATIC).
-- [ ] T044 [P] [US2] In test/domain/RoomsBuilderTest.kt, test/domain/NowPlayingBuilderTest.kt and
+- [X] T044 [P] [US2] In test/domain/RoomsBuilderTest.kt, test/domain/NowPlayingBuilderTest.kt and
   test/ui/rooms/StatusTextTest.kt add failing tests that a non-pauseable station route has the
   status "Radio · Live stream", Stop without Pause, the line "Live streams can't be paused" and the
   title of the station's name.
 
 ### Implementation for User Story 2
 
-- [ ] T045 [US2] In main/domain/Models.kt add `SourceKind.Radio`; in main/domain/SourceKind.kt
+- [X] T045 [US2] In main/domain/Models.kt add `SourceKind.Radio`; in main/domain/SourceKind.kt
   make `inferSourceKind` return it first for a station address, extend `isLiveStream`, `kindLabel`,
   `addressDetail` and `sourceDetail`; fix every exhaustive `when` over `SourceKind` the compiler
   reports.
-- [ ] T046 [P] [US2] In main/ui/rooms/KindStyle.kt map `Radio` to the stream colours and icon.
-- [ ] T047 [US2] Add `kind` to `RuntimeSourceRow` in main/domain/SettingsBuilder.kt and make
+- [X] T046 [P] [US2] In main/ui/rooms/KindStyle.kt map `Radio` to the stream colours and icon.
+- [X] T047 [US2] Add `kind` to `RuntimeSourceRow` in main/domain/SettingsBuilder.kt and make
   `RuntimeSourceSettingRow` in main/ui/settings/SettingRows.kt draw that kind's tile. The row's
   text does not change: it keeps the added line and names no kind in words.
-- [ ] T048 [US2] Run `./gradlew :composeApp:testAndroidHostTest` and confirm the Rooms status, Now
+- [X] T048 [US2] Run `./gradlew :composeApp:testAndroidHostTest` and confirm the Rooms status, Now
   Playing and source lists need no further change (they derive from these functions); fix any
   place that still shows a station as "Link" or draws its address.
 

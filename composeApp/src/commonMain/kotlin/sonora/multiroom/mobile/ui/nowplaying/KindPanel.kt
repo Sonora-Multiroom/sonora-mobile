@@ -35,7 +35,7 @@ import androidx.compose.ui.unit.sp
 fun KindPanel(kind: SourceKind, live: Boolean, modifier: Modifier = Modifier) {
     val colors = SonoraTheme.colors
     val kindColors = colors.forKind(kind)
-    val stream = kind == SourceKind.Stream
+    val stream = kind == SourceKind.Stream || kind == SourceKind.Radio
     val panel = if (stream) colors.streamPanel else kindColors.tile
     val ring = if (stream) colors.accent else kindColors.icon
     val disc = if (stream) colors.accent else kindColors.icon

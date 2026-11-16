@@ -336,4 +336,19 @@ class NowPlayingBuilderTest {
     fun changeSourceIsHiddenForAnUnknownTargetType() {
         assertFalse(playback(snapshot(routes = listOf(route("r1", "radio", Target.Unknown("weird"))))).changeSourceVisible)
     }
+
+    // ---- A radio station (MOB-009) ---------------------------------------------------------------
+
+    @Test
+    fun aStationIsNamedByItsNameIsLiveAndHasNoAddressAfterTheKind() {
+        val station = source("link-1", "radiobrowser://u1", "MANGORADIO", SourceOrigin.Runtime)
+        val p = playback(snapshot(sources = listOf(station), routes = listOf(route("r1", "link-1", Target.Room("living")))))
+        assertEquals("MANGORADIO", p.sourceName)
+        assertEquals(SourceKind.Radio, p.kind)
+        assertEquals("Radio", p.kindLabel)
+        assertNull(p.addressDetail)
+        assertTrue(p.live)
+        assertFalse(p.pauseVisible)
+        assertEquals(CardStatus.Playing, p.status)
+    }
 }

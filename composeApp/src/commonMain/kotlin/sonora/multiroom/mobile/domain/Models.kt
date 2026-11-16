@@ -20,7 +20,7 @@ data class Group(
 
 enum class SourceOrigin { Configured, Runtime, Unknown }
 
-enum class SourceKind { Stream, LineIn, File, Link }
+enum class SourceKind { Stream, LineIn, File, Link, Radio }
 
 /**
  * How a playback joined its target (API 0.1.21). [Announcement] is the hub's `DUCK_OTHERS`:

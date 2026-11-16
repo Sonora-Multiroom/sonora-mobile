@@ -54,4 +54,10 @@ class AddressDetailTest {
         assertEquals("http://", addressDetail(SourceKind.Stream, " http:// "))
         assertEquals("/music/", addressDetail(SourceKind.File, "/music/"))
     }
+
+    @Test
+    fun aStationShowsNoAddress() {
+        assertNull(addressDetail(SourceKind.Radio, "radiobrowser://9617a958-0601-11e8"))
+        assertNull(addressDetail(SourceKind.Radio, null))
+    }
 }
