@@ -265,4 +265,22 @@ class KtorHubRepositorySnapshotTest {
             assertEquals(sonora.multiroom.mobile.domain.SourceKind.Radio, snapshotOf(hub).sources.single().kind, origin)
         }
     }
+
+    // ---- 009: when the audio began (contract test 18) -------------------------------------------
+
+    private suspend fun routeFrom(extra: String): sonora.multiroom.mobile.domain.Route {
+        val hub = Hub(routes = """[{"routeId":"r1","inputId":"x","targetId":"living","targetType":"SINGLE_OUTPUT","status":"ACTIVE"$extra}]""")
+        return snapshotOf(hub).routes.single()
+    }
+
+    @Test
+    fun aRoutesStartedAtIsParsedAndAnythingUnreadableIsNullWithoutFailingTheSnapshot() = kotlinx.coroutines.test.runTest {
+        assertEquals(
+            kotlin.time.Instant.parse("2026-11-16T10:00:05Z"),
+            routeFrom(""","startedAt":"2026-11-16T10:00:05Z"""").startedAt,
+        )
+        for (extra in listOf("", ""","startedAt":null""", ",\"startedAt\":\"\"", ",\"startedAt\":\"soon\"")) {
+            assertEquals(null, routeFrom(extra).startedAt, extra)
+        }
+    }
 }

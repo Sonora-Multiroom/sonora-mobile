@@ -14,6 +14,7 @@ object RadioText {
     const val UNNAMED = "Unnamed station"
     const val LOADING = "Loading stations"
     const val LOADING_MORE = "Loading more stations…"
+    const val RECENT_HEADING = "RECENT"
 }
 
 /** The radio screen's second line: the known parts alone, or none. */
@@ -22,3 +23,6 @@ fun stationRowDetail(station: Station): String? = stationDetail(station)
 /** A station row read as one node: "<name>, <second line>". */
 fun stationSpoken(station: Station, detail: String?): String =
     if (detail == null) stationDisplayName(station) else "${stationDisplayName(station)}, $detail"
+
+/** The spoken label of a recent row's remove button. */
+fun removeRecentLabel(station: Station): String = "Remove ${stationDisplayName(station)} from Recent"

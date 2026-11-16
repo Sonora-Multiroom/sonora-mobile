@@ -385,4 +385,57 @@ class RadioViewModelTest {
         assertTrue(s.picker.gone.value)
         s.vm.onHidden()
     }
+
+    // ---- Recent (MOB-009) ------------------------------------------------------------------------
+
+    private fun recent(vararg ids: String) = ids.map { station(it) }
+
+    @Test
+    fun allRecentStationsShowWhileTheNameIsEmptyWhateverTheFilters() = runViewModelTest {
+        val ten = recent(*(1..10).map { "r$it" }.toTypedArray())
+        val filters = sonora.multiroom.mobile.domain.RadioFilters(tag = "jazz", order = StationOrder.Trending)
+        val s = live(store = InMemoryRadioStore(recent = ten, filters = filters))
+        assertEquals(ten, s.ui.recent)
+        s.vm.onHidden()
+    }
+
+    @Test
+    fun recentStationsShowWhenNoStationMatchesAndWhenTheCatalogueDoesNotAnswer() = runViewModelTest {
+        val empty = live(store = InMemoryRadioStore(recent = recent("a")), script = { it.stationsResult = { _, _ -> HubResult.Ok(StationPage(emptyList(), null)) } })
+        assertTrue(empty.list.empty)
+        assertEquals(recent("a"), empty.ui.recent)
+        empty.vm.onHidden()
+        val down = live(
+            store = InMemoryRadioStore(recent = recent("a")),
+            script = { it.stationResults += HubResult.Err(HubError.Rejected(503, "urn:multiroom:radio:error:catalogue-unavailable")) },
+        )
+        assertEquals(RadioFailure.Catalogue, down.list.problem)
+        assertEquals(recent("a"), down.ui.recent)
+        down.vm.onHidden()
+    }
+
+    @Test
+    fun recentStationsAreHiddenWhileANameIsTypedAndComeBackWhenItIsCleared() = runViewModelTest {
+        val s = live(store = InMemoryRadioStore(recent = recent("a", "b")))
+        s.vm.onNameChange("man"); runCurrent()
+        assertTrue(s.ui.recent.isEmpty())
+        s.vm.onNameChange("  "); runCurrent()
+        assertEquals(recent("a", "b"), s.ui.recent)
+        s.vm.onHidden()
+    }
+
+    @Test
+    fun withNoRecentStationNothingIsShown() = runViewModelTest {
+        val s = live()
+        assertTrue(s.ui.recent.isEmpty())
+        s.vm.onHidden()
+    }
+
+    @Test
+    fun removingARecentStationIsImmediateAndTouchesNoOtherEntry() = runViewModelTest {
+        val s = live(store = InMemoryRadioStore(recent = recent("a", "b", "c")))
+        s.vm.removeRecent("b"); runCurrent()
+        assertEquals(recent("a", "c"), s.ui.recent)
+        s.vm.onHidden()
+    }
 }

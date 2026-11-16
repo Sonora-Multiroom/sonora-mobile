@@ -134,3 +134,42 @@ fun addRecent(list: List<Station>, station: Station): List<Station> =
 /** An extension with id `radio` (any letter case) and status Active. */
 fun radioOffered(inventory: ExtensionInventory): Boolean =
     inventory.extensions.any { it.id.equals("radio", ignoreCase = true) && it.status == ExtensionStatus.Active }
+
+// ---- Judging a started station (research R8) ----------------------------------------------
+
+/** A station listened to for this long becomes "recent". Time spent starting does not count. */
+const val RECENT_AFTER_MILLIS = 30_000L
+
+sealed interface RecentVerdict {
+    /** Add the station to the recent list and stop watching. */
+    data object Recent : RecentVerdict
+
+    /** The playback is gone, failed or is another station: stop watching, add nothing. */
+    data object Drop : RecentVerdict
+
+    /** Keep watching; [pending] is the entry to keep, with `playingSince` fixed once it is known. */
+    data class Wait(val pending: PendingStation) : RecentVerdict
+}
+
+/**
+ * Judges one pending station against what the hub reports now. The count starts when the audio
+ * does: the first time the route is seen playing it is fixed, once and for all, at
+ * `max(route.startedAt ?: now, trackedAt)`: the hub's own statement, but never before the request
+ * was sent (a hub clock running behind must not let a station in early).
+ */
+fun judgeRecent(pending: PendingStation, snapshot: HubSnapshot, nowMillis: Long): RecentVerdict {
+    val route = snapshot.routes.firstOrNull { it.id == pending.routeId && it.status != RouteStatus.Stopped }
+        ?: return RecentVerdict.Drop
+    val input = snapshot.sources.firstOrNull { it.id == route.inputId } ?: return RecentVerdict.Drop
+    if (!sameStation(input.uri, pending.station.uri)) return RecentVerdict.Drop
+    return when (route.status) {
+        RouteStatus.Failed -> RecentVerdict.Drop
+        RouteStatus.Active -> {
+            val since = pending.playingSince
+                ?: maxOf(route.startedAt?.toEpochMilliseconds() ?: nowMillis, pending.trackedAt)
+            if (nowMillis - since >= RECENT_AFTER_MILLIS) RecentVerdict.Recent
+            else RecentVerdict.Wait(pending.copy(playingSince = since))
+        }
+        else -> RecentVerdict.Wait(pending)
+    }
+}

@@ -118,6 +118,8 @@ internal fun RouteResponse.toRoute(): Route? {
             null -> JoinMode.Unknown
         },
         outputs = outputs?.filter { it.isNotBlank() }?.distinct(),
+        // A date the app cannot read is "not known", never a failed refresh.
+        startedAt = startedAt?.takeIf { it.isNotBlank() }?.let { runCatching { Instant.parse(it) }.getOrNull() },
     )
 }
 

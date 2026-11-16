@@ -373,7 +373,7 @@ them: both are under "Recent", the later first; a station stopped after a few se
 
 ### Tests for User Story 3 (write first, see them fail)
 
-- [ ] T049 [P] [US3] In test/domain/RadioTest.kt add failing tests for `judgeRecent(pending,
+- [X] T049 [P] [US3] In test/domain/RadioTest.kt add failing tests for `judgeRecent(pending,
   snapshot, nowMillis)`, every row of research R8: no live route with that id → `Drop`; input
   missing or another address → `Drop`; status `Failed` → `Drop`; `Starting` → `Wait` unchanged;
   the first `Active` fixes `playingSince = max(route.startedAt ?: now, trackedAt)` and the `Wait`
@@ -383,7 +383,7 @@ them: both are under "Recent", the later first; a station stopped after a few se
   counted from now; `Active` and ≥ 30,000 ms since `playingSince` → `Recent`; a route that was
   `Starting` for 29 s and has played for 5 s is not `Recent`; once fixed, `playingSince` is not
   changed by a later, different `startedAt` (a move to another room keeps the route id).
-- [ ] T050 [P] [US3] Create test/ui/session/RecentStationTrackerTest.kt with failing tests, fake
+- [X] T050 [P] [US3] Create test/ui/session/RecentStationTrackerTest.kt with failing tests, fake
   session and virtual time: `track` stores a pending entry (also in the store) with `trackedAt`
   = the given `sentAt` and no `playingSince`; a start recovered 35 s after it was sent, with the
   hub's `startedAt` 2 s after sending, is added by the first refresh (the bound is the sending,
@@ -396,19 +396,19 @@ them: both are under "Recent", the later first; a station stopped after a few se
   restored from the store after the process was ended is judged on the first refresh; two stations
   in two rooms are judged by their own routes; a removed station can qualify again; the list stays
   at ten with each `uuid` once; the tracker never polls.
-- [ ] T051 [P] [US3] In test/ui/session/PlaybackStarterTest.kt add failing tests: a successful
+- [X] T051 [P] [US3] In test/ui/session/PlaybackStarterTest.kt add failing tests: a successful
   station start (also a recovered one, also when Start Playback was closed) calls
   `tracker.track(station, route, sentAt, fence)` with `sentAt` the clock when the start request was
   sent, the same value in the recovered case; a source or a link start does not, also when the source
   is a station another client started (spec Assumptions).
-- [ ] T052 [P] [US3] In test/ui/startplayback/StartPlaybackViewModelTest.kt add failing tests: up to
+- [X] T052 [P] [US3] In test/ui/startplayback/StartPlaybackViewModelTest.kt add failing tests: up to
   three recent rows, most recent first, none when radio is not offered whatever the phone
   remembers; selecting a recent row selects the station without opening the radio screen; a
   selection that is one of the three marks that row once, and tapping that selected row changes
   nothing (no `openRadio`, still selected); removing a station from "Recent" frees a
   place for the next one and leaves a selection or playback unaffected; a recent station that
   also plays is left out of the source list, and comes back there when it leaves the three.
-- [ ] T053 [P] [US3] In test/ui/radio/RadioViewModelTest.kt add failing tests: "Recent" (all ten,
+- [X] T053 [P] [US3] In test/ui/radio/RadioViewModelTest.kt add failing tests: "Recent" (all ten,
   unfiltered) while the cleaned name is empty, whatever filters are chosen and whatever the
   station list holds (also when no station matches or the catalogue does not answer); hidden while
   a name is typed, and when there is no recent station at all; removal is immediate, without
@@ -416,24 +416,24 @@ them: both are under "Recent", the later first; a station stopped after a few se
 
 ### Implementation for User Story 3
 
-- [ ] T053a [P] [US3] In test/data/KtorHubRepositorySnapshotTest.kt (with Fixtures.kt) add the
+- [X] T053a [P] [US3] In test/data/KtorHubRepositorySnapshotTest.kt (with Fixtures.kt) add the
   failing contract test 18 of contracts/hub-repository.md: a route's `startedAt` maps to that
   instant; `null`, missing, `""` and `"soon"` map to null and never fail the snapshot.
-- [ ] T053b [US3] Add `startedAt: Instant?` to `Route` in main/domain/Models.kt (default null, so
+- [X] T053b [US3] Add `startedAt: Instant?` to `Route` in main/domain/Models.kt (default null, so
   existing fixtures compile) and map `RouteResponse.startedAt` in main/data/ApiMapping.kt the way
   an input's `createdAt` is mapped (T053a).
-- [ ] T054 [US3] In main/domain/Radio.kt add `judgeRecent`, `RECENT_AFTER_MILLIS = 30_000` and
+- [X] T054 [US3] In main/domain/Radio.kt add `judgeRecent`, `RECENT_AFTER_MILLIS = 30_000` and
   `RECENT_IN_START_PLAYBACK = 3` (T049; needs T053b).
-- [ ] T055 [US3] Create main/ui/session/RecentStationTracker.kt (T050): `track(station, route,
+- [X] T055 [US3] Create main/ui/session/RecentStationTracker.kt (T050): `track(station, route,
   sentAt, fence)`, judging on every successful session refresh, pending entries kept in `RadioStore`
   (stored again whenever a judgement fixed `playingSince`), read once at start-up. Create it in AppGraph beside `PlaybackStarter`.
-- [ ] T056 [US3] In main/ui/session/PlaybackStarter.kt note the clock when a start request is sent
+- [X] T056 [US3] In main/ui/session/PlaybackStarter.kt note the clock when a start request is sent
   and call `tracker.track(station, route, sentAt, fence)` when a station start succeeds, directly
   or recovered (T051).
-- [ ] T057 [US3] In `RadioViewModel` expose `recent` and `removeRecent(uuid)`; in
+- [X] T057 [US3] In `RadioViewModel` expose `recent` and `removeRecent(uuid)`; in
   main/ui/radio/RadioScreen.kt draw the "RECENT" heading and up to ten station rows, each with a
   44 dp ✕ spoken "Remove <name> from Recent", above the list (T053).
-- [ ] T058 [US3] In `StartPlaybackViewModel` and main/ui/startplayback/RadioRows.kt list the three
+- [X] T058 [US3] In `StartPlaybackViewModel` and main/ui/startplayback/RadioRows.kt list the three
   recent rows directly under "Find a radio station" (transparent, a radio dot at the end, one
   radio group with the sources, no remove action; tapping the selected recent row changes
   nothing) and mark a selected one (T052). The selected

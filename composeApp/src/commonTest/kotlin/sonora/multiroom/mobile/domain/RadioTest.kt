@@ -155,4 +155,105 @@ class RadioTest {
         assertEquals(StationQuery("mango", "DE", "jazz", "german", StationOrder.Trending), filters.toQuery("mango"))
         assertEquals(StationQuery(null, null, null, null, StationOrder.MostVoted), RadioFilters().toQuery(null))
     }
+
+    // ---- Judging a started station (research R8) -------------------------------------------------
+
+    private val now = 10_000_000L
+    private val mango = station("u1")
+
+    private fun playing(
+        status: RouteStatus = RouteStatus.Active,
+        startedAt: Long? = null,
+        input: String? = "radiobrowser://u1",
+        routeId: String = "r1",
+    ) = HubSnapshot(
+        rooms = emptyList(),
+        groups = emptyList(),
+        routes = listOf(
+            Route(
+                routeId, "link-1", Target.Room("kitchen"), status, false, false, true,
+                startedAt = startedAt?.let(kotlin.time.Instant::fromEpochMilliseconds),
+            ),
+        ),
+        sources = listOfNotNull(
+            input?.let { Source("link-1", "MANGORADIO", it, SourceOrigin.Runtime, false, true, SourceKind.Radio) },
+        ),
+        masterMuted = false,
+    )
+
+    private fun pending(trackedAt: Long = now - 60_000, playingSince: Long? = null) =
+        PendingStation(mango, "r1", trackedAt, playingSince)
+
+    @Test
+    fun aMissingStoppedOrOtherRouteDropsTheEntry() {
+        assertEquals(RecentVerdict.Drop, judgeRecent(pending(), playing(routeId = "other"), now))
+        assertEquals(RecentVerdict.Drop, judgeRecent(pending(), playing(RouteStatus.Stopped), now))
+        assertEquals(RecentVerdict.Drop, judgeRecent(pending(), HubSnapshot(emptyList(), emptyList(), emptyList(), emptyList(), false), now))
+    }
+
+    @Test
+    fun aMissingInputOrAnotherStationDropsTheEntry() {
+        assertEquals(RecentVerdict.Drop, judgeRecent(pending(), playing(input = null), now))
+        assertEquals(RecentVerdict.Drop, judgeRecent(pending(), playing(input = "radiobrowser://other"), now))
+        assertEquals(RecentVerdict.Drop, judgeRecent(pending(), playing(input = "http://x/stream"), now))
+    }
+
+    @Test
+    fun aFailedRouteDropsTheEntry() {
+        assertEquals(RecentVerdict.Drop, judgeRecent(pending(), playing(RouteStatus.Failed), now))
+    }
+
+    @Test
+    fun aStartingRouteWaitsUnchanged() {
+        val p = pending()
+        assertEquals(RecentVerdict.Wait(p), judgeRecent(p, playing(RouteStatus.Starting), now))
+    }
+
+    @Test
+    fun theFirstActiveRefreshFixesPlayingSinceFromTheHubsStartedAt() {
+        val v = judgeRecent(pending(), playing(startedAt = now - 10_000), now)
+        assertEquals(RecentVerdict.Wait(pending(playingSince = now - 10_000)), v)
+    }
+
+    @Test
+    fun aStationThatBeganInTheBackgroundIsRecentInTheSameCall() {
+        val v = judgeRecent(pending(trackedAt = now - 400_000), playing(startedAt = now - 300_000), now)
+        assertEquals(RecentVerdict.Recent, v)
+    }
+
+    @Test
+    fun theCountNeverStartsBeforeTheRequestWasSent() {
+        // The hub's clock runs behind: it says the audio began 100 s ago, but the request left 5 s ago.
+        val v = judgeRecent(pending(trackedAt = now - 5_000), playing(startedAt = now - 100_000), now)
+        assertEquals(RecentVerdict.Wait(pending(trackedAt = now - 5_000, playingSince = now - 5_000)), v)
+    }
+
+    @Test
+    fun withoutAStartedAtTheCountBeginsNow() {
+        val v = judgeRecent(pending(), playing(startedAt = null), now)
+        assertEquals(RecentVerdict.Wait(pending(playingSince = now)), v)
+    }
+
+    @Test
+    fun thirtySecondsOfPlayAddTheStation() {
+        assertEquals(RecentVerdict.Recent, judgeRecent(pending(playingSince = now - 30_000), playing(), now))
+        val p = pending(playingSince = now - 29_999)
+        assertEquals(RecentVerdict.Wait(p), judgeRecent(p, playing(), now))
+    }
+
+    @Test
+    fun timeSpentStartingDoesNotCount() {
+        // Starting for 29 s, then playing for 5 s.
+        val v = judgeRecent(pending(trackedAt = now - 34_000), playing(startedAt = now - 5_000), now)
+        assertEquals(RecentVerdict.Wait(pending(trackedAt = now - 34_000, playingSince = now - 5_000)), v)
+    }
+
+    @Test
+    fun onceFixedPlayingSinceIsNotChangedByALaterStartedAt() {
+        // A move to another room may carry another startedAt; the count is not restarted or lengthened.
+        val p = pending(playingSince = now - 10_000)
+        assertEquals(RecentVerdict.Wait(p), judgeRecent(p, playing(startedAt = now - 100_000), now))
+        val later = pending(playingSince = now - 40_000)
+        assertEquals(RecentVerdict.Recent, judgeRecent(later, playing(startedAt = now - 1_000), now))
+    }
 }

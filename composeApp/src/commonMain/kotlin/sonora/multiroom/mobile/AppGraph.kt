@@ -17,6 +17,7 @@ import sonora.multiroom.mobile.ui.session.AppMessages
 import sonora.multiroom.mobile.ui.session.HubSession
 import sonora.multiroom.mobile.ui.session.PlaybackStarter
 import sonora.multiroom.mobile.ui.session.RadioAvailability
+import sonora.multiroom.mobile.ui.session.RecentStationTracker
 import sonora.multiroom.mobile.ui.session.StationPicker
 import sonora.multiroom.mobile.ui.session.SettingsActions
 import sonora.multiroom.mobile.ui.session.SettingsNavigator
@@ -50,6 +51,9 @@ class AppGraph(
     /** Whether the hub offers radio; asked when Start Playback opens (MOB-009). */
     val radioAvailability = RadioAvailability(session, appScope)
 
+    /** Watches started stations and adds each to "Recent" after 30 seconds of play. */
+    private val recentTracker = RecentStationTracker(appScope, session, radioStore)
+
     /** Hands the station chosen on the radio screen back to Start Playback. */
     val stationPicker = StationPicker()
 
@@ -57,7 +61,7 @@ class AppGraph(
     val messages = AppMessages()
 
     /** Runs starts so they outlive their screen (research R9). */
-    val starter = PlaybackStarter(appScope, session, messages)
+    val starter = PlaybackStarter(appScope, session, messages, recentTracker)
 
     /** The Settings tab and the sheet request, which outlive the Settings entry (research R2). */
     val settingsNavigator = SettingsNavigator()

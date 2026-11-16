@@ -107,7 +107,13 @@ fun RadioScreen(
             onClear = viewModel::onClearName,
             modifier = Modifier.padding(horizontal = 20.dp, vertical = 12.dp),
         )
-        StationListView(state, onChoose = viewModel::onChoose, onListPosition = viewModel::onListPosition, modifier = Modifier.weight(1f))
+        StationListView(
+            state,
+            onChoose = viewModel::onChoose,
+            onListPosition = viewModel::onListPosition,
+            onRemoveRecent = viewModel::removeRecent,
+            modifier = Modifier.weight(1f),
+        )
     }
 }
 
@@ -116,6 +122,7 @@ private fun StationListView(
     state: RadioUiState,
     onChoose: (sonora.multiroom.mobile.domain.Station) -> Unit,
     onListPosition: (Int) -> Unit,
+    onRemoveRecent: (String) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val colors = SonoraTheme.colors
@@ -125,10 +132,38 @@ private fun StationListView(
     val list = state.list
 
     val lastVisible by remember { derivedStateOf { listState.layoutInfo.visibleItemsInfo.lastOrNull()?.index ?: 0 } }
-    // Row 0 is the heading, so the last visible station is one less.
-    LaunchedEffect(lastVisible, list.stations.size, list.phase) { onListPosition(lastVisible - 1) }
+    // The "Recent" rows and the list heading come before the stations.
+    val rowsBefore = (if (state.recent.isEmpty()) 0 else state.recent.size + 1) + 1
+    LaunchedEffect(lastVisible, list.stations.size, list.phase) { onListPosition(lastVisible - rowsBefore) }
 
     LazyColumn(modifier = modifier.fillMaxSize(), state = listState, contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 12.dp, vertical = 4.dp)) {
+        if (state.recent.isNotEmpty()) {
+            item(key = "recent-heading") {
+                Text(
+                    RadioText.RECENT_HEADING,
+                    style = type.sectionLabel,
+                    color = colors.textMuted,
+                    modifier = Modifier.padding(start = 8.dp, top = 4.dp, bottom = 8.dp),
+                )
+            }
+            items(state.recent, key = { "recent:" + it.uuid }) { station ->
+                StationRow(
+                    station,
+                    secondLine = stationDetail(station),
+                    onClick = { onChoose(station) },
+                    trailing = {
+                        IconCircleButton(
+                            icon = SonoraIcons.Close,
+                            label = removeRecentLabel(station),
+                            background = Color.Transparent,
+                            tint = colors.textMuted,
+                            size = 44.dp,
+                            onClick = { onRemoveRecent(station.uuid) },
+                        )
+                    },
+                )
+            }
+        }
         item(key = "heading") {
             Text(
                 RadioText.LIST_HEADING,

@@ -932,4 +932,66 @@ class StartPlaybackViewModelTest {
         assertEquals(listOf<Any>("radiobrowser://u1", bedroom), s.repo.calls.single { it.name == "playLink" }.args)
         s.vm.onHidden()
     }
+
+    // ---- Recent stations (MOB-009) ---------------------------------------------------------------
+
+    private fun recentStations(vararg ids: String) = ids.map { Station(it, "radiobrowser://$it", "Station $it", null, null, null) }
+
+    @Test
+    fun upToThreeRecentRowsMostRecentFirst() = runViewModelTest {
+        val s = live(radio = true, store = InMemoryRadioStore(recent = recentStations("a", "b", "c", "d", "e")))
+        assertEquals(listOf("a", "b", "c"), s.ui.radio?.recent?.map { it.uuid })
+        s.vm.onHidden()
+    }
+
+    @Test
+    fun noRecentRowsWhileRadioIsNotOfferedWhateverThePhoneRemembers() = runViewModelTest {
+        val s = live(radio = false, store = InMemoryRadioStore(recent = recentStations("a", "b")))
+        assertNull(s.ui.radio)
+        s.vm.onHidden()
+    }
+
+    @Test
+    fun selectingARecentRowSelectsTheStationWithoutOpeningTheRadioScreen() = runViewModelTest {
+        val recent = recentStations("a", "b", "c")
+        val s = live(radio = true, store = InMemoryRadioStore(recent = recent))
+        s.vm.onSelectStation(recent[1])
+        assertEquals(recent[1], s.ui.selectedStation)
+        assertFalse(s.ui.openRadio)
+        assertEquals("b", s.ui.radio?.selectedUuid)
+        assertNull(s.ui.radio?.found)
+        // Tapping the selected row again changes nothing.
+        val before = s.ui
+        s.vm.onSelectStation(recent[1])
+        assertEquals(before, s.ui)
+        s.vm.onHidden()
+    }
+
+    @Test
+    fun removingARecentStationFreesAPlaceForTheNextAndLeavesTheSelectionAlone() = runViewModelTest {
+        val recent = recentStations("a", "b", "c", "d")
+        val s = live(radio = true, store = InMemoryRadioStore(recent = recent))
+        s.vm.onSelectStation(recent[0])
+        s.store.removeRecent("a"); runCurrent()
+        assertEquals(listOf("b", "c", "d"), s.ui.radio?.recent?.map { it.uuid })
+        // The station stays selected; it now takes the place of the "Find" row.
+        assertEquals(recent[0], s.ui.selectedStation)
+        assertEquals("a", s.ui.radio?.found?.uuid)
+        s.vm.onHidden()
+    }
+
+    @Test
+    fun aRecentStationThatAlsoPlaysIsLeftOutOfTheSourcesAndComesBackWhenItLeavesTheThree() = runViewModelTest {
+        val recent = recentStations("a", "b", "c")
+        val s = live(
+            radio = true,
+            store = InMemoryRadioStore(recent = recent),
+            snapshot = snapshot(sources = listOf(source("jazz", "Jazz24"), stationInput("link-a", "radiobrowser://a"))),
+        )
+        assertEquals(listOf("jazz"), s.ui.content?.sources?.map { it.id })
+        for (n in listOf("x", "y", "z")) s.store.addRecent(recentStations(n).single())
+        runCurrent()
+        assertEquals(listOf("jazz", "link-a"), s.ui.content?.sources?.map { it.id })
+        s.vm.onHidden()
+    }
 }

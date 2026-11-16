@@ -31,4 +31,11 @@ class RadioTextTest {
         assertEquals("DE · MP3 · 128 kbps", stationRowDetail(full))
         assertEquals(null, stationRowDetail(bare))
     }
+
+    @Test
+    fun theRecentSectionsWordingAndSpokenLabel() {
+        assertEquals("RECENT", RadioText.RECENT_HEADING)
+        assertEquals("Remove MANGORADIO from Recent", removeRecentLabel(full))
+        assertEquals("Remove Unnamed station from Recent", removeRecentLabel(bare))
+    }
 }

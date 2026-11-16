@@ -59,6 +59,8 @@ class RadioViewModel(
     /** The query the list on screen belongs to. */
     private var query: StationQuery? = null
 
+    private var storedRecent: List<Station> = emptyList()
+
     private var loadedOnce = false
     private var loadedName: String? = null
     private var pageJob: Job? = null
@@ -69,6 +71,12 @@ class RadioViewModel(
         viewModelScope.launch {
             session.state.collect { s ->
                 if (s is SessionState.Connected) _state.update { it.copy(connection = s.connection) }
+            }
+        }
+        viewModelScope.launch {
+            store.recent.collect { list ->
+                storedRecent = list
+                _state.update { it.copy(recent = shownRecent(it.nameText)) }
             }
         }
         viewModelScope.launch {
@@ -96,11 +104,19 @@ class RadioViewModel(
     fun onNameChange(text: String) {
         val clean = cleanField(text)
         savedState[NAME_KEY] = clean
-        _state.update { it.copy(nameText = clean) }
+        _state.update { it.copy(nameText = clean, recent = shownRecent(clean)) }
         nameInput.value = clean
     }
 
     fun onClearName() = onNameChange("")
+
+    /** All recent stations while the name is empty (whatever the filters or the list say); none while one is typed. */
+    private fun shownRecent(name: String): List<Station> = if (stationName(name) == null) storedRecent else emptyList()
+
+    /** Forgets one recent station at once; nothing else changes, not even a playback. */
+    fun removeRecent(uuid: String) {
+        viewModelScope.launch { store.removeRecent(uuid) }
+    }
 
     // ---- The list ------------------------------------------------------------------------------
 
