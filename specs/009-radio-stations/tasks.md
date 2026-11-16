@@ -183,7 +183,9 @@ Now Playing and Rooms name the station is User Story 2).
   target says what will stop; a station replaces (`effectiveJoinMode(Station)` = `Replace`);
   `alreadyThere` is true when a live route addressed to the target plays an input whose `uri` is
   the same station (`sameStation`, whichever input id), false for another station or another
-  target (FR-017, whichever client started it).
+  target (FR-017, whichever client started it). Also direct tests for `isStationAddress` (trimmed,
+  any letter case, `radiobrowser://` only) and `sameStation` (both station addresses, equal
+  ignoring case; an `http(s)` address never matches).
 - [ ] T022 [P] [US1] In test/domain/StartPlaybackBuilderTest.kt add failing tests for
   `radioRows(offered, recent, selected)`: null when not offered; the first three recent stations;
   a selected station that is one of them marks that row and `found` is null; a selected station
@@ -208,7 +210,10 @@ Now Playing and Rooms name the station is User Story 2).
   target selected and sets the snackbar `message` "Couldn't start <station>"; the selected station
   survives saved-state restore (`station` key, JSON); `openRadio` is one-shot; availability is
   refreshed each time the screen becomes visible; a selected station that also plays is not
-  listed again under the sources (`hideListedStations`).
+  listed again under the sources (`hideListedStations`); in fixed-target mode ("Change source…")
+  the radio section is offered, and a station start goes to the fixed room or group with no
+  target picked; tapping the "Change" row of a selected station that is not among the recent ones
+  raises `openRadio`.
 - [ ] T026 [P] [US1] In test/ui/startplayback/StartPlaybackTextTest.kt add failing tests for
   `playLabelParts` (`("Play ", "MANGORADIO", " in Bedroom")`; the name is empty for "Play", "Play
   link in <target>" and "Starting…", whose whole text is in `before`; source names use the same
@@ -220,7 +225,14 @@ Now Playing and Rooms name the station is User Story 2).
   nothing again; paging requests the next page within 10 rows of the end, drops duplicate `uuid`s,
   follows a page of only duplicates with the next request at once, stops at `nextOffset == null`
   and at 10,000; choosing a station calls `StationPicker.pick` and sets `exit = Chosen`; nothing is
-  emitted after the view model is cleared; the typed name is kept in `SavedStateHandle`.
+  emitted after the view model is cleared; the typed name is kept in `SavedStateHandle`. The
+  failure paths too, since every later story builds on them: a `Catalogue` failure keeps the
+  listed stations and sets `problem`; Retry repeats the failed request (first page or next page)
+  and `limitReached` survives a failed and retried next page; `HubUnreachable` asks the session
+  for a refresh, shows no catalogue message while the session is unreachable and repeats the
+  request by itself when the hub answers again (if the session is live all the same, it is shown
+  as `Catalogue`); `Gone` calls `RadioAvailability.markGone()` and `StationPicker.reportGone()`
+  and sets `exit = Gone`; "No stations match" for an empty loaded list.
 - [ ] T028 [P] [US1] Create test/ui/radio/RadioTextTest.kt with failing tests for the wording and
   spoken labels of the screen and a station row ("Radio stations", "Station name", "Clear the
   name", "Unnamed station", "<name>, <second line>", "Loading stations", "Loading more stations…").
@@ -240,18 +252,20 @@ Now Playing and Rooms name the station is User Story 2).
   display name in `StartNames.source`, and recover a lost answer by address (T024).
 - [ ] T033 [P] [US1] Create main/ui/radio/RadioText.kt (all radio wording and spoken labels, T028)
   and main/ui/radio/RadioUiState.kt (`RadioUiState`, `StationList` with `phase`, `nextOffset`,
-  `limitReached`, `problem`, derived `empty`; `RadioExit`; `FilterSheet` as a type only, filled in
-  US4).
+  `limitReached`, `problem`, derived `empty`; `RadioExit`; `FilterSheetState` as a type only,
+  filled in US4).
 - [ ] T034 [P] [US1] Add `Search`, `ChevronDown` and `Sort` to main/ui/theme/Icons.kt (vector
   drawn in code like the existing icons).
 - [ ] T035 [US1] Create main/ui/radio/RadioViewModel.kt (T027): `collectLatest` over the query with
   the 500 ms wait for a name and an immediate load for a filter; paging and `mergePage`; the
   session's connection; `StationPicker.pick`; the name in `SavedStateHandle`; all requests in
-  `viewModelScope`. Filters are read from `RadioStore` (none stored ⇒ no filter, `MostVoted`);
-  the first-visit rule and the sheets come in US4, the failures in US5.
+  `viewModelScope`. The three failure paths and Retry of T027 (`radioFailure`: `Catalogue` sets
+  `problem` and keeps the rows, `HubUnreachable`, `Gone`). Filters are read from `RadioStore`
+  (none stored ⇒ no filter, `MostVoted`); the first-visit rule and the sheets come in US4.
 - [ ] T036 [P] [US1] Create main/ui/radio/StationRow.kt: the row of contracts/radio-ui.md "A
   station row" (54 dp, tile 38 dp in the stream colours, one-line name ending in "…", second line
-  in `textMuted`, spoken as one node), reused by Start Playback with its "Radio ·" prefix.
+  in `textMuted`, spoken as one node), reused by Start Playback with its "Radio ·" prefix. Add its
+  new colour pair (`textMuted` on `surface`) to test/ui/theme/ContrastTest.kt.
 - [ ] T037 [US1] Create main/ui/radio/RadioScreen.kt: header with Back, the 52 dp search field
   (at most 100 characters, a typed `%` dropped, clear button, Search action only hides the
   keyboard), the list heading "STATIONS", six placeholders while loading the first page,
@@ -280,7 +294,7 @@ Now Playing and Rooms name the station is User Story 2).
   plan rules out.
 
 **Checkpoint**: US1 works on its own: build, all tests, quickstart §2 rows 1, 3–5, row 6 up to
-the start, and rows 22–24. Rows 6–7 in full need US2.
+the start, rows 20, 22–24 and 26–27. Rows 6–7 in full need US2.
 
 ---
 
@@ -361,7 +375,8 @@ them: both are under "Recent", the later first; a station stopped after a few se
 - [ ] T052 [P] [US3] In test/ui/startplayback/StartPlaybackViewModelTest.kt add failing tests: up to
   three recent rows, most recent first, none when radio is not offered whatever the phone
   remembers; selecting a recent row selects the station without opening the radio screen; a
-  selection that is one of the three marks that row once; removing a station from "Recent" frees a
+  selection that is one of the three marks that row once, and tapping that selected row changes
+  nothing (no `openRadio`, still selected); removing a station from "Recent" frees a
   place for the next one and leaves a selection or playback unaffected; a recent station that
   also plays is left out of the source list, and comes back there when it leaves the three.
 - [ ] T053 [P] [US3] In test/ui/radio/RadioViewModelTest.kt add failing tests: "Recent" (all ten,
@@ -384,7 +399,8 @@ them: both are under "Recent", the later first; a station stopped after a few se
   44 dp ✕ spoken "Remove <name> from Recent", above the list (T053).
 - [ ] T058 [US3] In `StartPlaybackViewModel` and main/ui/startplayback/RadioRows.kt list the three
   recent rows directly under "Find a radio station" (transparent, a radio dot at the end, one
-  radio group with the sources, no remove action) and mark a selected one (T052). The selected
+  radio group with the sources, no remove action; tapping the selected recent row changes
+  nothing) and mark a selected one (T052). The selected
   recent row draws its name with `MarqueeText`, like the "Change" row of T039; unselected rows
   stay one line ending in "…".
 
@@ -427,7 +443,7 @@ voted first; removing the tag shows all German stations again (quickstart §2 ro
 ### Implementation for User Story 4
 
 - [ ] T062 [US4] In `RadioViewModel` and RadioUiState.kt add the filters, the first-visit rule,
-  `Clear filters`, the four sheet kinds with `FilterRow(name, count, detail, selected)` (a country
+  `Clear filters`, the four sheet kinds (the state type is `FilterSheetState`) with `FilterRow(name, count, detail, selected)` (a country
   row also carries its code), the tag paging and the 500 ms tag search; persist through
   `RadioStore.saveFilters` (T059, T060). The region comes from the `region` function of T040.
 - [ ] T063 [US4] Create main/ui/radio/FilterSheet.kt: a `ModalBottomSheet` in the style of the Move
@@ -436,14 +452,18 @@ voted first; removing the tag shows all German stations again (quickstart §2 ro
   on one line ending in "…" and the count at the right never shrinking (thousands grouped, chosen
   row in `selected` with the count in `accent`, role radio button), the chosen row scrolled into
   view on opening, "Loading more tags…", the Order sheet without field or counts, "Cancel" at the
-  bottom.
+  bottom. Add the pair `textMuted` on `surface` (counts) to test/ui/theme/ContrastTest.kt if T036
+  did not already.
 - [ ] T064 [US4] In RadioScreen.kt add the chips row (Country, Tag, Language: a `surface` pill with
   a chevron when not chosen; when chosen `selected` with the value at most 120 dp wide ending in
   "…", an 40 × 44 dp ✕ and the value opening the sheet; the row scrolls sideways if needed), the
   list heading "STATIONS IN <COUNTRY>" and the 44 dp order control with the sort icon at its
-  right, always visible with the list, and the "No stations match" state with "Clear filters".
+  right, always visible with the list, and the "Clear filters" button of the "No stations match"
+  state (offered only when a country, tag or language is chosen; the state's wording is T068).
+  Add the pairs `textSoft` on `surface` (chips, order control) and `accent` on `selectedBg`
+  (the chip's ✕, "Change", a chosen row's count) to test/ui/theme/ContrastTest.kt.
 
-**Checkpoint**: US1–US4 work; quickstart §2 rows 2 and 14–21.
+**Checkpoint**: US1–US4 work; quickstart §2 rows 2, 14–19 and 21.
 
 ---
 
@@ -454,19 +474,18 @@ slow or down, and the existing connection state when the hub is unreachable.
 
 **Independent Test**: on a hub without the extension Start Playback has no radio row and works as
 before; with the hub's internet cut the radio screen shows "The station catalogue isn't
-answering" with Retry (quickstart §2 rows 26–31).
+answering" with Retry (quickstart §2 rows 28–31). The view model's failure paths themselves are
+built in US1 (T027, T035); this story adds Start Playback's handling, the wording and the drawn
+states.
 
 ### Tests for User Story 5 (write first, see them fail)
 
-- [ ] T065 [P] [US5] In test/ui/radio/RadioViewModelTest.kt add failing tests: a `Catalogue`
-  failure keeps the listed stations and sets `problem`; Retry repeats the failed request (first
-  page or next page); `HubUnreachable` asks the session for a refresh, shows no catalogue message
-  while the session is unreachable and repeats the request by itself when the hub answers again
-  (if the session is live all the same, it is shown as `Catalogue`); `Gone` calls
-  `RadioAvailability.markGone()` and `StationPicker.reportGone()` and sets `exit = Gone`; "No
-  stations match" for an empty loaded list; no state change and no message after the view model
-  is cleared mid-request. (Stopping at 10,000 is tested in T027; here only that the state the
-  note is drawn from, `limitReached`, survives a failed and retried next page.)
+- [ ] T065 [P] [US5] In test/ui/radio/RadioTextTest.kt add failing tests for the wording of the
+  failure and end states: "The station catalogue isn't answering", "Retry", "No stations match",
+  "Try another name or fewer filters.", "Clear filters", "Showing the first 10,000 stations.
+  Narrow the search to see others.", and "Radio is no longer available on this hub". (The view
+  model's failure paths are built and tested in US1, T027 and T035; the sheet's own failure in
+  T060.)
 - [ ] T066 [P] [US5] In test/ui/startplayback/StartPlaybackViewModelTest.kt add failing tests:
   `Unknown` and `NotOffered` show nothing of radio and no error (a hub without radio is exactly as
   before, recent stations not listed); availability is asked again after a successful session
@@ -478,16 +497,17 @@ answering" with Retry (quickstart §2 rows 26–31).
 
 ### Implementation for User Story 5
 
-- [ ] T067 [US5] In `RadioViewModel` implement the three failure paths of T065 and the retry of a
-  failed first or next page; in `StartPlaybackViewModel` the `Unknown` re-ask, the `gone`
-  handling and the deselection when radio stops being offered (T066). The refresh on each visible
-  opening already exists from T038.
+- [ ] T067 [US5] In `StartPlaybackViewModel` implement the `Unknown` re-ask, the `gone` handling
+  and the deselection when radio stops being offered (T066), and put the wording of T065 into
+  `RadioText.kt` (the screen uses it from T037 on). The refresh on each visible opening already
+  exists from T038.
 - [ ] T068 [US5] In RadioScreen.kt and FilterSheet.kt draw the catalogue card (a `surface` card
   above the list, role alert, info icon, "The station catalogue isn't answering" in `warningText`,
   "Retry" in `accent`; rows already listed stay under it, inside the sheet for a sheet), the
   placeholder and "Loading more…" announcements (status), "No stations match" (Sora 17 sp, "Try
   another name or fewer filters.") and the limit note "Showing the first 10,000 stations. Narrow
-  the search to see others.". The radio screen closes on `exit = Gone` and on `Chosen`.
+  the search to see others.". The radio screen closes on `exit = Gone` and on `Chosen`. Add the
+  pair `warningText` on `surface` (the catalogue card) to test/ui/theme/ContrastTest.kt.
 
 **Checkpoint**: all five stories work; quickstart §2 all rows except those needing the user.
 
@@ -495,9 +515,10 @@ answering" with Retry (quickstart §2 rows 26–31).
 
 ## Phase 8: Polish & Cross-Cutting Concerns
 
-- [ ] T069 [P] In test/ui/theme/ContrastTest.kt add the new pairs of contracts/radio-ui.md
-  "Accessibility": `textSoft` on `surface`, `accent` on `selectedBg`, `warningText` on `surface`,
-  `textMuted` on `surface`; fix any token use that fails.
+- [ ] T069 [P] Check test/ui/theme/ContrastTest.kt holds every new pair of contracts/radio-ui.md
+  "Accessibility" (`textSoft` on `surface`, `accent` on `selectedBg`, `warningText` on `surface`,
+  `textMuted` on `surface`; added with T036, T063, T064 and T068) and that all pass; fix any
+  token use that fails.
 - [ ] T070 Run `./gradlew :androidApp:assembleDebug`, `:composeApp:testAndroidHostTest`,
   `:composeApp:allTests` and `:composeApp:check` with `ANDROID_HOME="$LOCALAPPDATA/Android/Sdk"`,
   reading each Gradle exit code (`… > log; echo $?`); all green, and `verifyLayering` finds no
@@ -543,7 +564,8 @@ answering" with Retry (quickstart §2 rows 26–31).
   Start Playback's rows).
 - **US4 (T059–T064)**: after US1; shares `RadioViewModel`, `RadioScreen.kt` and `FilterSheet.kt`
   with US3 and US5, so run them one after another or merge carefully.
-- **US5 (T065–T068)**: after US1 and US4 (its sheet card uses `FilterSheet.kt`).
+- **US5 (T065–T068)**: after US1 and US4 (its sheet card uses `FilterSheet.kt`). The radio view
+  model's failure paths are not here: they are in US1 so that US3 and US4 can rely on them.
 - **Polish (T069–T077)**: after the stories. T076 needs an installed build; T077 is last.
 
 ### Within Each User Story
@@ -558,7 +580,8 @@ answering" with Retry (quickstart §2 rows 26–31).
 - T041–T044, T049–T053, T059–T061, T065–T066 are the test batches of their stories.
 - T072–T075 alongside T069.
 - T025, T038, T052, T058, T066 share StartPlaybackViewModel files and T027, T035, T053, T059,
-  T060, T065 share RadioViewModel files: do those one after the other.
+  T060 share RadioViewModel files, and T028, T061, T065 share RadioTextTest.kt: do those one after
+  the other. T036, T063, T064 and T068 each add a pair to ContrastTest.kt.
 
 ## Parallel Example: Foundational tests
 

@@ -202,7 +202,7 @@ drawing: `("Play ", "MANGORADIO", " in Bedroom")`; `name` is empty for "Play", "
 | `filters` | `RadioFilters` | what the chips and the order control show |
 | `recent` | `List<Station>` | the recent stations; the "Recent" section shows while `stationName(nameText)` is null and `recent` itself is not empty, whatever the station list holds (also under "No stations match" and the catalogue message) |
 | `list` | `StationList` | see below |
-| `sheet` | `FilterSheet?` | the open sheet, if any |
+| `sheet` | `FilterSheetState?` | the open sheet, if any |
 | `exit` | `RadioExit?` | `Chosen` or `Gone`; the screen consumes it and navigation pops |
 
 `StationList`:
@@ -216,7 +216,7 @@ drawing: `("Play ", "MANGORADIO", " in Bedroom")`; `name` is empty for "Play", "
 | `problem: RadioFailure?` | `Catalogue` ⇒ the message with Retry above the rows |
 | `empty` | derived: `Loaded`, no stations, no problem ⇒ "No stations match" |
 
-`FilterSheet`:
+`FilterSheetState`:
 
 | Field | Meaning |
 |---|---|
