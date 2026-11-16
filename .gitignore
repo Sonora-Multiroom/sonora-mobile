@@ -35,3 +35,8 @@ specs/drafts/
 # specified/planned, redundant once implemented — never commit these.
 specs/*/checklists/requirements.md
 .specify/archive/*/checklists/requirements.md
+
+# Signing keys never belong in the repository.
+*.jks
+*.keystore
+!androidApp/keystore/debug.keystore

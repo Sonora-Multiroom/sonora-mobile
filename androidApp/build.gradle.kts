@@ -28,11 +28,24 @@ android {
             keyAlias = "androiddebugkey"
             keyPassword = "android"
         }
+
+        // The release key never lives in the repository: the release workflow decodes it from a
+        // secret and passes it through these variables. Without them the release APK is unsigned.
+        val releaseStoreFile = providers.environmentVariable("SONORA_RELEASE_STORE_FILE").orNull
+        if (!releaseStoreFile.isNullOrBlank()) {
+            create("release") {
+                storeFile = file(releaseStoreFile)
+                storePassword = providers.environmentVariable("SONORA_RELEASE_STORE_PASSWORD").orNull
+                keyAlias = providers.environmentVariable("SONORA_RELEASE_KEY_ALIAS").orNull
+                keyPassword = providers.environmentVariable("SONORA_RELEASE_KEY_PASSWORD").orNull
+            }
+        }
     }
 
     buildTypes {
         release {
             isMinifyEnabled = false
+            signingConfigs.findByName("release")?.let { signingConfig = it }
         }
     }
     compileOptions {
