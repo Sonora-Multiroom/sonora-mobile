@@ -385,7 +385,9 @@ them: both are under "Recent", the later first; a station stopped after a few se
   changed by a later, different `startedAt` (a move to another room keeps the route id).
 - [ ] T050 [P] [US3] Create test/ui/session/RecentStationTrackerTest.kt with failing tests, fake
   session and virtual time: `track` stores a pending entry (also in the store) with `trackedAt`
-  and no `playingSince`; the first refresh that shows the route `Active` fixes `playingSince` and
+  = the given `sentAt` and no `playingSince`; a start recovered 35 s after it was sent, with the
+  hub's `startedAt` 2 s after sending, is added by the first refresh (the bound is the sending,
+  not the recovery); the first refresh that shows the route `Active` fixes `playingSince` and
   the changed entry is stored; a refresh at least 30 s after `playingSince` adds the station first
   and drops the entry; a station left while `Starting` and found playing for minutes on return is
   added by the first refresh; a stop within 30 s adds nothing; a failed
@@ -396,7 +398,8 @@ them: both are under "Recent", the later first; a station stopped after a few se
   at ten with each `uuid` once; the tracker never polls.
 - [ ] T051 [P] [US3] In test/ui/session/PlaybackStarterTest.kt add failing tests: a successful
   station start (also a recovered one, also when Start Playback was closed) calls
-  `tracker.track(station, route, fence)`; a source or a link start does not, also when the source
+  `tracker.track(station, route, sentAt, fence)` with `sentAt` the clock when the start request was
+  sent, the same value in the recovered case; a source or a link start does not, also when the source
   is a station another client started (spec Assumptions).
 - [ ] T052 [P] [US3] In test/ui/startplayback/StartPlaybackViewModelTest.kt add failing tests: up to
   three recent rows, most recent first, none when radio is not offered whatever the phone
@@ -422,10 +425,11 @@ them: both are under "Recent", the later first; a station stopped after a few se
 - [ ] T054 [US3] In main/domain/Radio.kt add `judgeRecent`, `RECENT_AFTER_MILLIS = 30_000` and
   `RECENT_IN_START_PLAYBACK = 3` (T049; needs T053b).
 - [ ] T055 [US3] Create main/ui/session/RecentStationTracker.kt (T050): `track(station, route,
-  fence)`, judging on every successful session refresh, pending entries kept in `RadioStore`
+  sentAt, fence)`, judging on every successful session refresh, pending entries kept in `RadioStore`
   (stored again whenever a judgement fixed `playingSince`), read once at start-up. Create it in AppGraph beside `PlaybackStarter`.
-- [ ] T056 [US3] In main/ui/session/PlaybackStarter.kt call `tracker.track` when a station start
-  succeeds (T051).
+- [ ] T056 [US3] In main/ui/session/PlaybackStarter.kt note the clock when a start request is sent
+  and call `tracker.track(station, route, sentAt, fence)` when a station start succeeds, directly
+  or recovered (T051).
 - [ ] T057 [US3] In `RadioViewModel` expose `recent` and `removeRecent(uuid)`; in
   main/ui/radio/RadioScreen.kt draw the "RECENT" heading and up to ten station rows, each with a
   44 dp ✕ spoken "Remove <name> from Recent", above the list (T053).
@@ -452,8 +456,10 @@ voted first; removing the tag shows all German stations again (quickstart §2 ro
 
 - [ ] T059 [P] [US4] In test/ui/radio/RadioViewModelTest.kt add failing tests: first visit (no
   stored filters) loads the countries, matches the phone's region ignoring case, stores that
-  country or none, then loads stations; if the country list fails nothing is stored and the
-  catalogue message with Retry shows; afterwards the stored filters and order open the screen and
+  country or none, then loads stations; if the country list fails nothing is stored, and the
+  failure follows the rule of T027: the catalogue message with Retry for a catalogue failure;
+  with the hub unreachable no catalogue message and the lookup repeated by itself after the
+  first successful refresh that started after the failure; `Gone` closes the screen; afterwards the stored filters and order open the screen and
   the typed name is not kept; each change is stored; choosing a value, removing a chip and a change
   of order reload the first page at once; several filters and a name are sent together; "Clear
   filters" removes country, tag and language, keeps order and name, and is offered only when one is
@@ -523,7 +529,9 @@ states.
 - [ ] T066 [P] [US5] In test/ui/startplayback/StartPlaybackViewModelTest.kt add failing tests:
   `Unknown` and `NotOffered` show nothing of radio and no error (a hub without radio is exactly as
   before, recent stations not listed); when the first request got no answer (hub
-  unreachable), availability is asked once more after the first successful session refresh, and
+  unreachable), availability is asked once more after the first successful session refresh that started after
+  the failed request (fence on `startedSeq`; a session that still says live from before the
+  network loss does not trigger it), and
   not again until the screen next becomes visible, whatever that second request returns; a picker `gone` shows "Radio is no longer available on this hub"
   once, drops the radio rows and deselects a selected station; when the state leaves `Offered`
   for any other reason (a later answer says the extension is not active, the hub address changes)

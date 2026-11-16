@@ -87,7 +87,10 @@ factory and a second "follow the address" path for four read-only calls); the de
 - `markGone()` sets `NotOffered` (called when a radio request shows the extension is gone, R9).
 - Start Playback's view model calls `refresh()` each time the screen becomes visible. If the
   state is still `Unknown` afterwards (the request got no answer), it asks **once** more, after
-  the first successful session refresh that follows, and then leaves it until the screen next
+  the first successful session refresh that *started after that failed request* (the fence rule:
+  capture `session.startedSeq` when `refresh()` returns, wait for a state whose `refreshSeq` is
+  greater; never wait on "the connection is live", which still reads true from before a network
+  loss and would spend the one repeat at once), and then leaves it until the screen next
   becomes visible. So the extensions request is never tied to the 2.5 s poll. It shows the radio
   row and the recent stations only while the state is `Offered`.
 
@@ -229,8 +232,11 @@ loading on a "Load more" button (the spec asks for loading on scroll).
   still shown and applied.
 - **First visit** (no filters stored yet): the view model loads the country list first, matches
   the phone's region code against `Country.code` ignoring case, stores the result (that country or
-  none) and then loads the stations. If the country list cannot be loaded, the screen shows the
-  catalogue message with Retry and stores nothing, so the next opening is still a first visit.
+  none) and then loads the stations. If the country list cannot be loaded, nothing is stored, so the next
+  opening is still a first visit, and the failure is classified like any radio request (R9): the
+  catalogue message with Retry when the catalogue is at fault; with the hub unreachable, no
+  catalogue message and the lookup repeated by itself after the hub answers again; `Gone` closes
+  the screen.
 - **The phone's region**: `androidx.compose.ui.text.intl.Locale.current.region`, read in
   `AppGraph` and passed to the view model as a plain `() -> String` (empty when unknown). It is
   Compose Multiplatform common API, so no `expect`/`actual` and no platform code is added. No
@@ -270,8 +276,9 @@ the catalogue's English names); a platform `expect fun` for the region (not need
 
 - When a station start succeeds (also when the answer was recovered from a snapshot, and also when
   Start Playback was already closed), `PlaybackStarter` calls
-  `tracker.track(station, route, fence)`. The tracker stores a **pending** entry: the station,
-  the route id, `trackedAt` (the phone's clock at that moment) and an empty `playingSince`.
+  `tracker.track(station, route, sentAt, fence)`, where `sentAt` is the phone's clock when the
+  starter sent the start request. The tracker stores a **pending** entry: the station, the route
+  id, `trackedAt` = `sentAt`, and an empty `playingSince`.
   Pending entries are kept on the phone too (R10), so one survives the app's process being ended
   in the background.
 - **When the audio began** comes from the hub: `RouteResponse.startedAt`, "timestamp when audio
@@ -285,7 +292,10 @@ the catalogue's English names); a platform `expect fun` for the region (not need
 
   - `startedAt` is the hub's own statement, so a station that began while the app was in the
     background is credited with the time it really played.
-  - `max(…, trackedAt)`: the audio cannot have begun before the start was answered. This bounds a
+  - `max(…, trackedAt)`: the audio cannot have begun before the start request was sent. The moment
+    of sending, not of the answer, is the bound: when the answer is lost and the start is
+    recovered from a snapshot some 35 s later, the audio has long been playing, and a bound taken
+    at the recovery would throw that time away. This bounds a
     hub clock that runs behind the phone's, which would otherwise let a station in after a few
     seconds. A hub clock that runs ahead only makes a station qualify that much later.
   - `?: now`: a hub that reports `Active` without `startedAt` is counted from when the app first

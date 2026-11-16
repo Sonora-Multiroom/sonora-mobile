@@ -73,7 +73,7 @@ recent first, each `uuid` once.
 |---|---|---|
 | `station` | `Station` | what will be added |
 | `routeId` | `String` | the playback being watched |
-| `trackedAt` | `Long` | the phone's clock (epoch ms) when the start's answer arrived; the audio cannot have begun earlier |
+| `trackedAt` | `Long` | the phone's clock (epoch ms) when the start request was sent (also when its answer was lost and the start recovered later); the audio cannot have begun earlier |
 | `playingSince` | `Long?` | when the audio began, fixed once by the first refresh that shows the route `Active`: `max(route.startedAt ?: now, trackedAt)`; null until then |
 
 | Function | Result |
@@ -154,7 +154,7 @@ unchanged and also carries a station's address.
 |---|---|---|
 | `RadioAvailability` | `state: StateFlow<RadioOffer>` (`Unknown`, `Offered`, `NotOffered`); `Unknown` again when the hub address changes | `suspend refresh()`, `markGone()` |
 | `StationPicker` | `picked: StateFlow<Station?>`, `gone: StateFlow<Boolean>` | `pick(station)`, `reportGone()`, `consumePicked()`, `consumeGone()` |
-| `RecentStationTracker` | pending entries (also stored) | `track(station, route, fence)`; judges on every successful refresh and stores an entry whenever a judgement changed it |
+| `RecentStationTracker` | pending entries (also stored) | `track(station, route, sentAt, fence)`; judges on every successful refresh and stores an entry whenever a judgement changed it |
 | `PlaybackStarter` (changed) | | `StartKind.Station`; calls `tracker.track` when a station start succeeds |
 
 `AppGraph` gains `radioStore`, the three objects above, `region: () -> String` and

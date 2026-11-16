@@ -119,7 +119,7 @@ production files and 20 edited ones; 8 new and 12 extended test files.
 7. **The Play button's three-part layout applies to source names too**, so a long source name no
    longer hides the target.
 8. **The 30 seconds are counted from when the hub says the audio began** (`RouteResponse.startedAt`,
-   mapped by this feature), never earlier than the start's answer on the phone's clock, and fixed
+   mapped by this feature), never earlier than the sending of the start request on the phone's clock, and fixed
    once per playback, so that a hub clock running behind, or a move to another room, cannot
    shorten or restart the count. Time spent `Starting` does not count (FR-021a;
    [R8](research.md#r8-recent-stations-and-the-30-second-rule-fr-021-to-fr-024a)).
