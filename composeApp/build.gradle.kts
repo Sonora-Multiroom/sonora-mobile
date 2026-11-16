@@ -149,7 +149,11 @@ tasks.withType<KotlinCompilationTask<*>>().configureEach {
     dependsOn(tasks.named("openApiGenerate"), generateAppVersion)
 }
 // Anything else that reads the commonMain sources (source jars, resource/metadata tasks).
-tasks.matching { it.name.endsWith("SourcesJar") || it.name.startsWith("generateResourceAccessorsFor") }
+// The art-profile task (release builds only) scans the whole generated directory.
+tasks.matching {
+    it.name.endsWith("SourcesJar") || it.name.startsWith("generateResourceAccessorsFor") ||
+        it.name.endsWith("ArtProfile")
+}
     .configureEach { dependsOn(tasks.named("openApiGenerate"), generateAppVersion) }
 
 // ui/ and domain/ must never see generated wire types (Constitution I).
