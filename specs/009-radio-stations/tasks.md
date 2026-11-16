@@ -584,7 +584,7 @@ states.
 - [X] T074 [P] Add the entry "0.1.34: radio is used since 0.9.0-alpha" to docs/hub-api-history.md.
 - [X] T075 [P] Delete docs/backlog/radio-stations.md and its row in docs/backlog/INDEX.md; keep
   docs/backlog/start-failure-above-play.md and its row.
-- [ ] T076 On a local session with the installed build, run quickstart §2 as AGENTS.md "On-device
+- [X] T076 On a local session with the installed build, run quickstart §2 as AGENTS.md "On-device
   verification" describes (POCO, volumes noted and set to 1, Do Not Disturb, Sonora in front before
   every input, test routes stopped before volumes are restored; say before row 3 that the run
   replaces what plays in `A` and `B`; rows marked **User** are done by the user or marked `n/a`).

@@ -37,7 +37,7 @@ used. Volumes noted (Office 30, Kitchen 30, Bedroom 50, Bathroom 50 and turned o
 before the first start; test routes stopped first, then volumes restored; screen timeout 60000
 and Do Not Disturb off restored. Taps by `input tap` after a foreground check. Build under test:
 local debug APK 0.9.0-alpha; rows 15-19 and later ran on the build with the two fixes listed
-under Issues. The phone was at 13% battery at the end, so the run stopped early. Status legend: ✅ pass · ❌ fail · ⏳ not run · n/a not applicable.
+under Issues. The first session stopped at 13% battery; the rest ran after the phone was charged. Status legend: ✅ pass · ❌ fail · ⏳ not run · n/a not applicable.
 
 | # | Check | Status | Evidence |
 |---|---|---|---|
@@ -52,7 +52,7 @@ under Issues. The phone was at 13% battery at the end, so the run stopped early.
 | 9 | select the recent MANGORADIO row, room `A` | ✅ | MANGORADIO on Office: "MANGORADIO is already playing in Office Speaker", Play clickable node `enabled=false`; on Kitchen: enabled |
 | 10 | a second station on `B`; `DELETE` its route by `curl` after ~10 s; open the radio screen | ✅ | Classic Vinyl HD on Kitchen, route deleted by `curl` ~9 s after the start: not under "RECENT" (only MANGORADIO) |
 | 11 | a third station on `B`; press Home within 10 s; wait 40 s; reopen the app | ✅ | 101 SMOOTH JAZZ on Kitchen, Home after 3 s, reopened 42 s later: still playing, first under "RECENT" |
-| 12 | Now Playing → "Move to room…" → `A` (when the hub marks it transferable); wait until 30 s after the  | ⏳ | Not run (a move within 30 s of a start) |
+| 12 | Now Playing → "Move to room…" → `A` (when the hub marks it transferable); wait until 30 s after the  | ✅ | Blu Radio started 21:34:19 on Office, moved to Kitchen by "Move to room…" (same route id, `startedAt` unchanged); it entered "RECENT" at 30 s from the start. Caveat: the move itself came ~35 s after the start, so this does not tell "from the start" apart from "from the move"; the rule is covered by `RecentStationTrackerTest` |
 | 13 | radio screen → ✕ on one "Recent" row | ✅ | ✕ on 101 SMOOTH JAZZ: gone at once, no question; gone from Start Playback; the route kept playing |
 | 14 | Country chip → sheet; type `ger`; choose Germany | ✅ | Country sheet: every country with counts (US 6,979, Germany 5,604, …), field `ger` narrowed to Germany, Algeria, Nigeria, The Niger; chip "Germany" with ✕; heading "STATIONS IN GERMANY" |
 | 15 | Tag chip → type `jazz` → choose "jazz"; then Language → choose "german" | ✅ | Tag `jazz` → "jazz, 1,064"; Language `german` → "german, 3,976"; three chips fit. First rows compared with `curl` only after the fix below; see Issues |
@@ -61,19 +61,19 @@ under Issues. The phone was at 13% battery at the end, so the run stopped early.
 | 18 | type `qzxvqzxv` | ✅ | `mango` with Germany/jazz/german: "No stations match", "Try another name or fewer filters.", "Clear filters"; tapped: three chips gone, name kept, order kept |
 | 19 | `adb shell am force-stop sonora.multiroom.mobile`; reopen; open the radio screen | ✅ | `am force-stop`, reopened: chip Germany and the order kept, name empty, "RECENT" still there |
 | 20 | scroll the list down several pages | ✅ | 14 swipes: 148 distinct names seen, so pages beyond the first 50 loaded. Duplicates across pages not checked by dump (overlapping windows); covered by `RadioViewModelTest` |
-| 21 | look at the chips and the sheet | ⏳ | Long country name only seen in the sheet list ("The United Kingdom Of Great Britain And Northern Ireland, 1,943" on one node); chip with that value not run |
-| 22 | look at Start Playback and the Play button | ⏳ | Not run |
+| 21 | look at the chips and the sheet | ✅ | Country "The United Kingdom Of Great Britain And Northern Ireland", tag "smooth jazz", language "english": the country chip ends in "…" with its ✕, the row scrolls sideways (the third chip is cut at the screen edge), heading "STATIONS IN THE UNITED KINGDOM OF …"; in the country sheet the long name is one row with its count 1,943 at the right |
+| 22 | look at Start Playback and the Play button | ✅ | `Blu Radio, señal nacional (HJCK, …)` (246 characters): selected name scrolls as a marquee on Start Playback, unselected recent/list rows end in "…", Play reads "Play Blu Radio, señal naci… in Office Speaker" (the full label is the node text). The label runs close to the pill's right edge |
 | 23 | look at the field and `GET` nothing by hand | ✅ | `100%` typed: no `%` appeared in the field, no message |
-| 24 | rotate; press Home and return | ⏳ | Not run |
+| 24 | rotate; press Home and return | ✅ | Name `jazz` typed; rotated to landscape and back, then Home and back: name, filters and the 20 listed rows kept |
 | 25 | Rooms, Now Playing, "Play something", Settings → Sources | ✅ | Intense Radio started by `curl` on Bedroom: Rooms "Radio · Live stream"; Settings → Sources "ADDED FROM APPS", "Added today 21:28 · removed when it stops" (no kind in words); not in "RECENT" after 4 min. Now Playing and Start Playback rows not re-read |
 | 25a | "Play something" | ✅ | MANGORADIO playing and recent: shown once (row 8), not under "OR PICK A SOURCE" |
-| 26 | select a station, a room, Play; Close at once | ⏳ | Not run |
-| 27 | Play | ⏳ | Not run (n/a unless a station fails) |
-| 28 | open the radio screen; Retry; restore access; Retry | ⏳ | User row, not run |
-| 29 | look; restore Wi-Fi | ⏳ | User row, not run |
-| 29a | look; restore Wi-Fi | ⏳ | User row, not run |
-| 30 | focus a station row, a chosen chip's ✕, the order control, a "Recent" ✕, the selected station row in | ⏳ | User row (TalkBack), not run. Accessibility tree read instead: "Remove the country Germany", "Order: Most voted. Change the order", "Remove MANGORADIO from Recent", "MANGORADIO, selected. Choose another station" |
-| 31 | "Play something" | ⏳ | No hub without radio at hand; covered by `StartPlaybackViewModelTest` |
+| 26 | select a station, a room, Play; Close at once | ✅ | Play of Blu Radio on Office, Close within 1 s: Rooms; the playback appeared on the Office card; no other notice later (dumps at 1 s and 7 s) |
+| 27 | Play | n/a | Not tried: no station was found that fails to start |
+| 28 | open the radio screen; Retry; restore access; Retry | n/a | User row, not done |
+| 29 | look; restore Wi-Fi | n/a | User row, not done |
+| 29a | look; restore Wi-Fi | n/a | User row, not done |
+| 30 | focus a station row, a chosen chip's ✕, the order control, a "Recent" ✕, the selected station row in | n/a | User row (TalkBack), not done. Accessibility tree read instead: "Remove the country Germany", "Order: Most voted. Change the order", "Remove MANGORADIO from Recent", "MANGORADIO, selected. Choose another station" |
+| 31 | "Play something" | n/a | No hub without radio at hand; covered by `StartPlaybackViewModelTest` |
 
 ## Issues found
 
@@ -87,5 +87,7 @@ under Issues. The phone was at 13% battery at the end, so the run stopped early.
 - The search field's typed text was reported as aligned to the top of the field by the owner on
   their device. On the Pixel it already looked centred; the text field now fills its 44 dp box
   and centres its text, in the radio screen and in the filter sheets.
-- Row 12, 21 (chip with the long value), 22, 24, 26, 27 were not run; rows 28-30 need the user; row 31
-  has no hub without radio at hand.
+- Observation (rows 22): the Play button's label runs up to the pill's right edge when the station
+  name is long, because the name takes all the remaining width. Readable and complete; not changed.
+- Rows 28-30 need the user and were not done; row 27 and 31 were not possible (no failing station,
+  no hub without radio).
