@@ -33,7 +33,7 @@ data class Consequence(
  * stop. Never [JoinMode.Unknown].
  */
 fun effectiveJoinMode(what: StartWhat, snapshot: HubSnapshot): JoinMode = when (what) {
-    is StartWhat.Link -> JoinMode.Replace
+    is StartWhat.Link, is StartWhat.Station -> JoinMode.Replace
     is StartWhat.Source -> when (val mode = snapshot.sources.firstOrNull { it.id == what.id }?.defaultJoinMode) {
         JoinMode.Mix, JoinMode.Announcement -> mode
         else -> JoinMode.Replace
@@ -59,16 +59,22 @@ object StartConsequence {
             return AffectedPlayback(sourceNames[route.inputId] ?: route.inputId, where)
         }
 
-        val alreadyThere = (what as? StartWhat.Source)?.let { w ->
-            liveRoutes(snapshot).any { it.inputId == w.id && it.target == target }
-        } == true
+        // A source is "already there" by its input id; a station by its address, because each
+        // station start makes a new input (MOB-009).
+        val sourceUris = snapshot.sources.associate { it.id to it.uri }
+        val alreadyName: String? = when (what) {
+            is StartWhat.Source ->
+                (sourceNames[what.id] ?: what.id).takeIf { liveRoutes(snapshot).any { it.inputId == what.id && it.target == target } }
+            is StartWhat.Station ->
+                stationDisplayName(what.station).takeIf {
+                    liveRoutes(snapshot).any { it.target == target && sameStation(sourceUris[it.inputId], what.station.uri) }
+                }
+            is StartWhat.Link -> null
+        }
 
         val withoutAnnouncements = affected.filterNot { it.isAnnouncement }.map(::playback)
         val line: ConsequenceLine? = when {
-            alreadyThere -> ConsequenceLine.AlreadyPlaying(
-                (what as StartWhat.Source).let { sourceNames[it.id] ?: it.id },
-                chosen.title,
-            )
+            alreadyName != null -> ConsequenceLine.AlreadyPlaying(alreadyName, chosen.title)
             else -> when (effectiveJoinMode(what, snapshot)) {
                 JoinMode.Mix -> withoutAnnouncements.takeIf { it.isNotEmpty() }?.let(ConsequenceLine::PlaysAlongside)
                 JoinMode.Announcement -> affected.map(::playback).takeIf { it.isNotEmpty() }?.let(ConsequenceLine::WillBeLowered)

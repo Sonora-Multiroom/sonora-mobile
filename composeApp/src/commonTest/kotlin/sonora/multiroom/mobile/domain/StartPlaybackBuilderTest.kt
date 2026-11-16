@@ -280,4 +280,77 @@ class StartPlaybackBuilderTest {
         val live = status(route("r1", "jazz", Target.Group("down")), sources = listOf(source("jazz", "Jazz24")))
         assertEquals(TargetStatus.GroupPlaying(CardStatus.Playing, listOf("Jazz24")), live)
     }
+
+    // ---- Radio rows (MOB-009) --------------------------------------------------------------------
+
+    private fun station(uuid: String) = Station(uuid, "radiobrowser://$uuid", "Station $uuid", null, null, null)
+
+    @Test
+    fun noRadioRowsWhileRadioIsNotOffered() {
+        assertEquals(null, radioRows(false, listOf(station("a")), station("b")))
+    }
+
+    @Test
+    fun theFirstThreeRecentStationsAreListed() {
+        val recent = listOf("a", "b", "c", "d", "e").map(::station)
+        val rows = radioRows(true, recent, null)!!
+        assertEquals(listOf("a", "b", "c"), rows.recent.map { it.uuid })
+        assertEquals(null, rows.found)
+        assertEquals(null, rows.selectedUuid)
+    }
+
+    @Test
+    fun aSelectedRecentStationMarksItsRowAndIsNotFound() {
+        val recent = listOf("a", "b", "c").map(::station)
+        val rows = radioRows(true, recent, station("b"))!!
+        assertEquals("b", rows.selectedUuid)
+        assertEquals(null, rows.found)
+        assertEquals(3, rows.recent.size)
+    }
+
+    @Test
+    fun aSelectedStationOutsideTheRecentRowsIsFoundAndNeverListedTwice() {
+        val recent = listOf("a", "b", "c", "d").map(::station)
+        val outside = radioRows(true, recent, station("z"))!!
+        assertEquals("z", outside.found?.uuid)
+        assertEquals("z", outside.selectedUuid)
+        // The fourth recent station is not among the first three, so it is found, not listed.
+        val fourth = radioRows(true, recent, station("d"))!!
+        assertEquals("d", fourth.found?.uuid)
+        assertEquals(listOf("a", "b", "c"), fourth.recent.map { it.uuid })
+    }
+
+    private fun stationSource(id: String, uuid: String) =
+        source(id, "Station $uuid", uri = "radiobrowser://$uuid", origin = SourceOrigin.Runtime)
+
+    @Test
+    fun sourcesThatAreAStationShownInTheSectionAreLeftOut() {
+        val sources = listOf(source("jazz"), stationSource("l1", "a"), stationSource("l2", "z"), stationSource("l3", "q"))
+        val rows = radioRows(true, listOf(station("a")), station("z"))!!
+        val options = StartPlaybackBuilder.build(snapshot(sources = sources)).sources
+        assertEquals(listOf("jazz", "l3"), hideListedStations(options, rows, null).map { it.id })
+    }
+
+    @Test
+    fun theSelectedSourceIsNeverLeftOut() {
+        val sources = listOf(stationSource("l1", "a"))
+        val rows = radioRows(true, listOf(station("a")), null)!!
+        val options = StartPlaybackBuilder.build(snapshot(sources = sources)).sources
+        assertEquals(listOf("l1"), hideListedStations(options, rows, "l1").map { it.id })
+    }
+
+    @Test
+    fun withoutRadioRowsTheListIsUnchanged() {
+        val options = StartPlaybackBuilder.build(snapshot(sources = listOf(stationSource("l1", "a")))).sources
+        assertEquals(options, hideListedStations(options, null, null))
+    }
+
+    @Test
+    fun stationUriIsSetOnlyForAStationSource() {
+        val options = StartPlaybackBuilder.build(
+            snapshot(sources = listOf(source("jazz"), stationSource("l1", "a"))),
+        ).sources.associateBy { it.id }
+        assertEquals(null, options.getValue("jazz").stationUri)
+        assertEquals("radiobrowser://a", options.getValue("l1").stationUri)
+    }
 }

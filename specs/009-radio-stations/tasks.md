@@ -183,14 +183,14 @@ Now Playing and Rooms name the station is User Story 2).
 
 ### Tests for User Story 1 (write first, see them fail)
 
-- [ ] T021 [P] [US1] In test/domain/StartConsequenceTest.kt add failing tests: a station on a busy
+- [X] T021 [P] [US1] In test/domain/StartConsequenceTest.kt add failing tests: a station on a busy
   target says what will stop; a station replaces (`effectiveJoinMode(Station)` = `Replace`);
   `alreadyThere` is true when a live route addressed to the target plays an input whose `uri` is
   the same station (`sameStation`, whichever input id), false for another station or another
   target (FR-017, whichever client started it). Also direct tests for `isStationAddress` (trimmed,
   any letter case, `radiobrowser://` only) and `sameStation` (both station addresses, equal
   ignoring case; an `http(s)` address never matches).
-- [ ] T022 [P] [US1] In test/domain/StartPlaybackBuilderTest.kt add failing tests for
+- [X] T022 [P] [US1] In test/domain/StartPlaybackBuilderTest.kt add failing tests for
   `radioRows(offered, recent, selected)`: null when not offered; the first three recent stations;
   a selected station that is one of them marks that row and `found` is null; a selected station
   that is not among them is `found` and takes the place of the "Find a radio station" row; a
@@ -199,14 +199,14 @@ Now Playing and Rooms name the station is User Story 2).
   playing station the section does not show stays, with kind `Radio`; the selected source is
   never left out; `rows == null` returns the list unchanged; `SourceOption.stationUri` is set
   only for a station source.
-- [ ] T023 [P] [US1] In test/ui/MessagesTest.kt add failing tests for `startFailure` with
+- [X] T023 [P] [US1] In test/ui/MessagesTest.kt add failing tests for `startFailure` with
   `StartKind.Station`: 422, 502, 503, 400 and any other answer → `StationFailed(name)` worded
   "Couldn't start <name>"; a `reason` refusal, 404 and unreachable keep their existing meaning.
-- [ ] T024 [P] [US1] In test/ui/session/PlaybackStarterTest.kt add failing tests: a station start
+- [X] T024 [P] [US1] In test/ui/session/PlaybackStarterTest.kt add failing tests: a station start
   calls `playLink` with the station's address and sends no `displayName`; the answer is returned
   like a link's; a lost answer is recovered by a runtime input with the same station address; a
   failed start reports `StationFailed` and starts no tracking.
-- [ ] T025 [P] [US1] In test/ui/startplayback/StartPlaybackViewModelTest.kt add failing tests: the
+- [X] T025 [P] [US1] In test/ui/startplayback/StartPlaybackViewModelTest.kt add failing tests: the
   radio section only while `RadioAvailability` is `Offered` (never for `Unknown` or `NotOffered`);
   a picked station becomes `selectedStation` and is consumed; choosing a source or typing a link
   deselects the station and choosing a station clears the source and the link text; the Play label
@@ -223,11 +223,11 @@ Now Playing and Rooms name the station is User Story 2).
   filtered for it; it is effective and shown selected once the state is `Offered`. The Play
   label, `playEnabled`, the consequence, the radio rows, `hideListedStations` and the start all
   read the one effective station (data-model.md), never the raw field.
-- [ ] T026 [P] [US1] In test/ui/startplayback/StartPlaybackTextTest.kt add failing tests for
+- [X] T026 [P] [US1] In test/ui/startplayback/StartPlaybackTextTest.kt add failing tests for
   `playLabelParts` (`("Play ", "MANGORADIO", " in Bedroom")`; the name is empty for "Play", "Play
   link in <target>" and "Starting…", whose whole text is in `before`; source names use the same
   parts) and for the station row's second line ("Radio · DE · MP3 · 128 kbps", or "Radio" alone).
-- [ ] T027 [P] [US1] Create test/ui/radio/RadioViewModelTest.kt with failing tests for the name
+- [X] T027 [P] [US1] Create test/ui/radio/RadioViewModelTest.kt with failing tests for the name
   search: the list loads without typing (first page, no filters, `MostVoted`); a typed name loads
   after 500 ms (virtual time) and `%` is not sent; only the latest text decides the list (an
   earlier slow answer never replaces it, and neither does a next-page answer still in flight when
@@ -248,30 +248,30 @@ Now Playing and Rooms name the station is User Story 2).
   query change during the wait cancels it; the radio call fails and the following refresh
   succeeds → shown as `Catalogue` with Retry; `Gone` calls `RadioAvailability.markGone()` and `StationPicker.reportGone()`
   and sets `exit = Gone`; "No stations match" for an empty loaded list.
-- [ ] T028 [P] [US1] Create test/ui/radio/RadioTextTest.kt with failing tests for the wording and
+- [X] T028 [P] [US1] Create test/ui/radio/RadioTextTest.kt with failing tests for the wording and
   spoken labels of the screen and a station row ("Radio stations", "Station name", "Clear the
   name", "Unnamed station", "<name>, <second line>", "Loading stations", "Loading more stations…").
 
 ### Implementation for User Story 1
 
-- [ ] T029 [US1] In main/domain/StartRequest.kt add `StartWhat.Station(station)` and
+- [X] T029 [US1] In main/domain/StartRequest.kt add `StartWhat.Station(station)` and
   `effectiveJoinMode` → `Replace`; in main/domain/StartConsequence.kt handle a station (T021). In
   main/domain/SourceKind.kt add only `isStationAddress` and `sameStation` here (the kind rules are
   US2); fix every `when` over `StartWhat` the compiler reports.
-- [ ] T030 [US1] In main/domain/StartPlaybackBuilder.kt add `radioRows`, `SourceOption.stationUri`
+- [X] T030 [US1] In main/domain/StartPlaybackBuilder.kt add `radioRows`, `SourceOption.stationUri`
   and `hideListedStations` (T022).
-- [ ] T031 [US1] In main/ui/Messages.kt add `StartKind.Station`, `StartFailure.StationFailed(name)`
+- [X] T031 [US1] In main/ui/Messages.kt add `StartKind.Station`, `StartFailure.StationFailed(name)`
   and the `startFailure` mapping (T023).
-- [ ] T032 [US1] In main/ui/session/PlaybackStarter.kt start a `StartWhat.Station` through
+- [X] T032 [US1] In main/ui/session/PlaybackStarter.kt start a `StartWhat.Station` through
   `HubRepository.playLink(station.uri, target)` (never through `checkLink`), carry the station's
   display name in `StartNames.source`, and recover a lost answer by address (T024).
-- [ ] T033 [P] [US1] Create main/ui/radio/RadioText.kt (all radio wording and spoken labels, T028)
+- [X] T033 [P] [US1] Create main/ui/radio/RadioText.kt (all radio wording and spoken labels, T028)
   and main/ui/radio/RadioUiState.kt (`RadioUiState`, `StationList` with `phase`, `nextOffset`,
   `limitReached`, `problem`, derived `empty`; `RadioExit`; `FilterSheetState` as a type only,
   filled in US4).
-- [ ] T034 [P] [US1] Add `Search`, `ChevronDown` and `Sort` to main/ui/theme/Icons.kt (vector
+- [X] T034 [P] [US1] Add `Search`, `ChevronDown` and `Sort` to main/ui/theme/Icons.kt (vector
   drawn in code like the existing icons).
-- [ ] T035 [US1] Create main/ui/radio/RadioViewModel.kt (T027): `collectLatest` over the query with
+- [X] T035 [US1] Create main/ui/radio/RadioViewModel.kt (T027): `collectLatest` over the query with
   the 500 ms wait for a name and an immediate load for a filter; paging and `mergePage`; the
   session's connection; `StationPicker.pick`; the name in `SavedStateHandle`; all requests in
   `viewModelScope`. The three failure paths and Retry of T027 (`radioFailure`: `Catalogue` sets
@@ -279,30 +279,30 @@ Now Playing and Rooms name the station is User Story 2).
   fenced single repeat, as research R9 "Telling a silent radio request from an unreachable hub"
   describes, never by waiting for "the connection is live"; `Gone`). Filters are read from `RadioStore`
   (none stored ⇒ no filter, `MostVoted`); the first-visit rule and the sheets come in US4.
-- [ ] T036 [P] [US1] Create main/ui/radio/StationRow.kt: the row of contracts/radio-ui.md "A
+- [X] T036 [P] [US1] Create main/ui/radio/StationRow.kt: the row of contracts/radio-ui.md "A
   station row" (54 dp, tile 38 dp in the stream colours, one-line name ending in "…", second line
   in `textMuted`, spoken as one node), reused by Start Playback with its "Radio ·" prefix. Add its
   new colour pair (`textMuted` on `surface`) to test/ui/theme/ContrastTest.kt.
-- [ ] T037 [US1] Create main/ui/radio/RadioScreen.kt: header with Back, the 52 dp search field
+- [X] T037 [US1] Create main/ui/radio/RadioScreen.kt: header with Back, the 52 dp search field
   (at most 100 characters, a typed `%` dropped, clear button, Search action only hides the
   keyboard), the list heading "STATIONS", six placeholders while loading the first page,
   "Loading more stations…", the session's stale banner, the session held with acquire / release.
   The list's scroll state is saveable (`rememberLazyListState`), so rotation and a return from
   the background keep the position.
   Chips, the order control, "Recent" and the failure states are added by US4, US3 and US5.
-- [ ] T038 [US1] In main/ui/startplayback/ add `selectedStation`, `radio` and `openRadio` to
+- [X] T038 [US1] In main/ui/startplayback/ add `selectedStation`, `radio` and `openRadio` to
   `StartPlaybackUiState`; in `StartPlaybackViewModel` the radio rows, the exclusive selection, the
   picker and availability collection, the `station` saved-state key, the failure message, the
   source list passed through `hideListedStations` (T025). The view model's constructor changes
   here, so in the same task pass `RadioAvailability`, `StationPicker` and `RadioStore` to
   `startPlaybackViewModel` in main/AppGraph.kt and update the test helpers that build it.
-- [ ] T039 [US1] Create main/ui/startplayback/RadioRows.kt (section heading "Or a radio station",
+- [X] T039 [US1] Create main/ui/startplayback/RadioRows.kt (section heading "Or a radio station",
   the "Find a radio station" row, the selected row with "Change" and a `MarqueeText` name, the
   selected-style rows) and update StartPlaybackScreen.kt and StartPlaybackText.kt: the section
   between the link field and "Or pick a source", `playLabelParts` and the three-part Play button
   (only the name shrinks and ends in "…") for stations and source names (T026). "Will stop",
   "already playing" and the starting state work as for any source.
-- [ ] T040 [US1] In main/ui/nav/AppNavigation.kt add the `Destination.Radio` entry (no bottom bar,
+- [X] T040 [US1] In main/ui/nav/AppNavigation.kt add the `Destination.Radio` entry (no bottom bar,
   Back pops and changes nothing, a chosen station pops) and `onOpenRadio` from Start Playback,
   also when Start Playback has a fixed target ("Change source…"); in AppGraph add
   `radioViewModel(savedState)`. Pass the phone's region as `region: () -> String` from

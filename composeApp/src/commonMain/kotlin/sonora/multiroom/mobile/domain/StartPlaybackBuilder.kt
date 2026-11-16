@@ -5,7 +5,13 @@ data class StartPlaybackContent(
     val targets: List<TargetOption>,
 )
 
-data class SourceOption(val id: String, val name: String, val kind: SourceKind)
+data class SourceOption(
+    val id: String,
+    val name: String,
+    val kind: SourceKind,
+    /** The source's address when it is a radio station (MOB-009); null for any other source. */
+    val stationUri: String? = null,
+)
 
 data class TargetOption(
     /** [Target.Room] or [Target.Group] only. */
@@ -86,7 +92,7 @@ object StartPlaybackBuilder {
     fun build(snapshot: HubSnapshot): StartPlaybackContent {
         val sources = snapshot.sources
             .filter { it.enabled }
-            .map { SourceOption(it.id, it.name, it.kind) }
+            .map { SourceOption(it.id, it.name, it.kind, it.uri?.trim()?.takeIf(::isStationAddress)) }
             .sortedWith(compareBy({ it.name.lowercase() }, { it.id }))
 
         val statuses = TargetStatuses(snapshot)
@@ -121,4 +127,32 @@ object StartPlaybackBuilder {
             TargetStatus.TurnedOff, TargetStatus.NotConnected, TargetStatus.NoRooms, TargetStatus.Removed -> false
             else -> true
         }
+}
+
+/**
+ * The radio part of Start Playback (MOB-009). [found] is the selected station when it is not one of
+ * the [recent] rows; it then takes the place of the "Find a radio station" row. [selectedUuid]
+ * marks the selected row among [recent].
+ */
+data class RadioRows(val found: Station?, val recent: List<Station>, val selectedUuid: String?)
+
+/** Null when radio is not offered. [selected] is the effective station (data-model.md). */
+fun radioRows(offered: Boolean, recent: List<Station>, selected: Station?): RadioRows? {
+    if (!offered) return null
+    val shown = recent.take(RECENT_IN_START_PLAYBACK)
+    val found = selected?.takeIf { s -> shown.none { it.uuid == s.uuid } }
+    return RadioRows(found, shown, selected?.uuid)
+}
+
+/**
+ * A station shown in the radio section is a source on the hub while it plays; it must not appear
+ * twice. The selected source is never left out.
+ */
+fun hideListedStations(sources: List<SourceOption>, rows: RadioRows?, selectedSourceId: String?): List<SourceOption> {
+    if (rows == null) return sources
+    val shown = listOfNotNull(rows.found) + rows.recent
+    if (shown.isEmpty()) return sources
+    return sources.filterNot { option ->
+        option.id != selectedSourceId && option.stationUri != null && shown.any { sameStation(option.stationUri, it.uri) }
+    }
 }

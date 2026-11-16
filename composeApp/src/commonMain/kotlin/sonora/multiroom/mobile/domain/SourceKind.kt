@@ -82,3 +82,13 @@ private fun String.isHttp(): Boolean =
 private fun String.isPath(): Boolean =
     startsWith("/") || startsWith("./") || startsWith("../") || startsWith("~/") ||
         startsWith("\\\\") || (length >= 3 && this[0].isLetter() && this[1] == ':' && (this[2] == '\\' || this[2] == '/'))
+
+private const val STATION_SCHEME = "radiobrowser://"
+
+/** A radio station's address, as the hub gives it: `radiobrowser://<uuid>` (MOB-009). */
+fun isStationAddress(uri: String?): Boolean =
+    uri?.trim().orEmpty().startsWith(STATION_SCHEME, ignoreCase = true)
+
+/** Both are station addresses and name the same station. Whichever input carries it. */
+fun sameStation(a: String?, b: String?): Boolean =
+    isStationAddress(a) && isStationAddress(b) && a!!.trim().equals(b!!.trim(), ignoreCase = true)

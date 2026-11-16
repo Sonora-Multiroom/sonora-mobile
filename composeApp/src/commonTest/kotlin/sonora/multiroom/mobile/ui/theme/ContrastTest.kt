@@ -46,6 +46,13 @@ class ContrastTest {
     }
 
     @Test
+    fun stationRowSecondLine() {
+        assertText("station row second line on background", c.textMuted, c.background)
+        assertText("station row second line on selected", c.textMuted, c.selectedBg)
+        assertText("station row second line on surface", c.textMuted, c.surface)
+    }
+
+    @Test
     fun accentPairs() {
         assertText("onAccent on accent", c.onAccent, c.accent)
         assertText("accent on background", c.accent, c.background)

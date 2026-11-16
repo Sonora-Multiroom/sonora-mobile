@@ -230,4 +230,82 @@ class StartConsequenceTest {
         assertEquals(expected, line(snapshot(listOf(route(paused = false))), "jazz", bedroom))
         assertEquals(expected, line(snapshot(listOf(route(paused = true))), "jazz", bedroom))
     }
+
+    // ---- A radio station (MOB-009) ---------------------------------------------------------------
+
+    private val mango = Station("u1", "radiobrowser://u1", "MANGORADIO", "DE", "MP3", 128)
+
+    /** A playing station is a runtime input on the hub; each start makes a new one. */
+    private fun stationSource(id: String, uri: String = mango.uri) =
+        Source(id, "MANGORADIO", uri, SourceOrigin.Runtime, false, true, SourceKind.Link)
+
+    @Test
+    fun aStationReplacesLikeALink() {
+        assertEquals(JoinMode.Replace, effectiveJoinMode(StartWhat.Station(mango), snapshot()))
+    }
+
+    @Test
+    fun aStationOnABusyTargetSaysWhatWillStop() {
+        val s = snapshot(listOf(route("r", "radio", bedroom)))
+        assertEquals(
+            ConsequenceLine.WillStop(listOf(AffectedPlayback("Radio Paradise", "Bedroom"))),
+            of(s, StartWhat.Station(mango), bedroom).line,
+        )
+    }
+
+    @Test
+    fun aStationOnAnIdleTargetHasNoLine() {
+        assertEquals(null, of(snapshot(), StartWhat.Station(mango), bedroom).line)
+    }
+
+    @Test
+    fun theSameStationOnTheSameTargetIsAlreadyPlayingWhicheverInputItIs() {
+        val sources = listOf(stationSource("link-7", "RadioBrowser://U1"))
+        val s = snapshot(listOf(route("r", "link-7", bedroom)), sources = sources)
+        assertEquals(
+            ConsequenceLine.AlreadyPlaying("MANGORADIO", "Bedroom"),
+            of(s, StartWhat.Station(mango), bedroom).line,
+        )
+    }
+
+    @Test
+    fun anotherStationOrAnotherTargetIsNotAlreadyPlaying() {
+        val other = snapshot(
+            listOf(route("r", "link-7", bedroom)),
+            sources = listOf(stationSource("link-7", "radiobrowser://other")),
+        )
+        assertEquals(
+            ConsequenceLine.WillStop(listOf(AffectedPlayback("MANGORADIO", "Bedroom"))),
+            of(other, StartWhat.Station(mango), bedroom).line,
+        )
+        val elsewhere = snapshot(listOf(route("r", "link-7", Target.Room("office"))), sources = listOf(stationSource("link-7")))
+        assertEquals(null, of(elsewhere, StartWhat.Station(mango), bedroom).line)
+    }
+
+    @Test
+    fun anHttpAddressNeverMatchesAStation() {
+        val s = snapshot(listOf(route("r", "jazz", bedroom)))
+        assertNotEquals(
+            ConsequenceLine.AlreadyPlaying("Jazz24", "Bedroom"),
+            of(s, StartWhat.Station(mango), bedroom).line,
+        )
+    }
+
+    @Test
+    fun stationAddressesAreRecognisedTrimmedAndInAnyLetterCase() {
+        assertEquals(true, isStationAddress("radiobrowser://abc"))
+        assertEquals(true, isStationAddress("  RadioBrowser://abc "))
+        assertEquals(false, isStationAddress("http://radiobrowser://"))
+        assertEquals(false, isStationAddress("https://x"))
+        assertEquals(false, isStationAddress(null))
+        assertEquals(false, isStationAddress(""))
+    }
+
+    @Test
+    fun sameStationNeedsTwoStationAddressesEqualIgnoringCase() {
+        assertEquals(true, sameStation("radiobrowser://abc", " RADIOBROWSER://ABC "))
+        assertEquals(false, sameStation("radiobrowser://abc", "radiobrowser://abd"))
+        assertEquals(false, sameStation("http://x", "http://x"))
+        assertEquals(false, sameStation(null, "radiobrowser://abc"))
+    }
 }

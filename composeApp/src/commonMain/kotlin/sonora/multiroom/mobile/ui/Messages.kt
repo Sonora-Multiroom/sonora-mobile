@@ -128,9 +128,12 @@ sealed interface StartFailure {
     data class NoLongerOnHub(val name: String) : StartFailure
     data object HubUnreachable : StartFailure
     data object Other : StartFailure
+
+    /** A station could not be started; the hub gave no reason worth showing (MOB-009). */
+    data class StationFailed(val name: String) : StartFailure
 }
 
-enum class StartKind { Source, Link }
+enum class StartKind { Source, Link, Station }
 
 /**
  * Maps a hub answer to a [StartFailure]. A `reason` decides whatever the status (the contract does
@@ -146,7 +149,7 @@ fun startFailure(
     roomName: (outputId: String) -> String?,
 ): StartFailure = when (error) {
     HubError.Unreachable -> StartFailure.HubUnreachable
-    HubError.Unexpected -> StartFailure.Other
+    HubError.Unexpected -> if (kind == StartKind.Station) StartFailure.StationFailed(names.source ?: names.target) else StartFailure.Other
     is HubError.Rejected -> {
         val room = error.outputId?.let(roomName) ?: names.target
         val source = names.source
@@ -164,6 +167,7 @@ fun startFailure(
                 503 -> StartFailure.ServiceDown
                 else -> StartFailure.Other
             }
+            kind == StartKind.Station -> StartFailure.StationFailed(names.source ?: names.target)
             else -> StartFailure.Other
         }
     }
@@ -179,6 +183,7 @@ fun startFailureMessage(failure: StartFailure): String = when (failure) {
     is StartFailure.NoLongerOnHub -> "${failure.name} is no longer on the hub"
     StartFailure.HubUnreachable -> "Couldn't reach the hub"
     StartFailure.Other -> "Couldn't start playback"
+    is StartFailure.StationFailed -> "Couldn't start ${failure.name}"
 }
 
 /** What the user was doing in Settings when a request failed. */

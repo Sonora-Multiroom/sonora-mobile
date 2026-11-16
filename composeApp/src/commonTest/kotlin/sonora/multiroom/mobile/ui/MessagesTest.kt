@@ -176,7 +176,7 @@ class MessagesTest {
 
     @Test
     fun aStartRefusedForSomethingTurnedOffNamesIt() {
-        for (kind in StartKind.entries) {
+        for (kind in listOf(StartKind.Source, StartKind.Link)) {
             val n = if (kind == StartKind.Source) names else linkNames
             val g = if (kind == StartKind.Source) groupNames else groupLinkNames
             assertEquals("Office Speaker is turned off", startText(kind, turnedOff("OUTPUT_DISABLED", "office"), n), kind.name)
@@ -289,5 +289,32 @@ class MessagesTest {
         assertEquals(RadioFailure.Catalogue, radioFailure(HubError.Rejected(404, "urn:multiroom:radio:error:not-found")))
         assertEquals(RadioFailure.Catalogue, radioFailure(HubError.Rejected(503, null)))
         assertEquals(RadioFailure.Catalogue, radioFailure(HubError.Unexpected))
+    }
+
+    // ---- A failed station start (MOB-009) ----------------------------------------------------
+
+    private val stationNames = StartNames("MANGORADIO", "Bedroom")
+
+    private fun station(error: HubError) = startFailure(StartKind.Station, error, stationNames, roomName)
+
+    @Test
+    fun aFailedStationStartSaysItCouldNotStartTheStationAndNothingElse() {
+        for (status in listOf(400, 422, 502, 503, 500, 418)) {
+            val failure = station(HubError.Rejected(status, "urn:multiroom:error:x"))
+            assertEquals(StartFailure.StationFailed("MANGORADIO"), failure, "$status")
+            assertEquals("Couldn't start MANGORADIO", startFailureMessage(failure))
+        }
+        assertEquals(StartFailure.StationFailed("MANGORADIO"), station(HubError.Unexpected))
+    }
+
+    @Test
+    fun aStationRefusalKeepsItsExistingMeaning() {
+        assertEquals(
+            StartFailure.TurnedOff(TurnedOff.Room("Office Speaker")),
+            station(HubError.Rejected(409, null, "OUTPUT_DISABLED", "office")),
+        )
+        assertEquals(StartFailure.RoomFull("Bedroom"), station(HubError.Rejected(409, null, "ROUTE_LIMIT_REACHED")))
+        assertEquals(StartFailure.NoLongerOnHub("Bedroom"), station(HubError.Rejected(404, null)))
+        assertEquals(StartFailure.HubUnreachable, station(HubError.Unreachable))
     }
 }

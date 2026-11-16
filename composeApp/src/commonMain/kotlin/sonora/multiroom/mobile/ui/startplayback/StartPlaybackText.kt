@@ -5,6 +5,9 @@ import sonora.multiroom.mobile.domain.CardStatus
 import sonora.multiroom.mobile.domain.ConsequenceLine
 import sonora.multiroom.mobile.domain.FixedTargetCard
 import sonora.multiroom.mobile.domain.MuteNote
+import sonora.multiroom.mobile.domain.Station
+import sonora.multiroom.mobile.domain.stationDetail
+import sonora.multiroom.mobile.domain.stationDisplayName
 import sonora.multiroom.mobile.domain.Target
 import sonora.multiroom.mobile.domain.TargetStatus
 import sonora.multiroom.mobile.domain.Unusable
@@ -87,3 +90,29 @@ internal fun muteNoteText(note: MuteNote): String = when (note) {
     MuteNote.AllRoomsMuted -> "All rooms are muted"
     is MuteNote.TargetMuted -> "${note.name} is muted"
 }
+
+/**
+ * The Play button drawn in three parts: only [name] may shrink and end in "…", so the target at
+ * the end is never cut off (MOB-009). [name] is empty for labels without a source name, whose
+ * whole text is then in [before].
+ */
+internal data class PlayLabelParts(val before: String, val name: String, val after: String)
+
+internal fun playLabelParts(label: PlayLabel): PlayLabelParts = when (label) {
+    is PlayLabel.PlaySource -> PlayLabelParts("Play ", label.source, " in ${label.target}")
+    else -> PlayLabelParts(playLabelText(label), "", "")
+}
+
+/** A station row's second line in Start Playback: "Radio" and the known parts. */
+internal fun stationSecondLineInStartPlayback(station: Station): String =
+    listOfNotNull("Radio", stationDetail(station)).joinToString(" · ")
+
+// The radio section of Start Playback (MOB-009).
+internal const val RADIO_SECTION_LEGEND = "Or a radio station"
+internal const val FIND_STATION_TITLE = "Find a radio station"
+internal const val FIND_STATION_SUBTITLE = "Search by name, country, tag or language"
+internal const val CHANGE_STATION = "Change"
+
+/** The selected station's row, read aloud with what tapping it does. */
+internal fun selectedStationSpoken(station: Station): String =
+    "${stationDisplayName(station)}, selected. Choose another station"

@@ -7,6 +7,7 @@ import sonora.multiroom.mobile.domain.MuteNote
 import sonora.multiroom.mobile.domain.TargetStatus
 import sonora.multiroom.mobile.domain.WontPlay
 import sonora.multiroom.mobile.domain.FixedTargetCard
+import sonora.multiroom.mobile.domain.Station
 import sonora.multiroom.mobile.domain.Target
 import sonora.multiroom.mobile.domain.Unusable
 import kotlin.test.Test
@@ -123,5 +124,40 @@ class StartPlaybackTextTest {
         )
         assertEquals("Bedroom is muted", muteNoteText(MuteNote.TargetMuted("Bedroom")))
         assertEquals("All rooms are muted", muteNoteText(MuteNote.AllRoomsMuted))
+    }
+
+    // ---- The Play button in three parts (MOB-009) -------------------------------------------
+
+    @Test
+    fun aSourceOrStationIsSplitIntoBeforeNameAfter() {
+        assertEquals(
+            PlayLabelParts("Play ", "MANGORADIO", " in Bedroom"),
+            playLabelParts(PlayLabel.PlaySource("MANGORADIO", "Bedroom")),
+        )
+        assertEquals(
+            PlayLabelParts("Play ", "Jazz24", " in Kitchen + Office"),
+            playLabelParts(PlayLabel.PlaySource("Jazz24", "Kitchen + Office")),
+        )
+    }
+
+    @Test
+    fun theOtherLabelsAreWhollyInBefore() {
+        assertEquals(PlayLabelParts("Play", "", ""), playLabelParts(PlayLabel.Play))
+        assertEquals(PlayLabelParts("Play link in Bedroom", "", ""), playLabelParts(PlayLabel.PlayLink("Bedroom")))
+        assertEquals(PlayLabelParts("Starting…", "", ""), playLabelParts(PlayLabel.Starting))
+    }
+
+    @Test
+    fun thePartsReadAsTheOldSingleLabel() {
+        val label = PlayLabel.PlaySource("MANGORADIO", "Bedroom")
+        val p = playLabelParts(label)
+        assertEquals(playLabelText(label), p.before + p.name + p.after)
+    }
+
+    @Test
+    fun aStationRowsSecondLineStartsWithRadio() {
+        val full = Station("a", "radiobrowser://a", "N", "DE", "MP3", 128)
+        assertEquals("Radio · DE · MP3 · 128 kbps", stationSecondLineInStartPlayback(full))
+        assertEquals("Radio", stationSecondLineInStartPlayback(Station("b", "radiobrowser://b", "N", null, null, null)))
     }
 }

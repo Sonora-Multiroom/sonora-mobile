@@ -11,6 +11,7 @@ import sonora.multiroom.mobile.data.createHubHttpClient
 import sonora.multiroom.mobile.domain.Target
 import sonora.multiroom.mobile.data.httpEngine
 import sonora.multiroom.mobile.ui.nowplaying.NowPlayingViewModel
+import sonora.multiroom.mobile.ui.radio.RadioViewModel
 import sonora.multiroom.mobile.ui.rooms.RoomsViewModel
 import sonora.multiroom.mobile.ui.session.AppMessages
 import sonora.multiroom.mobile.ui.session.HubSession
@@ -70,7 +71,10 @@ class AppGraph(
         NowPlayingViewModel(routeId, savedState, session, messages, startedAfterSeq, targetName)
 
     fun startPlaybackViewModel(targetId: String?, fixedTarget: Target?, fixedName: String?, savedState: SavedStateHandle) =
-        StartPlaybackViewModel(targetId, fixedTarget, fixedName, savedState, session, starter)
+        StartPlaybackViewModel(targetId, fixedTarget, fixedName, savedState, session, starter, radioAvailability, stationPicker, radioStore)
+
+    fun radioViewModel(savedState: SavedStateHandle, region: () -> String) =
+        RadioViewModel(savedState, session, radioAvailability, stationPicker, radioStore, region)
 
     fun roomsViewModel() = RoomsViewModel(session, messages)
 }

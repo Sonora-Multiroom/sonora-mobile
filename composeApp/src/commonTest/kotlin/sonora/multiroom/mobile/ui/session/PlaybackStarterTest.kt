@@ -11,6 +11,7 @@ import sonora.multiroom.mobile.domain.RouteStatus
 import sonora.multiroom.mobile.domain.Source
 import sonora.multiroom.mobile.domain.SourceKind
 import sonora.multiroom.mobile.domain.SourceOrigin
+import sonora.multiroom.mobile.domain.Station
 import sonora.multiroom.mobile.domain.StartNames
 import sonora.multiroom.mobile.domain.StartWhat
 import sonora.multiroom.mobile.domain.Target
@@ -367,5 +368,72 @@ class PlaybackStarterTest {
         s.starter.detach()
         advanceTimeBy(100); runCurrent()
         assertEquals(listOf("Couldn't reach that link"), s.posted)
+    }
+
+    // ---- stations (MOB-009) ---------------------------------------------------------------------
+
+    private val mango = Station("u1", "radiobrowser://u1", "MANGORADIO", "DE", "MP3", 128)
+    private val stationNames = StartNames("MANGORADIO", "Bedroom")
+    private fun Setup.playStation() = starter.start(StartWhat.Station(mango), bedroom, stationNames)
+    private fun stationInput(uri: String) =
+        Source("link-1", "MANGORADIO", uri, SourceOrigin.Runtime, false, true, SourceKind.Link)
+
+    @Test
+    fun aStationStartSendsTheStationAddressAndNothingElse() = runTest {
+        val s = setup()
+        s.repo.startResults += HubResult.Ok(route("r9", input = "link-1"))
+        s.playStation(); runCurrent()
+        // playLink has no name, volume or join mode to send; checkLink is never involved.
+        assertEquals(listOf("playLink"), s.repo.calls.map { it.name })
+        assertEquals(listOf<Any>("radiobrowser://u1", bedroom), s.repo.calls.single().args)
+    }
+
+    @Test
+    fun aStationAnswerIsReturnedLikeALinks() = runTest {
+        val s = setup()
+        s.repo.startResults += HubResult.Ok(route("r9", input = "link-1"))
+        s.playStation(); runCurrent()
+        assertEquals("r9", assertIs<StartAttempt.Done>(s.attempt).route.id)
+    }
+
+    @Test
+    fun aLostStationAnswerIsRecoveredByARuntimeInputWithTheSameAddress() = runTest {
+        val s = setup()
+        s.repo.startResults += HubResult.Err(HubError.Unreachable)
+        s.repo.snapshotResult = {
+            HubResult.Ok(snapshot(sources = listOf(stationInput("RadioBrowser://U1")), routes = listOf(route("r5", input = "link-1"))))
+        }
+        s.playStation(); runCurrent()
+        assertEquals("r5", assertIs<StartAttempt.Done>(s.attempt).route.id)
+    }
+
+    @Test
+    fun aLostStationAnswerWithNoSuchPlaybackIsAFailureOfThatStation() = runTest {
+        val s = setup()
+        s.repo.startResults += HubResult.Err(HubError.Unexpected)
+        s.playStation(); runCurrent()
+        assertEquals(StartAttempt.Failed(StartFailure.StationFailed("MANGORADIO")), s.attempt)
+    }
+
+    @Test
+    fun aFailedStationStartReportsTheStation() = runTest {
+        val s = setup()
+        for (status in listOf(422, 502, 503)) {
+            s.repo.startResults += HubResult.Err(HubError.Rejected(status, null))
+            s.playStation(); runCurrent()
+            assertEquals(StartAttempt.Failed(StartFailure.StationFailed("MANGORADIO")), s.attempt, "$status")
+            s.starter.consume()
+        }
+    }
+
+    @Test
+    fun aDetachedFailedStationStartIsPostedToRooms() = runTest {
+        val s = setup()
+        s.repo.startDelayMs = 100
+        s.repo.startResults += HubResult.Err(HubError.Rejected(502, null))
+        s.playStation(); runCurrent()
+        s.starter.detach()
+        advanceTimeBy(100); runCurrent()
+        assertEquals(listOf("Couldn't start MANGORADIO"), s.posted)
     }
 }

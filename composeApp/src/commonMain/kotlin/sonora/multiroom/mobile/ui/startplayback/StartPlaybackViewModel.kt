@@ -1,5 +1,8 @@
 package sonora.multiroom.mobile.ui.startplayback
 
+import sonora.multiroom.mobile.data.RadioStore
+import sonora.multiroom.mobile.data.decodeStation
+import sonora.multiroom.mobile.data.encodeStation
 import sonora.multiroom.mobile.domain.ConsequenceLine
 import sonora.multiroom.mobile.domain.FixedTarget
 import sonora.multiroom.mobile.domain.HubSnapshot
@@ -10,10 +13,17 @@ import sonora.multiroom.mobile.domain.StartNames
 import sonora.multiroom.mobile.domain.StartPlaybackBuilder
 import sonora.multiroom.mobile.domain.StartPlaybackContent
 import sonora.multiroom.mobile.domain.StartWhat
+import sonora.multiroom.mobile.domain.Station
+import sonora.multiroom.mobile.domain.hideListedStations
+import sonora.multiroom.mobile.domain.radioRows
+import sonora.multiroom.mobile.domain.stationDisplayName
 import sonora.multiroom.mobile.domain.Target
 import sonora.multiroom.mobile.ui.session.Connection
 import sonora.multiroom.mobile.ui.session.HubSession
 import sonora.multiroom.mobile.ui.session.PlaybackStarter
+import sonora.multiroom.mobile.ui.session.RadioAvailability
+import sonora.multiroom.mobile.ui.session.RadioOffer
+import sonora.multiroom.mobile.ui.session.StationPicker
 import sonora.multiroom.mobile.ui.session.SessionState
 import sonora.multiroom.mobile.ui.session.StartAttempt
 import sonora.multiroom.mobile.ui.startFailureMessage
@@ -22,6 +32,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
@@ -39,11 +50,23 @@ class StartPlaybackViewModel(
     private val savedState: SavedStateHandle,
     private val session: HubSession,
     private val starter: PlaybackStarter,
+    private val availability: RadioAvailability,
+    private val picker: StationPicker,
+    store: RadioStore,
 ) : ViewModel() {
     private val _state = MutableStateFlow(StartPlaybackUiState())
     val state: StateFlow<StartPlaybackUiState> = _state.asStateFlow()
 
     private var snapshot: HubSnapshot? = null
+
+    /** What the hub lists, before stations shown in the radio section are left out. */
+    private var baseContent: StartPlaybackContent? = null
+
+    // Radio (MOB-009). The chosen station is only ever read through the effective value in `derive`.
+    private var rawStation: Station? = savedState.get<String>(STATION_KEY)?.let(::decodeStation)
+    private var offer = RadioOffer.Unknown
+    private var recent: List<Station> = emptyList()
+    private val recentFlow = store.recent
 
     /** Names captured when Play was tapped, for the hand-off to Now Playing. */
     private var pendingNames: StartNames? = null
@@ -68,6 +91,26 @@ class StartPlaybackViewModel(
         }
         viewModelScope.launch { session.state.collect(::onSession) }
         viewModelScope.launch { starter.attempt.collect(::onAttempt) }
+        viewModelScope.launch {
+            availability.state.collect { state ->
+                offer = state
+                if (started) return@collect
+                _state.update(::derive)
+            }
+        }
+        viewModelScope.launch {
+            recentFlow.collect { list ->
+                recent = list
+                if (started) return@collect
+                _state.update(::derive)
+            }
+        }
+        viewModelScope.launch {
+            picker.picked.filterNotNull().collect { station ->
+                onSelectStation(station)
+                picker.consumePicked()
+            }
+        }
     }
 
     // ---- Session -------------------------------------------------------------------------------
@@ -90,6 +133,7 @@ class StartPlaybackViewModel(
 
     /** New content: prune what vanished, apply the opening preselection once, refresh derived fields. */
     private fun rebuild(content: StartPlaybackContent) {
+        baseContent = content
         val fixed = fixedTarget?.let { t ->
             snapshot?.let { FixedTarget.of(it, t, savedState.get<String>(FIXED_NAME_KEY)) }
                 ?.also { savedState[FIXED_NAME_KEY] = it.name }
@@ -109,16 +153,20 @@ class StartPlaybackViewModel(
         }
     }
 
-    /** What would be played: the selected source, else a valid link. */
-    private fun whatOf(s: StartPlaybackUiState): StartWhat? = when {
+    /** What would be played: the chosen station, else the selected source, else a valid link. */
+    private fun whatOf(s: StartPlaybackUiState, station: Station?): StartWhat? = when {
+        station != null -> StartWhat.Station(station)
         s.selectedSourceId != null -> StartWhat.Source(s.selectedSourceId)
         else -> (checkLink(s.linkText) as? LinkCheck.Valid)?.let { StartWhat.Link(it.uri) }
     }
 
     /** Fields that follow from the others: the Play label, the consequence, whether Play can be tapped. */
     private fun derive(s: StartPlaybackUiState): StartPlaybackUiState {
-        val content = s.content
-        val what = whatOf(s)
+        // A chosen station counts only while the hub offers radio; everything below reads this one value.
+        val station = rawStation?.takeIf { offer == RadioOffer.Offered }
+        val rows = radioRows(offer == RadioOffer.Offered, recent, station)
+        val content = baseContent?.let { it.copy(sources = hideListedStations(it.sources, rows, s.selectedSourceId)) }
+        val what = whatOf(s, station)
         val sourceName = content?.sources?.firstOrNull { it.id == s.selectedSourceId }?.name
         val targetName = if (fixedTarget != null) s.fixed?.takeIf { it.unusable == null }?.name
         else content?.targets?.firstOrNull { it.target == s.selectedTarget }?.name
@@ -127,11 +175,15 @@ class StartPlaybackViewModel(
         val label = when {
             s.starting -> PlayLabel.Starting
             ready && what is StartWhat.Source -> PlayLabel.PlaySource(sourceName!!, targetName!!)
+            ready && what is StartWhat.Station -> PlayLabel.PlaySource(stationDisplayName(what.station), targetName!!)
             ready -> PlayLabel.PlayLink(targetName!!)
             else -> PlayLabel.Play
         }
         val consequence = snapshot?.takeIf { ready }?.let { StartConsequence.of(it, what!!, s.selectedTarget!!) }
         return s.copy(
+            content = content,
+            selectedStation = station,
+            radio = rows,
             playLabel = label,
             // A start the hub would refuse as "already playing" is not offered.
             playEnabled = ready && !s.starting && s.connection == Connection.Live &&
@@ -152,10 +204,36 @@ class StartPlaybackViewModel(
         _state.update { current ->
             if (current.starting || current.content?.sources?.any { it.id == id } != true) return@update current
             // At most one selection: a source clears the link (FR-005).
+            clearStation()
             save(id, current.selectedTarget, "")
             derive(current.copy(selectedSourceId = id, linkText = "", linkMessageShown = false))
         }
     }
+
+    // ---- A radio station (MOB-009) -------------------------------------------------------------
+
+    /** Chosen on the radio screen or from a recent row: deselects a source and empties the link. */
+    fun onSelectStation(station: Station) {
+        _state.update { current ->
+            if (current.starting) return@update current
+            rawStation = station
+            savedState[STATION_KEY] = encodeStation(station)
+            save(null, current.selectedTarget, "")
+            derive(current.copy(selectedSourceId = null, linkText = "", linkMessageShown = false))
+        }
+    }
+
+    private fun clearStation() {
+        if (rawStation == null) return
+        rawStation = null
+        savedState[STATION_KEY] = null
+    }
+
+    /** "Find a radio station" or "Change": asks the screen to push the radio screen. */
+    fun onOpenRadio() = _state.update { it.copy(openRadio = true) }
+
+    fun consumeOpenRadio() = _state.update { it.copy(openRadio = false) }
+
 
     fun onSelectTarget(target: Target) {
         if (fixedTarget != null) return
@@ -191,6 +269,8 @@ class StartPlaybackViewModel(
             // The message appears on request and only for invalid text; it clears once the text is fine.
             val shown = check == LinkCheck.Invalid && (showMessage || current.linkMessageShown)
             save(sourceId, current.selectedTarget, text)
+            // Typing a link deselects a chosen station as it deselects a source.
+            if (check != LinkCheck.Empty) clearStation()
             derive(current.copy(linkText = text, linkMessageShown = shown, selectedSourceId = sourceId))
         }
     }
@@ -201,13 +281,17 @@ class StartPlaybackViewModel(
         val s = _state.value
         if (!s.playEnabled) return
         val content = s.content ?: return
-        val what = whatOf(s) ?: return
+        val what = whatOf(s, s.selectedStation) ?: return
         val (target, targetName) = if (fixedTarget != null) {
             fixedTarget to (s.fixed?.name ?: return)
         } else {
             content.targets.firstOrNull { it.target == s.selectedTarget }?.let { it.target to it.name } ?: return
         }
-        val sourceName = (what as? StartWhat.Source)?.let { w -> content.sources.firstOrNull { it.id == w.id }?.name ?: return }
+        val sourceName = when (what) {
+            is StartWhat.Source -> content.sources.firstOrNull { it.id == what.id }?.name ?: return
+            is StartWhat.Station -> stationDisplayName(what.station)
+            is StartWhat.Link -> null
+        }
         val names = StartNames(sourceName, targetName)
         pendingNames = names
         starter.start(what, target, names)
@@ -240,7 +324,11 @@ class StartPlaybackViewModel(
     }
 
     /** Foreground only: the screen calls this while it is visible (FR-002). */
-    fun onVisible() = session.acquire()
+    fun onVisible() {
+        session.acquire()
+        // Asked each time the screen opens, never on the poll: the inventory changes only on a hub restart.
+        viewModelScope.launch { availability.refresh() }
+    }
 
     fun onHidden() = session.release()
 
@@ -254,6 +342,7 @@ class StartPlaybackViewModel(
 
     private companion object {
         const val SOURCE_KEY = "sourceId"
+        const val STATION_KEY = "station"
         const val TARGET_KEY = "target"
         const val LINK_KEY = "link"
         const val PRESELECTED_KEY = "preselected"

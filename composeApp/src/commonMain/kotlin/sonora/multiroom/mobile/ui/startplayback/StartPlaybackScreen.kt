@@ -2,6 +2,7 @@ package sonora.multiroom.mobile.ui.startplayback
 
 import sonora.multiroom.mobile.domain.ConsequenceLine
 import sonora.multiroom.mobile.domain.StartPlaybackContent
+import sonora.multiroom.mobile.domain.Station
 import sonora.multiroom.mobile.domain.Target
 import sonora.multiroom.mobile.ui.rooms.IconCircleButton
 import sonora.multiroom.mobile.ui.rooms.Message
@@ -37,6 +38,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -51,6 +53,7 @@ fun StartPlaybackScreen(
     viewModel: StartPlaybackViewModel,
     onClose: () -> Unit,
     onStarted: (StartExit.Started) -> Unit,
+    onOpenRadio: () -> Unit,
     onOpenSettings: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -81,6 +84,14 @@ fun StartPlaybackScreen(
         }
     }
 
+    // "Find a radio station" or "Change": push the radio screen. Once.
+    LaunchedEffect(state.openRadio) {
+        if (state.openRadio) {
+            onOpenRadio()
+            viewModel.consumeOpenRadio()
+        }
+    }
+
     // Poll only while this screen is visible and the app is in the foreground (FR-002).
     val lifecycleOwner = LocalLifecycleOwner.current
     LaunchedEffect(viewModel, lifecycleOwner) {
@@ -104,6 +115,8 @@ fun StartPlaybackScreen(
             onLinkDone = viewModel::onLinkDone,
             onSelectSource = viewModel::onSelectSource,
             onSelectTarget = viewModel::onSelectTarget,
+            onOpenRadio = viewModel::onOpenRadio,
+            onSelectStation = viewModel::onSelectStation,
             onPlay = viewModel::onPlay,
         )
         SnackbarHost(
@@ -129,6 +142,8 @@ internal fun StartPlaybackContentView(
     onLinkDone: () -> Unit,
     onSelectSource: (String) -> Unit,
     onSelectTarget: (Target) -> Unit,
+    onOpenRadio: () -> Unit,
+    onSelectStation: (Station) -> Unit,
     onPlay: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -179,7 +194,7 @@ internal fun StartPlaybackContentView(
                 if (connection is Connection.Unreachable) StaleBanner()
                 Body(modifier = Modifier.weight(1f)) {
                     link()
-                    Lists(content, state, onSelectSource, onSelectTarget)
+                    Lists(content, state, onSelectSource, onSelectTarget, onOpenRadio, onSelectStation)
                 }
                 Footer(state, onPlay)
             }
@@ -218,7 +233,7 @@ private fun Body(modifier: Modifier = Modifier, content: @Composable () -> Unit)
 }
 
 @Composable
-private fun SectionLegend(text: String, modifier: Modifier = Modifier) {
+internal fun SectionLegend(text: String, modifier: Modifier = Modifier) {
     Text(text.uppercase(), style = SonoraTheme.type.sectionLabel, color = SonoraTheme.colors.textMuted, modifier = modifier)
 }
 
@@ -228,9 +243,21 @@ private fun Lists(
     state: StartPlaybackUiState,
     onSelectSource: (String) -> Unit,
     onSelectTarget: (Target) -> Unit,
+    onOpenRadio: () -> Unit,
+    onSelectStation: (Station) -> Unit,
 ) {
     val colors = SonoraTheme.colors
     val locked = state.starting
+
+    state.radio?.let { rows ->
+        RadioSection(
+            rows = rows,
+            stale = state.connection is Connection.Unreachable,
+            enabled = !locked,
+            onOpenRadio = onOpenRadio,
+            onSelectStation = onSelectStation,
+        )
+    }
 
     SectionLegend("Or pick a source", Modifier.padding(top = 6.dp))
     if (content.sources.isEmpty()) {
@@ -308,14 +335,36 @@ private fun Footer(state: StartPlaybackUiState, onPlay: () -> Unit) {
             if (!state.starting) {
                 Icon(SonoraIcons.Play, contentDescription = null, tint = colors.onAccent, modifier = Modifier.size(20.dp))
             }
-            Text(
-                playLabelText(state.playLabel),
-                style = SonoraTheme.type.button16,
-                color = colors.onAccent,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-                modifier = Modifier.weight(1f, fill = false),
-            )
+            // Three parts: only the name shrinks and ends in "…", so the target is never cut off.
+            val parts = playLabelParts(state.playLabel)
+            val style = SonoraTheme.type.button16
+            Row(
+                modifier = Modifier
+                    .weight(1f, fill = false)
+                    .semantics(mergeDescendants = true) { contentDescription = playLabelText(state.playLabel) },
+            ) {
+                Text(
+                    parts.before,
+                    style = style,
+                    color = colors.onAccent,
+                    maxLines = 1,
+                    softWrap = false,
+                    overflow = TextOverflow.Ellipsis,
+                    // Without a name the whole label is here and may need to shrink.
+                    modifier = if (parts.name.isEmpty()) Modifier.weight(1f, fill = false) else Modifier,
+                )
+                if (parts.name.isNotEmpty()) {
+                    Text(
+                        parts.name,
+                        style = style,
+                        color = colors.onAccent,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.weight(1f, fill = false),
+                    )
+                }
+                if (parts.after.isNotEmpty()) Text(parts.after, style = style, color = colors.onAccent, maxLines = 1, softWrap = false)
+            }
         }
     }
 }

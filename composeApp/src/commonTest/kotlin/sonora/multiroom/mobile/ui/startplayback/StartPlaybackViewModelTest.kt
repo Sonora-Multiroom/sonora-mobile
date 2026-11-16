@@ -3,7 +3,14 @@ package sonora.multiroom.mobile.ui.startplayback
 import sonora.multiroom.mobile.data.HubError
 import sonora.multiroom.mobile.data.HubResult
 import sonora.multiroom.mobile.data.InMemoryHubAddressStore
+import sonora.multiroom.mobile.data.InMemoryRadioStore
+import sonora.multiroom.mobile.data.encodeStation
 import sonora.multiroom.mobile.domain.ConsequenceLine
+import sonora.multiroom.mobile.domain.Extension
+import sonora.multiroom.mobile.domain.ExtensionConnection
+import sonora.multiroom.mobile.domain.ExtensionInventory
+import sonora.multiroom.mobile.domain.ExtensionStatus
+import sonora.multiroom.mobile.domain.Station
 import sonora.multiroom.mobile.domain.Group
 import sonora.multiroom.mobile.domain.TargetStatus
 import sonora.multiroom.mobile.domain.Unusable
@@ -23,6 +30,8 @@ import sonora.multiroom.mobile.ui.session.AppMessages
 import sonora.multiroom.mobile.ui.session.Connection
 import sonora.multiroom.mobile.ui.session.HubSession
 import sonora.multiroom.mobile.ui.session.PlaybackStarter
+import sonora.multiroom.mobile.ui.session.RadioAvailability
+import sonora.multiroom.mobile.ui.session.StationPicker
 import androidx.lifecycle.SavedStateHandle
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.TestScope
@@ -61,6 +70,9 @@ class StartPlaybackViewModelTest {
         val starter: PlaybackStarter,
         val posted: MutableList<String>,
         val handle: SavedStateHandle,
+        val picker: StationPicker,
+        val availability: RadioAvailability,
+        val store: InMemoryRadioStore,
     ) {
         val repo get() = factory.last
         val ui get() = vm.state.value
@@ -73,6 +85,9 @@ class StartPlaybackViewModelTest {
         snapshot: HubSnapshot = snapshot(),
         handle: SavedStateHandle = SavedStateHandle(),
         visible: Boolean = true,
+        radio: Boolean = false,
+        store: InMemoryRadioStore = InMemoryRadioStore(),
+        script: (sonora.multiroom.mobile.ui.rooms.FakeRepository) -> Unit = {},
     ): Setup {
         val factory = FakeFactory { currentTime }
         val session = HubSession(InMemoryHubAddressStore(address), factory, backgroundScope, now = { currentTime })
@@ -82,10 +97,14 @@ class StartPlaybackViewModelTest {
         runCurrent()
         factory.last.snapshotResult = { HubResult.Ok(snapshot) }
         val starter = PlaybackStarter(backgroundScope, session, messages)
-        val vm = StartPlaybackViewModel(initialTargetId, fixedTarget, fixedName, handle, session, starter)
+        if (radio) factory.last.extensionsResult = { HubResult.Ok(radioInventory) }
+        script(factory.last)
+        val availability = RadioAvailability(session, backgroundScope)
+        val picker = StationPicker()
+        val vm = StartPlaybackViewModel(initialTargetId, fixedTarget, fixedName, handle, session, starter, availability, picker, store)
         if (visible) vm.onVisible()
         runCurrent()
-        return Setup(vm, session, factory, starter, posted, handle)
+        return Setup(vm, session, factory, starter, posted, handle, picker, availability, store)
     }
 
     private fun Setup.refresh(snapshot: HubSnapshot) {
@@ -702,5 +721,215 @@ class StartPlaybackViewModelTest {
         assertIs<ConsequenceLine.AlreadyPlaying>(group.ui.consequence?.line)
         assertFalse(group.ui.playEnabled)
         group.vm.onHidden()
+    }
+
+    // ---- A radio station (MOB-009) ---------------------------------------------------------------
+
+    private val radioInventory = ExtensionInventory(
+        true,
+        listOf(Extension("radio", "Radio", ExtensionStatus.Active, ExtensionConnection.Connected)),
+    )
+    private val mango = Station("u1", "radiobrowser://u1", "MANGORADIO", "DE", "MP3", 128)
+
+    private fun stationInput(id: String = "link-1", uri: String = mango.uri) =
+        Source(id, "MANGORADIO", uri, SourceOrigin.Runtime, false, true, SourceKind.Link)
+
+    @Test
+    fun theRadioSectionExistsOnlyWhileRadioIsOffered() = runViewModelTest {
+        val without = live()
+        assertNull(without.ui.radio)
+        without.vm.onHidden()
+        val with = live(radio = true)
+        assertNotNull(with.ui.radio)
+        assertNull(with.ui.radio?.found)
+        with.vm.onHidden()
+    }
+
+    @Test
+    fun whileTheAnswerIsUnknownThereIsNoRadioSection() = runViewModelTest {
+        val s = live(radio = true, script = { it.extensionsDelayMs = 1_000 })
+        assertNull(s.ui.radio)
+        advanceTimeBy(1_000); runCurrent()
+        assertNotNull(s.ui.radio)
+        s.vm.onHidden()
+    }
+
+    @Test
+    fun aHubWithoutRadioShowsNothingOfIt() = runViewModelTest {
+        val s = live(radio = false)
+        assertNull(s.ui.radio)
+        assertNull(s.ui.selectedStation)
+        s.vm.onHidden()
+    }
+
+    @Test
+    fun aPickedStationBecomesTheSelectionAndIsConsumed() = runViewModelTest {
+        val s = live(radio = true)
+        s.picker.pick(mango); runCurrent()
+        assertEquals(mango, s.ui.selectedStation)
+        assertNull(s.picker.picked.value)
+        assertEquals(mango.uuid, s.ui.radio?.selectedUuid)
+        assertEquals(mango, s.ui.radio?.found)
+        s.vm.onHidden()
+    }
+
+    @Test
+    fun aStationAndASourceExcludeEachOther() = runViewModelTest {
+        val s = live(radio = true)
+        s.vm.onSelectSource("jazz")
+        s.picker.pick(mango); runCurrent()
+        assertNull(s.ui.selectedSourceId)
+        assertEquals(mango, s.ui.selectedStation)
+        s.vm.onSelectSource("news")
+        assertNull(s.ui.selectedStation)
+        assertEquals("news", s.ui.selectedSourceId)
+        s.vm.onHidden()
+    }
+
+    @Test
+    fun aStationAndALinkExcludeEachOther() = runViewModelTest {
+        val s = live(radio = true)
+        s.vm.type("https://x.y/a")
+        s.picker.pick(mango); runCurrent()
+        assertEquals("", s.ui.linkText)
+        assertEquals(mango, s.ui.selectedStation)
+        s.vm.onLinkChange("h")
+        assertNull(s.ui.selectedStation)
+        s.vm.onHidden()
+    }
+
+    @Test
+    fun theStationNamesThePlayButton() = runViewModelTest {
+        val s = live(radio = true)
+        s.picker.pick(mango); runCurrent()
+        assertEquals(PlayLabel.Play, s.ui.playLabel)
+        assertFalse(s.ui.playEnabled)
+        s.vm.onSelectTarget(bedroom)
+        assertEquals(PlayLabel.PlaySource("MANGORADIO", "Bedroom"), s.ui.playLabel)
+        assertTrue(s.ui.playEnabled)
+        s.vm.onHidden()
+    }
+
+    @Test
+    fun aStationWithoutANameIsCalledUnnamed() = runViewModelTest {
+        val s = live(radio = true)
+        s.picker.pick(mango.copy(name = null)); runCurrent()
+        s.vm.onSelectTarget(bedroom)
+        assertEquals(PlayLabel.PlaySource("Unnamed station", "Bedroom"), s.ui.playLabel)
+        s.vm.onHidden()
+    }
+
+    @Test
+    fun playStartsTheStationOnTheChosenTarget() = runViewModelTest {
+        val s = live(radio = true)
+        s.picker.pick(mango); runCurrent()
+        s.vm.onSelectTarget(bedroom)
+        s.vm.onPlay(); runCurrent()
+        assertEquals(listOf<Any>("radiobrowser://u1", bedroom), s.repo.calls.single { it.name == "playLink" }.args)
+        s.vm.onHidden()
+    }
+
+    @Test
+    fun aFailedStationStartKeepsTheStationAndTheTargetAndShowsTheSnackbarText() = runViewModelTest {
+        val s = live(radio = true)
+        s.picker.pick(mango); runCurrent()
+        s.vm.onSelectTarget(bedroom)
+        s.repo.startResults += HubResult.Err(HubError.Rejected(502, null))
+        s.vm.onPlay(); runCurrent()
+        assertEquals("Couldn't start MANGORADIO", s.ui.message)
+        assertEquals(mango, s.ui.selectedStation)
+        assertEquals(bedroom, s.ui.selectedTarget)
+        assertFalse(s.ui.starting)
+        s.vm.onHidden()
+    }
+
+    @Test
+    fun aStationAlreadyPlayingOnTheTargetIsNotOffered() = runViewModelTest {
+        val playing = Route("r1", "link-1", bedroom, RouteStatus.Active, false, false, true)
+        val s = live(radio = true, snapshot = snapshot(sources = listOf(source("jazz", "Jazz24"), stationInput("link-1", "RadioBrowser://U1")), routes = listOf(playing)))
+        s.picker.pick(mango); runCurrent()
+        s.vm.onSelectTarget(bedroom)
+        assertEquals(ConsequenceLine.AlreadyPlaying("MANGORADIO", "Bedroom"), s.ui.consequence?.line)
+        assertFalse(s.ui.playEnabled)
+        s.vm.onHidden()
+    }
+
+    @Test
+    fun aSelectedStationThatAlsoPlaysIsNotListedAgainUnderTheSources() = runViewModelTest {
+        val s = live(radio = true, snapshot = snapshot(sources = listOf(source("jazz", "Jazz24"), stationInput())))
+        assertEquals(listOf("jazz", "link-1"), s.ui.content?.sources?.map { it.id })
+        s.picker.pick(mango); runCurrent()
+        assertEquals(listOf("jazz"), s.ui.content?.sources?.map { it.id })
+        s.vm.onHidden()
+    }
+
+    @Test
+    fun theSelectedStationSurvivesARestoreOfSavedState() = runViewModelTest {
+        val handle = SavedStateHandle()
+        val first = live(radio = true, handle = handle)
+        first.picker.pick(mango); runCurrent()
+        assertEquals(encodeStation(mango), handle.get<String>("station"))
+        first.vm.onHidden()
+        val second = live(radio = true, handle = handle)
+        assertEquals(mango, second.ui.selectedStation)
+        second.vm.onHidden()
+    }
+
+    @Test
+    fun aRestoredStationIsNotEffectiveUntilRadioIsOffered() = runViewModelTest {
+        val playing = Route("r1", "link-1", bedroom, RouteStatus.Active, false, false, true)
+        val handle = SavedStateHandle().also { it["station"] = encodeStation(mango) }
+        val s = live(
+            radio = true, handle = handle,
+            snapshot = snapshot(sources = listOf(source("jazz", "Jazz24"), stationInput()), routes = listOf(playing)),
+            script = { it.extensionsDelayMs = 1_000 },
+        )
+        s.vm.onSelectTarget(bedroom)
+        // As with nothing selected: no label, no line, the source list untouched.
+        assertNull(s.ui.selectedStation)
+        assertEquals(PlayLabel.Play, s.ui.playLabel)
+        assertFalse(s.ui.playEnabled)
+        assertNull(s.ui.consequence)
+        assertEquals(listOf("jazz", "link-1"), s.ui.content?.sources?.map { it.id })
+        advanceTimeBy(1_000); runCurrent()
+        assertEquals(mango, s.ui.selectedStation)
+        assertEquals(PlayLabel.PlaySource("MANGORADIO", "Bedroom"), s.ui.playLabel)
+        assertEquals(ConsequenceLine.AlreadyPlaying("MANGORADIO", "Bedroom"), s.ui.consequence?.line)
+        assertEquals(listOf("jazz"), s.ui.content?.sources?.map { it.id })
+        s.vm.onHidden()
+    }
+
+    @Test
+    fun openRadioIsOneShot() = runViewModelTest {
+        val s = live(radio = true)
+        assertFalse(s.ui.openRadio)
+        s.vm.onOpenRadio()
+        assertTrue(s.ui.openRadio)
+        s.vm.consumeOpenRadio()
+        assertFalse(s.ui.openRadio)
+        s.vm.onHidden()
+    }
+
+    @Test
+    fun availabilityIsAskedEachTimeTheScreenBecomesVisible() = runViewModelTest {
+        val s = live(radio = true)
+        assertEquals(1, s.repo.extensionsCalls)
+        s.vm.onHidden()
+        s.vm.onVisible(); runCurrent()
+        assertEquals(2, s.repo.extensionsCalls)
+        s.vm.onHidden()
+    }
+
+    @Test
+    fun changeSourceOffersRadioAndStartsOnTheFixedTarget() = runViewModelTest {
+        val s = live(radio = true, fixedTarget = bedroom, fixedName = "Bedroom")
+        assertNotNull(s.ui.radio)
+        s.picker.pick(mango); runCurrent()
+        assertEquals(mango, s.ui.selectedStation)
+        assertEquals(bedroom, s.ui.selectedTarget)
+        assertTrue(s.ui.playEnabled)
+        s.vm.onPlay(); runCurrent()
+        assertEquals(listOf<Any>("radiobrowser://u1", bedroom), s.repo.calls.single { it.name == "playLink" }.args)
+        s.vm.onHidden()
     }
 }
