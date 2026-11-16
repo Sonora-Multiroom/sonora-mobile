@@ -29,6 +29,12 @@ internal const val HUB_TIMEOUT_MILLIS = 3000L
 /** `POST /api/v2/play`: the hub fetches and resolves the link before it answers (FR-014). */
 internal const val LINK_TIMEOUT_MILLIS = 30_000L
 
+/**
+ * The radio extension's requests: the hub itself waits up to 5 s for the catalogue and then
+ * answers 503, so the app waits a little longer instead of calling a slow catalogue "unreachable".
+ */
+internal const val RADIO_TIMEOUT_MILLIS = 6000L
+
 /** No retries (the poll loop is the retry) and no auth; status codes are mapped explicitly. */
 fun createHubHttpClient(engine: HttpClientEngine): HttpClient = HttpClient(engine) {
     expectSuccess = false

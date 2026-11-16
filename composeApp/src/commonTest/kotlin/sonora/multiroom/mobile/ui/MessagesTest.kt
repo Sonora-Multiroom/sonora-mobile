@@ -274,4 +274,20 @@ class MessagesTest {
         // Already gone is a success for the caller.
         assertEquals(null, settingsFailure(a, "Radio", notFound))
     }
+
+    // ---- Radio (MOB-009) --------------------------------------------------------------------
+
+    @Test
+    fun radioFailureFollowsTheTable() {
+        assertEquals(RadioFailure.HubUnreachable, radioFailure(HubError.Unreachable))
+        // 404 without a radio type: the extension is not there.
+        assertEquals(RadioFailure.Gone, radioFailure(HubError.Rejected(404, null)))
+        assertEquals(RadioFailure.Gone, radioFailure(HubError.Rejected(404, "urn:multiroom:error:not-found")))
+        for (status in listOf(502, 503, 500, 400)) {
+            assertEquals(RadioFailure.Catalogue, radioFailure(HubError.Rejected(status, "urn:multiroom:radio:error:x")), "$status")
+        }
+        assertEquals(RadioFailure.Catalogue, radioFailure(HubError.Rejected(404, "urn:multiroom:radio:error:not-found")))
+        assertEquals(RadioFailure.Catalogue, radioFailure(HubError.Rejected(503, null)))
+        assertEquals(RadioFailure.Catalogue, radioFailure(HubError.Unexpected))
+    }
 }

@@ -17,15 +17,16 @@ interface HubAddressStore {
     suspend fun save(address: HubAddress)
 }
 
-/**
- * Persists the address in a DataStore Preferences file holding one key. Only the file path comes
- * from the platform, so this stays free of any Android `Context`. One instance per file per
- * process: DataStore refuses a second active instance on the same file.
- */
-class DataStoreHubAddressStore(path: String) : HubAddressStore {
-    private val dataStore: DataStore<Preferences> =
-        PreferenceDataStoreFactory.createWithPath(produceFile = { path.toPath() })
+/** The app's one preferences file. DataStore refuses a second active instance on the same file. */
+fun createPreferencesDataStore(path: String): DataStore<Preferences> =
+    PreferenceDataStoreFactory.createWithPath(produceFile = { path.toPath() })
 
+/**
+ * Persists the address in the app's preferences file. The file itself is created once by the app
+ * (only its path comes from the platform, so this stays free of any Android `Context`) and shared
+ * with the radio store.
+ */
+class DataStoreHubAddressStore(private val dataStore: DataStore<Preferences>) : HubAddressStore {
     override val address: Flow<HubAddress?> =
         dataStore.data.map { prefs -> prefs[KEY]?.let(::HubAddress) }
 

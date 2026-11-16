@@ -4,10 +4,15 @@ import sonora.multiroom.mobile.data.HubError
 import sonora.multiroom.mobile.data.HubRepository
 import sonora.multiroom.mobile.data.HubRepositoryFactory
 import sonora.multiroom.mobile.data.HubResult
+import sonora.multiroom.mobile.domain.Country
 import sonora.multiroom.mobile.domain.HubAddress
 import sonora.multiroom.mobile.domain.HubSnapshot
+import sonora.multiroom.mobile.domain.Language
 import sonora.multiroom.mobile.domain.Room
 import sonora.multiroom.mobile.domain.Route
+import sonora.multiroom.mobile.domain.StationPage
+import sonora.multiroom.mobile.domain.StationQuery
+import sonora.multiroom.mobile.domain.TagPage
 import sonora.multiroom.mobile.domain.Target
 import kotlinx.coroutines.delay
 
@@ -116,6 +121,49 @@ class FakeRepository(private val time: () -> Long) : HubRepository {
         calls += Call("playLink", listOf(uri, target), time())
         if (startDelayMs > 0) delay(startDelayMs)
         return startResult()
+    }
+
+    // ---- Radio (MOB-009): scripted answers and recorded calls ------------------------------
+
+    /** Answers the queue first, then [stationsResult]; [radioDelayMs] delays every radio answer. */
+    val stationResults = ArrayDeque<HubResult<StationPage>>()
+    var stationsResult: (StationQuery, Int) -> HubResult<StationPage> = { _, _ -> HubResult.Ok(StationPage(emptyList(), null)) }
+    var radioDelayMs = 0L
+    var countriesResult: () -> HubResult<List<Country>> = { HubResult.Ok(emptyList()) }
+    var languagesResult: () -> HubResult<List<Language>> = { HubResult.Ok(emptyList()) }
+    val tagResults = ArrayDeque<HubResult<TagPage>>()
+    var tagsResult: (String?, Int) -> HubResult<TagPage> = { _, _ -> HubResult.Ok(TagPage(emptyList(), null)) }
+
+    /** The searches asked for, in order, with the offset. */
+    val searches = mutableListOf<Pair<StationQuery, Int>>()
+    val tagSearches = mutableListOf<Pair<String?, Int>>()
+    val countriesCalls get() = calls.count { it.name == "radioCountries" }
+    val languagesCalls get() = calls.count { it.name == "radioLanguages" }
+
+    override suspend fun searchStations(query: StationQuery, offset: Int): HubResult<StationPage> {
+        searches += query to offset
+        calls += Call("searchStations", listOf(query, offset), time())
+        if (radioDelayMs > 0) delay(radioDelayMs)
+        return stationResults.removeFirstOrNull() ?: stationsResult(query, offset)
+    }
+
+    override suspend fun radioCountries(): HubResult<List<Country>> {
+        calls += Call("radioCountries", emptyList(), time())
+        if (radioDelayMs > 0) delay(radioDelayMs)
+        return countriesResult()
+    }
+
+    override suspend fun radioLanguages(): HubResult<List<Language>> {
+        calls += Call("radioLanguages", emptyList(), time())
+        if (radioDelayMs > 0) delay(radioDelayMs)
+        return languagesResult()
+    }
+
+    override suspend fun radioTags(name: String?, offset: Int): HubResult<TagPage> {
+        tagSearches += name to offset
+        calls += Call("radioTags", listOf(name ?: "", offset), time())
+        if (radioDelayMs > 0) delay(radioDelayMs)
+        return tagResults.removeFirstOrNull() ?: tagsResult(name, offset)
     }
 }
 

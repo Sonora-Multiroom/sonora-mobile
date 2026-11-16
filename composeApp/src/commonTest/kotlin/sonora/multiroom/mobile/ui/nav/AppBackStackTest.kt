@@ -226,4 +226,23 @@ class AppBackStackTest {
         assertSame(now, s.stack[1])
         assertEquals(listOf(Destination.Rooms, now), s.contents())
     }
+
+    @Test
+    fun radioIsSavedAsRadioAndRestored() {
+        assertEquals("radio", encodeDestination(Destination.Radio))
+        assertEquals(Destination.Radio, decodeDestination("radio"))
+        val s = AppBackStack(listOf(Destination.Rooms, Destination.StartPlayback(null), Destination.Radio))
+        val restored = AppBackStack(s.stack.map(::encodeDestination).mapNotNull(::decodeDestination))
+        assertEquals(s.contents(), restored.contents())
+    }
+
+    @Test
+    fun theBottomBarIsHiddenOnRadio() {
+        val s = AppBackStack(listOf(Destination.Rooms, Destination.StartPlayback(null)))
+        s.push(Destination.Radio)
+        assertFalse(s.showsBottomBar)
+        assertEquals(Destination.Rooms, s.currentTab)
+        assertTrue(s.pop())
+        assertEquals(Destination.StartPlayback(null), s.top)
+    }
 }

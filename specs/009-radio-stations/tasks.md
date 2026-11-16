@@ -60,9 +60,9 @@ added.
 
 ## Phase 1: Setup
 
-- [ ] T001 Set `sonora.versionName=0.9.0-alpha` and `sonora.versionCode=9` in gradle.properties as
+- [X] T001 Set `sonora.versionName=0.9.0-alpha` and `sonora.versionCode=9` in gradle.properties as
   the first implementation commit (AGENTS.md "Bump the app version first").
-- [ ] T002 Add `Radio` to the generator's tag filter in composeApp/build.gradle.kts
+- [X] T002 Add `Radio` to the generator's tag filter in composeApp/build.gradle.kts
   (`"tag:Routes|Outputs|Inputs|Groups|Master Mute|Playback|Extensions|Radio"`). Generate once and
   check that `RadioApi.searchRadioStations`, `listRadioCountries`, `listRadioLanguages`,
   `listRadioTags` and the models `RadioStation`, `RadioStationPage`, `RadioCountry`,
@@ -80,7 +80,7 @@ radio store, and the three small app-scoped objects every story reads.
 
 ### Tests first
 
-- [ ] T003 [P] Create test/domain/RadioTest.kt with failing tests for the pure rules of
+- [X] T003 [P] Create test/domain/RadioTest.kt with failing tests for the pure rules of
   data-model.md "Station" and "RecentStation": `stationName` (removes every `%`, trims, cuts to 100
   characters, null when empty or blank), `tagName` (also removes `/`), `stationDisplayName`
   ("Unnamed station"), `stationDetail` (known parts of country code, codec, "<n> kbps" joined with
@@ -90,7 +90,7 @@ radio store, and the three small app-scoped objects every story reads.
   trimmed text ignoring case; all when blank), `groupThousands` (6965 → "6,965"), `addRecent`
   (station first, older entry with the same `uuid` removed, cut to ten), `radioOffered` (extension
   `radio` in any letter case with status `Active`; any other status or none → false).
-- [ ] T004 [P] Create test/data/KtorHubRepositoryRadioTest.kt with the failing `MockEngine`
+- [X] T004 [P] Create test/data/KtorHubRepositoryRadioTest.kt with the failing `MockEngine`
   contract tests 1–16 of contracts/hub-repository.md (exact query parameters, percent-encoding of
   "Хіт FM & co", the live sample page, null and `UNKNOWN` fields, a blank `uuid` dropped, unknown
   fields ignored, `nextOffset` null or missing, countries / languages / tags, the three problem
@@ -99,33 +99,33 @@ radio store, and the three small app-scoped objects every story reads.
   failures, and `playLink` with a station address posting only `uri`, `targetId`, `targetType`).
   First check that `application/problem+json` is decoded into `ErrorResponse` (research R9 "To
   confirm"); if not, make `rejection()` read the body as text and decode it with `HubJson`.
-- [ ] T005 [P] In test/ui/MessagesTest.kt add failing tests for `radioFailure(error)` (every row of
+- [X] T005 [P] In test/ui/MessagesTest.kt add failing tests for `radioFailure(error)` (every row of
   research R9: `Unreachable` → `HubUnreachable`; 404 whose type does not start with
   `urn:multiroom:radio:` → `Gone`; 502, 503, 500, 400, 404 with a radio type, an unknown radio
   type and `Unexpected` → `Catalogue`).
-- [ ] T006 [P] Create test/data/RadioStoreTest.kt and test/data/InMemoryRadioStore.kt (the
+- [X] T006 [P] Create test/data/RadioStoreTest.kt and test/data/InMemoryRadioStore.kt (the
   in-memory implementation for view-model tests, shaped like InMemoryHubAddressStore.kt). Failing
   tests: JSON round trips of recent stations, filters and pending entries; an unreadable value is
   absent (empty list, no filters), an unknown `order` reads as "Most voted"; `addRecent` keeps ten;
   `removeRecent(uuid)` removes only that entry and touches no pending entry; a pending entry
   round-trips with `trackedAt`, and with `playingSince` null and set; `encodeStation` /
   `decodeStation` round trip and `decodeStation` of garbage is null.
-- [ ] T007 [P] Create test/ui/session/RadioAvailabilityTest.kt with failing tests (research R3):
+- [X] T007 [P] Create test/ui/session/RadioAvailabilityTest.kt with failing tests (research R3):
   starts `Unknown`; `refresh()` → `Offered` for an active `radio` extension, `NotOffered`
   otherwise; an error status or an unreadable answer turns `Unknown` into `NotOffered` and
   leaves `Offered` as it is; an unreachable hub leaves any state as it was; an answer for a
   repository that is no
   longer the session's is dropped; a changed hub address returns it to `Unknown`; `markGone()` →
   `NotOffered`.
-- [ ] T008 [P] Create test/ui/session/StationPickerTest.kt with failing tests: `pick` publishes the
+- [X] T008 [P] Create test/ui/session/StationPickerTest.kt with failing tests: `pick` publishes the
   station and `consumePicked` clears it; `reportGone` / `consumeGone` likewise; one pending value
   only.
-- [ ] T009 [P] In test/ui/nav/AppBackStackTest.kt add failing tests: `Destination.Radio` encodes as
+- [X] T009 [P] In test/ui/nav/AppBackStackTest.kt add failing tests: `Destination.Radio` encodes as
   `radio` and decodes back; the bottom bar is hidden on it.
 
 ### Implementation
 
-- [ ] T010 Create main/domain/Radio.kt (after T003): `Station`, `StationQuery`, `StationOrder`
+- [X] T010 Create main/domain/Radio.kt (after T003): `Station`, `StationQuery`, `StationOrder`
   (`MostVoted`, `Trending`, `NameAZ`), `StationPage`, `Country`, `Language`, `Tag`, `TagPage`,
   `RadioFilters` (with `toQuery(name)`), `PendingStation` (`station`, `routeId`, `trackedAt: Long`,
   `playingSince: Long?`) and
@@ -133,37 +133,37 @@ radio store, and the three small app-scoped objects every story reads.
   `RECENT_LIMIT = 10`), `radioOffered(inventory)`. Quote data-model.md for
   each field's rule (e.g. `uuid` blank ⇒ dropped; `codec` blank or `UNKNOWN` in any letter case ⇒
   null; `bitrate` null or ≤ 0 ⇒ null). Make T003 pass.
-- [ ] T011 [P] In main/data/HttpClients.kt add `RADIO_TIMEOUT_MILLIS = 6000` and the client
+- [X] T011 [P] In main/data/HttpClients.kt add `RADIO_TIMEOUT_MILLIS = 6000` and the client
   configuration for it (request and socket 6 s, connect the usual 3 s), the pattern of the 30 s
   playback client.
-- [ ] T012 [P] In main/data/ApiMapping.kt map `RadioStation` → `Station`, `RadioStationPage` →
+- [X] T012 [P] In main/data/ApiMapping.kt map `RadioStation` → `Station`, `RadioStationPage` →
   `StationPage`, `RadioCountry`, `RadioLanguage`, `RadioTag`, `RadioTagPage` per the "Mapping to
   domain types" table (blank entries dropped; `Language.code` not mapped; counts `Long`).
-- [ ] T013 Add `searchStations`, `radioCountries`, `radioLanguages` and `radioTags` to
+- [X] T013 Add `searchStations`, `radioCountries`, `radioLanguages` and `radioTags` to
   main/data/HubRepository.kt and implement them in main/data/KtorHubRepository.kt on `RadioApi`
   with the 6 s client (needs T002, T011, T012). Order mapping: `MostVoted` → `votes`, `Trending` →
   `clickCount`, `NameAZ` → `name`. Send `limit=50`, `offset`, `order` and the optional values only
   when not null; never `direction`, `codec` or `bitrateMin`. Make T004 pass.
-- [ ] T014 Implement the four methods in `FakeRepository` (test/ui/rooms/FakeHub.kt) with scripted
+- [X] T014 Implement the four methods in `FakeRepository` (test/ui/rooms/FakeHub.kt) with scripted
   answers and call recording, so view-model tests can script pages, delays and failures, and fix
   any other `HubRepository` implementer the compiler reports.
-- [ ] T015 In main/ui/Messages.kt add `RadioFailure` (`Catalogue`, `HubUnreachable`, `Gone`) and
+- [X] T015 In main/ui/Messages.kt add `RadioFailure` (`Catalogue`, `HubUnreachable`, `Gone`) and
   `radioFailure(error)` (after T005). The catalogue wording lives in `RadioText.kt` (T033).
-- [ ] T016 Create main/data/RadioStore.kt (after T006): the `RadioStore` interface of data-model.md
+- [X] T016 Create main/data/RadioStore.kt (after T006): the `RadioStore` interface of data-model.md
   and `DataStoreRadioStore` with the keys `radio_recent`, `radio_filters`, `radio_pending` holding
   JSON through private `@Serializable` classes (`ignoreUnknownKeys`; an unreadable value counts as
   absent), plus `encodeStation` / `decodeStation`. `PendingStation` comes from T010.
-- [ ] T017 Change main/data/HubAddressStore.kt so `DataStoreHubAddressStore` takes the shared
+- [X] T017 Change main/data/HubAddressStore.kt so `DataStoreHubAddressStore` takes the shared
   `DataStore<Preferences>` instead of a path, and update test/data/InMemoryHubAddressStore.kt or
   its callers only if the compiler requires it. In main/AppGraph.kt create the one DataStore from
   `dataStorePath` and hand it to both stores; `AppGraph(dataStorePath)` stays the production entry
   and `SonoraApplication` is not edited.
-- [ ] T018 Create main/ui/session/RadioAvailability.kt (after T007): `state: StateFlow<RadioOffer>`
+- [X] T018 Create main/ui/session/RadioAvailability.kt (after T007): `state: StateFlow<RadioOffer>`
   (`Unknown`, `Offered`, `NotOffered`), `suspend refresh()` (an error answer turns `Unknown`
   into `NotOffered` and leaves `Offered`; `Unreachable` keeps any state), `markGone()`; `Unknown` again when the hub address changes. Wire it in AppGraph (the same file as T017 and T019: one after the other).
-- [ ] T019 Create main/ui/session/StationPicker.kt (after T008): `picked`, `gone`, `pick`,
+- [X] T019 Create main/ui/session/StationPicker.kt (after T008): `picked`, `gone`, `pick`,
   `reportGone`, `consumePicked`, `consumeGone`. Wire it in AppGraph.
-- [ ] T020 Add `Destination.Radio` (data object, saved as `radio`, not a tab, bottom bar hidden) in
+- [X] T020 Add `Destination.Radio` (data object, saved as `radio`, not a tab, bottom bar hidden) in
   main/ui/nav/Destinations.kt (after T009). The entry itself is added in T040.
 
 **Checkpoint**: `./gradlew :composeApp:testAndroidHostTest` is green; the app behaves exactly as

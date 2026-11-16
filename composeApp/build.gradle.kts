@@ -128,12 +128,14 @@ openApiGenerate {
     // The FILTER normalizer has no `path:` rule in 7.14.0; every /api/v2 operation carries one of
     // these tags, while v1 (`*-controller`) and TTS operations carry others.
     openapiNormalizer.set(
-        mapOf("FILTER" to "tag:Routes|Outputs|Inputs|Groups|Master Mute|Playback|Extensions"),
+        mapOf("FILTER" to "tag:Routes|Outputs|Inputs|Groups|Master Mute|Playback|Extensions|Radio"),
     )
     configOptions.set(
         mapOf(
             "dateLibrary" to "string",
             "enumUnknownDefaultCase" to "false",
+            // The radio `order` enum has a value `name`, which clashes with Enum.name as written.
+            "enumPropertyNaming" to "UPPERCASE",
             "nonPublicApi" to "true",
             "omitGradleWrapper" to "true",
             "sourceFolder" to "src/commonMain/kotlin",
