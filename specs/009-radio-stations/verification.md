@@ -72,12 +72,12 @@ under Issues. The first session stopped at 13% battery; the rest ran after the p
 | 25 | Rooms, Now Playing, "Play something", Settings → Sources | ⏳ | Intense Radio started by `curl` on Bedroom: Rooms "Radio · Live stream"; Settings → Sources "ADDED FROM APPS", "Added today 21:28 · removed when it stops" (no kind in words); not in "RECENT" after 4 min. Now Playing and Start Playback rows not re-read |
 | 25a | "Play something" | ✅ | MANGORADIO playing and recent: shown once (row 8), not under "OR PICK A SOURCE" |
 | 26 | select a station, a room, Play; Close at once | ✅ | Play of Blu Radio on Office, Close within 1 s: Rooms; the playback appeared on the Office card; no other notice later (dumps at 1 s and 7 s) |
-| 27 | Play | n/a | Not tried: no station was found that fails to start |
+| 27 | a listed station the hub cannot start; Play | ✅ | Owner, 2026-11-18: "# TOP 100 DJ CHARTS - DJ REMIX & CHARTS RADIO @ TikTok Charts…" (a low-voted station) selected for Office Speaker, Play: a notice "Couldn't start # TOP 100 DJ CHARTS…" above Play, and the station stayed selected. Read on the phone afterwards: the station is still selected, Play still reads "Play # TOP 100 DJ CHARTS… in Office Speaker", and `GET /api/v2/routes` returns `[]`, so Office is silent. With the extension back on (2026-11-18), Start Playback shows the failed station only as the selected row ("Radio · DE · MP3 · 192 kbps", "Change"); the recent rows show Kiss FM Ukrainian and no other station. The stored Recent list, read read-only with `run-as` from `files/sonora.preferences_pb` (`radio_recent`), holds one entry, Kiss FM Ukrainian (`radiobrowser://8fae0da6-…`). The failed station is not in it, so it is not under "RECENT" |
 | 28 | open the radio screen; Retry; restore access; Retry | ⏳ | User row, not done |
 | 29 | look; restore Wi-Fi | ⏳ | User row, not done |
 | 29a | look; restore Wi-Fi | ⏳ | User row, not done |
 | 30 | focus a station row, a chosen chip's ✕, the order control, a "Recent" ✕, the selected station row in | ⏳ | User row (TalkBack), not done. Accessibility tree read instead: "Remove the country Germany", "Order: Most voted. Change the order", "Remove MANGORADIO from Recent", "MANGORADIO, selected. Choose another station" |
-| 31 | "Play something" | n/a | No hub without radio at hand; covered by `StartPlaybackViewModelTest` |
+| 31 | "Play something" | ✅ | Hub with the radio extension off (2026-11-18, `GET /api/v2/extensions` lists no `radio`). Start Playback opened from Rooms's plus next to Office: "PASTE A LINK", "OR PICK A SOURCE" with the sources as before; no "Find a radio station" row, no "OR A RADIO STATION" section, no "RECENT" rows. `StartPlaybackViewModelTest` ran green on the same day |
 
 ## Issues found
 
@@ -113,8 +113,7 @@ under Issues. The first session stopped at 13% battery; the rest ran after the p
   screen was opened by hand.
   Again with the country chip Germany (2026-11-18): the ✕ is `[177,342][273,438]`, 96 × 96 px,
   48 × 48 dp, the same as with The United States Of America.
-- Rows 28-30 need the user and were not done; row 27 and 31 were not possible (no failing station,
-  no hub without radio).
+- Rows 28-30 need the user and were not done; row 27 was checked by the owner on 2026-11-18 (a station the hub would not start). Row 31 was checked on the phone by Claude, with the owner's hub with the radio extension off (2026-11-18); the hub's extension list confirmed `radio` was absent.
 
 ## Reviews
 
