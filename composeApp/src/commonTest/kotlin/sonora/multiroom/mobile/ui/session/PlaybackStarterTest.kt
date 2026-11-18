@@ -11,6 +11,7 @@ import sonora.multiroom.mobile.domain.RouteStatus
 import sonora.multiroom.mobile.domain.Source
 import sonora.multiroom.mobile.domain.SourceKind
 import sonora.multiroom.mobile.domain.SourceOrigin
+import sonora.multiroom.mobile.domain.Station
 import sonora.multiroom.mobile.domain.StartNames
 import sonora.multiroom.mobile.domain.StartWhat
 import sonora.multiroom.mobile.domain.Target
@@ -367,5 +368,148 @@ class PlaybackStarterTest {
         s.starter.detach()
         advanceTimeBy(100); runCurrent()
         assertEquals(listOf("Couldn't reach that link"), s.posted)
+    }
+
+    // ---- stations (MOB-009) ---------------------------------------------------------------------
+
+    private val mango = Station("u1", "radiobrowser://u1", "MANGORADIO", "DE", "MP3", 128)
+    private val stationNames = StartNames("MANGORADIO", "Bedroom")
+    private fun Setup.playStation() = starter.start(StartWhat.Station(mango), bedroom, stationNames)
+    private fun stationInput(uri: String) =
+        Source("link-1", "MANGORADIO", uri, SourceOrigin.Runtime, false, true, SourceKind.Link)
+
+    @Test
+    fun aStationStartSendsTheStationAddressAndNothingElse() = runTest {
+        val s = setup()
+        s.repo.startResults += HubResult.Ok(route("r9", input = "link-1"))
+        s.playStation(); runCurrent()
+        // playLink has no name, volume or join mode to send; checkLink is never involved.
+        assertEquals(listOf("playLink"), s.repo.calls.map { it.name })
+        assertEquals(listOf<Any>("radiobrowser://u1", bedroom), s.repo.calls.single().args)
+    }
+
+    @Test
+    fun aStationAnswerIsReturnedLikeALinks() = runTest {
+        val s = setup()
+        s.repo.startResults += HubResult.Ok(route("r9", input = "link-1"))
+        s.playStation(); runCurrent()
+        assertEquals("r9", assertIs<StartAttempt.Done>(s.attempt).route.id)
+    }
+
+    @Test
+    fun aLostStationAnswerIsRecoveredByARuntimeInputWithTheSameAddress() = runTest {
+        val s = setup()
+        s.repo.startResults += HubResult.Err(HubError.Unreachable)
+        s.repo.snapshotResult = {
+            HubResult.Ok(snapshot(sources = listOf(stationInput("RadioBrowser://U1")), routes = listOf(route("r5", input = "link-1"))))
+        }
+        s.playStation(); runCurrent()
+        assertEquals("r5", assertIs<StartAttempt.Done>(s.attempt).route.id)
+    }
+
+    @Test
+    fun aLostStationAnswerWithNoSuchPlaybackIsAFailureOfThatStation() = runTest {
+        val s = setup()
+        s.repo.startResults += HubResult.Err(HubError.Unexpected)
+        s.playStation(); runCurrent()
+        assertEquals(StartAttempt.Failed(StartFailure.StationFailed("MANGORADIO")), s.attempt)
+    }
+
+    @Test
+    fun aFailedStationStartReportsTheStation() = runTest {
+        val s = setup()
+        for (status in listOf(422, 502, 503)) {
+            s.repo.startResults += HubResult.Err(HubError.Rejected(status, null))
+            s.playStation(); runCurrent()
+            assertEquals(StartAttempt.Failed(StartFailure.StationFailed("MANGORADIO")), s.attempt, "$status")
+            s.starter.consume()
+        }
+    }
+
+    @Test
+    fun aDetachedFailedStationStartIsPostedToRooms() = runTest {
+        val s = setup()
+        s.repo.startDelayMs = 100
+        s.repo.startResults += HubResult.Err(HubError.Rejected(502, null))
+        s.playStation(); runCurrent()
+        s.starter.detach()
+        advanceTimeBy(100); runCurrent()
+        assertEquals(listOf("Couldn't start MANGORADIO"), s.posted)
+    }
+
+    // ---- Recent stations: what is handed to the tracker (MOB-009) ---------------------------------
+
+    private class Tracked(val starter: PlaybackStarter, val tracker: RecentStationTracker)
+
+    /** A starter that reports to a real tracker, with a clock that starts at 5,000. */
+    private fun TestScope.tracked(s: Setup): Tracked {
+        val tracker = RecentStationTracker(backgroundScope, s.session, sonora.multiroom.mobile.data.InMemoryRadioStore()) { 5_000L + currentTime }
+        val starter = PlaybackStarter(backgroundScope, s.session, AppMessages(), tracker) { 5_000L + currentTime }
+        runCurrent()
+        return Tracked(starter, tracker)
+    }
+
+    @Test
+    fun aStationStartIsTrackedWithTheClockAtTheMomentOfSending() = runTest {
+        val s = setup()
+        val t = tracked(s)
+        s.repo.snapshotResult = { HubResult.Ok(snapshot(sources = listOf(stationInput("radiobrowser://u1")), routes = listOf(route("r9", input = "link-1", status = RouteStatus.Starting)))) }
+        s.repo.startDelayMs = 100
+        s.repo.startResults += HubResult.Ok(route("r9", input = "link-1"))
+        t.starter.start(StartWhat.Station(mango), bedroom, stationNames); runCurrent()
+        advanceTimeBy(100); runCurrent()
+        val p = t.tracker.pending.value.single()
+        assertEquals(Triple("r9", mango, 5_000L), Triple(p.routeId, p.station, p.trackedAt))
+    }
+
+    @Test
+    fun aRecoveredStationStartIsTrackedWithTheSameSendingTime() = runTest {
+        val s = setup()
+        val t = tracked(s)
+        s.repo.startResults += HubResult.Err(HubError.Unreachable)
+        s.repo.snapshotResult = {
+            HubResult.Ok(snapshot(sources = listOf(stationInput("radiobrowser://u1")), routes = listOf(route("r5", input = "link-1"))))
+        }
+        t.starter.start(StartWhat.Station(mango), bedroom, stationNames); runCurrent()
+        val p = t.tracker.pending.value.single()
+        assertEquals(Triple("r5", mango, 5_000L), Triple(p.routeId, p.station, p.trackedAt))
+    }
+
+    @Test
+    fun aStationStartIsTrackedEvenWhenStartPlaybackWasClosed() = runTest {
+        val s = setup()
+        val t = tracked(s)
+        s.repo.snapshotResult = { HubResult.Ok(snapshot(sources = listOf(stationInput("radiobrowser://u1")), routes = listOf(route("r9", input = "link-1", status = RouteStatus.Starting)))) }
+        s.repo.startDelayMs = 100
+        s.repo.startResults += HubResult.Ok(route("r9", input = "link-1"))
+        t.starter.start(StartWhat.Station(mango), bedroom, stationNames); runCurrent()
+        t.starter.detach()
+        advanceTimeBy(100); runCurrent()
+        assertEquals("r9", t.tracker.pending.value.single().routeId)
+    }
+
+    @Test
+    fun aSourceOrLinkStartIsNeverTrackedNotEvenAStationAnotherClientStarted() = runTest {
+        val s = setup()
+        val t = tracked(s)
+        s.repo.startResults += HubResult.Ok(route("r1"))
+        t.starter.start(StartWhat.Source("jazz"), bedroom, names); runCurrent()
+        t.starter.consume()
+        s.repo.startResults += HubResult.Ok(route("r2", input = "link-1"))
+        t.starter.start(StartWhat.Link(link), bedroom, linkNames); runCurrent()
+        t.starter.consume()
+        // A station that is a configured source of the hub, started as such.
+        s.repo.startResults += HubResult.Ok(route("r3", input = "station-source"))
+        t.starter.start(StartWhat.Source("station-source"), bedroom, StartNames("MANGORADIO", "Bedroom")); runCurrent()
+        assertEquals(emptyList(), t.tracker.pending.value)
+    }
+
+    @Test
+    fun aFailedStationStartIsNeverTracked() = runTest {
+        val s = setup()
+        val t = tracked(s)
+        s.repo.startResults += HubResult.Err(HubError.Rejected(502, null))
+        t.starter.start(StartWhat.Station(mango), bedroom, stationNames); runCurrent()
+        assertEquals(emptyList(), t.tracker.pending.value)
     }
 }

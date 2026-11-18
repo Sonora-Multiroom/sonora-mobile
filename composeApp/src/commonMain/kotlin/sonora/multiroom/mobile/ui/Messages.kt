@@ -128,9 +128,12 @@ sealed interface StartFailure {
     data class NoLongerOnHub(val name: String) : StartFailure
     data object HubUnreachable : StartFailure
     data object Other : StartFailure
+
+    /** A station could not be started; the hub gave no reason worth showing (MOB-009). */
+    data class StationFailed(val name: String) : StartFailure
 }
 
-enum class StartKind { Source, Link }
+enum class StartKind { Source, Link, Station }
 
 /**
  * Maps a hub answer to a [StartFailure]. A `reason` decides whatever the status (the contract does
@@ -146,7 +149,7 @@ fun startFailure(
     roomName: (outputId: String) -> String?,
 ): StartFailure = when (error) {
     HubError.Unreachable -> StartFailure.HubUnreachable
-    HubError.Unexpected -> StartFailure.Other
+    HubError.Unexpected -> if (kind == StartKind.Station) StartFailure.StationFailed(names.source ?: names.target) else StartFailure.Other
     is HubError.Rejected -> {
         val room = error.outputId?.let(roomName) ?: names.target
         val source = names.source
@@ -164,6 +167,7 @@ fun startFailure(
                 503 -> StartFailure.ServiceDown
                 else -> StartFailure.Other
             }
+            kind == StartKind.Station -> StartFailure.StationFailed(names.source ?: names.target)
             else -> StartFailure.Other
         }
     }
@@ -179,6 +183,7 @@ fun startFailureMessage(failure: StartFailure): String = when (failure) {
     is StartFailure.NoLongerOnHub -> "${failure.name} is no longer on the hub"
     StartFailure.HubUnreachable -> "Couldn't reach the hub"
     StartFailure.Other -> "Couldn't start playback"
+    is StartFailure.StationFailed -> "Couldn't start ${failure.name}"
 }
 
 /** What the user was doing in Settings when a request failed. */
@@ -228,4 +233,31 @@ fun settingsFailureMessage(failure: SettingsFailure): String = when (failure) {
     is SettingsFailure.CouldNotTurn -> "Couldn't turn ${failure.name} ${if (failure.on) "on" else "off"}"
     is SettingsFailure.CannotRemoveConfigured -> "${failure.name} comes from the hub's configuration and can't be removed"
     is SettingsFailure.CouldNotRemove -> "Couldn't remove ${failure.name}"
+}
+
+/** What a failed radio request means for the radio screen (MOB-009); the wording is in `RadioText.kt`. */
+enum class RadioFailure {
+    /** The catalogue is slow or broken: a plain message with Retry. */
+    Catalogue,
+
+    /** No answer at all: the hub may be unreachable, which a fresh refresh decides. */
+    HubUnreachable,
+
+    /** The hub has no radio extension (any more). */
+    Gone,
+}
+
+private const val RADIO_PROBLEM_PREFIX = "urn:multiroom:radio:"
+
+/**
+ * Classifies a radio request's error. A 404 that does not carry a radio problem type is the hub's
+ * plain answer for a path it does not have, so the extension is gone; everything else the hub
+ * says about the catalogue (and an answer the app cannot read) is the catalogue message, never
+ * a status code or a title.
+ */
+fun radioFailure(error: HubError): RadioFailure = when {
+    error is HubError.Unreachable -> RadioFailure.HubUnreachable
+    error is HubError.Rejected && error.status == 404 && error.problemType?.startsWith(RADIO_PROBLEM_PREFIX) != true ->
+        RadioFailure.Gone
+    else -> RadioFailure.Catalogue
 }

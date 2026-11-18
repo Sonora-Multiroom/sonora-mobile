@@ -1,16 +1,22 @@
 package sonora.multiroom.mobile.data
 
+import sonora.multiroom.mobile.domain.Country
 import sonora.multiroom.mobile.domain.Extension
 import sonora.multiroom.mobile.domain.ExtensionConnection
 import sonora.multiroom.mobile.domain.ExtensionInventory
 import sonora.multiroom.mobile.domain.ExtensionStatus
 import sonora.multiroom.mobile.domain.Group
 import sonora.multiroom.mobile.domain.JoinMode
+import sonora.multiroom.mobile.domain.Language
 import sonora.multiroom.mobile.domain.Room
 import sonora.multiroom.mobile.domain.Route
 import sonora.multiroom.mobile.domain.RouteStatus
 import sonora.multiroom.mobile.domain.Source
 import sonora.multiroom.mobile.domain.SourceOrigin
+import sonora.multiroom.mobile.domain.Station
+import sonora.multiroom.mobile.domain.StationPage
+import sonora.multiroom.mobile.domain.Tag
+import sonora.multiroom.mobile.domain.TagPage
 import sonora.multiroom.mobile.domain.Target
 import sonora.multiroom.mobile.domain.inferSourceKind
 import sonora.multiroom.mobile.hub.generated.models.GroupResponse
@@ -18,6 +24,12 @@ import sonora.multiroom.mobile.hub.generated.models.ExtensionInventory as Extens
 import sonora.multiroom.mobile.hub.generated.models.Extension as ExtensionResponse
 import sonora.multiroom.mobile.hub.generated.models.InputResponse
 import sonora.multiroom.mobile.hub.generated.models.OutputResponse
+import sonora.multiroom.mobile.hub.generated.models.RadioCountry
+import sonora.multiroom.mobile.hub.generated.models.RadioLanguage
+import sonora.multiroom.mobile.hub.generated.models.RadioStation
+import sonora.multiroom.mobile.hub.generated.models.RadioStationPage
+import sonora.multiroom.mobile.hub.generated.models.RadioTag
+import sonora.multiroom.mobile.hub.generated.models.RadioTagPage
 import sonora.multiroom.mobile.hub.generated.models.RouteResponse
 import kotlin.time.Instant
 
@@ -106,6 +118,8 @@ internal fun RouteResponse.toRoute(): Route? {
             null -> JoinMode.Unknown
         },
         outputs = outputs?.filter { it.isNotBlank() }?.distinct(),
+        // A date the app cannot read is "not known", never a failed refresh.
+        startedAt = startedAt?.takeIf { it.isNotBlank() }?.let { runCatching { Instant.parse(it) }.getOrNull() },
     )
 }
 
@@ -140,3 +154,33 @@ internal fun ExtensionInventoryResponse.toInventory(): ExtensionInventory = Exte
     loadingEnabled = loadingEnabled ?: true,
     extensions = extensions.orEmpty().mapNotNull { it.toExtension() },
 )
+
+// ---- Radio (MOB-009) ----------------------------------------------------------------------
+
+private fun String?.trimmedOrNull(): String? = this?.trim()?.takeIf { it.isNotEmpty() }
+
+/** A station without a `uuid` or `uri` cannot be chosen or played, so it is dropped. */
+internal fun RadioStation.toStation(): Station? {
+    if (uuid.isBlank() || uri.isBlank()) return null
+    return Station(
+        uuid = uuid,
+        uri = uri,
+        name = name.trimmedOrNull(),
+        countryCode = countryCode.trimmedOrNull(),
+        codec = codec.trimmedOrNull()?.takeUnless { it.equals("UNKNOWN", ignoreCase = true) },
+        bitrate = bitrate?.takeIf { it > 0 },
+    )
+}
+
+internal fun RadioStationPage.toStationPage() =
+    StationPage(stations.mapNotNull { it.toStation() }, nextOffset)
+
+internal fun RadioCountry.toCountry(): Country? =
+    if (code.isBlank() || name.isBlank()) null else Country(code.trim(), name.trim(), stationCount)
+
+internal fun RadioLanguage.toLanguage(): Language? =
+    if (name.isBlank()) null else Language(name.trim(), stationCount)
+
+internal fun RadioTag.toTag(): Tag? = if (name.isBlank()) null else Tag(name, stationCount)
+
+internal fun RadioTagPage.toTagPage() = TagPage(tags.mapNotNull { it.toTag() }, nextOffset)

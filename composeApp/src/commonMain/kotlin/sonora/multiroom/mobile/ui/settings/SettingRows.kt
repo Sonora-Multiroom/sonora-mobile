@@ -193,7 +193,7 @@ fun RuntimeSourceSettingRow(item: Item<RuntimeSourceRow>, controlsEnabled: Boole
     val colors = SonoraTheme.colors
     val type = SonoraTheme.type
     val row = item.row
-    val kind = colors.forKind(sonora.multiroom.mobile.domain.SourceKind.Link)
+    val kind = colors.forKind(row.kind)
     val canRemove = controlsEnabled && !item.removing
     Row(
         modifier = Modifier
@@ -207,7 +207,7 @@ fun RuntimeSourceSettingRow(item: Item<RuntimeSourceRow>, controlsEnabled: Boole
             Modifier.size(38.dp).background(kind.tile, RoundedCornerShape(10.dp)),
             contentAlignment = Alignment.Center,
         ) {
-            Icon(iconForKind(sonora.multiroom.mobile.domain.SourceKind.Link), contentDescription = null, tint = kind.icon, modifier = Modifier.size(20.dp))
+            Icon(iconForKind(row.kind), contentDescription = null, tint = kind.icon, modifier = Modifier.size(20.dp))
         }
         Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
             Text(

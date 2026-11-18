@@ -3,6 +3,8 @@ package sonora.multiroom.mobile.ui.startplayback
 import sonora.multiroom.mobile.domain.Consequence
 import sonora.multiroom.mobile.domain.FixedTargetCard
 import sonora.multiroom.mobile.domain.HubAddress
+import sonora.multiroom.mobile.domain.RadioRows
+import sonora.multiroom.mobile.domain.Station
 import sonora.multiroom.mobile.domain.StartPlaybackContent
 import sonora.multiroom.mobile.domain.Target
 import sonora.multiroom.mobile.ui.session.Connection
@@ -33,6 +35,15 @@ data class StartPlaybackUiState(
     /** "Enter a web address (https://…)" is showing (FR-006). */
     val linkMessageShown: Boolean = false,
     val selectedSourceId: String? = null,
+    /**
+     * The station chosen on the radio screen, only while the hub offers radio (the "effective
+     * station"): a restored one stays unseen until the hub has said so. Excludes a source and a link.
+     */
+    val selectedStation: Station? = null,
+    /** The "Or a radio station" section; null while radio is not offered. */
+    val radio: RadioRows? = null,
+    /** One-shot: push the radio screen. The screen consumes it. */
+    val openRadio: Boolean = false,
     /** In Change source mode always the fixed target. */
     val selectedTarget: Target? = null,
     /**

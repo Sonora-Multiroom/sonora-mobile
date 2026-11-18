@@ -33,6 +33,12 @@ composeApp/
                                        #   AppMessages, SettingsActions (switch and removal requests
                                        #   that outlive the screen), SettingsNavigator (selected
                                        #   Settings tab). Screens never run their own loop.
+                                       #   Radio (MOB-009): RadioAvailability (does the hub offer
+                                       #   radio, asked when Start Playback opens), StationPicker
+                                       #   (hands a chosen station back), RecentStationTracker
+                                       #   (a station listened to for 30 s becomes "recent").
+    .../ui/radio/                      # the radio screen: search by name, filter chips and sheets,
+                                       #   recent stations, RadioViewModel, FilterSheet
   src/commonMain/composeResources/font # sora.ttf, dm_sans.ttf (already committed, variable fonts)
   src/commonTest/kotlin/
   src/androidMain/                     # platform drivers only (HTTP engine, storage path)
@@ -156,9 +162,9 @@ Record the build (CI build number and commit), the device and each row's evidenc
   refresh it with `./gradlew refreshOpenApi` from a local session. The hub removed REST v1 in
   0.1.24.
 - **Use only `/api/v2/**`**, with one exception (constitution 1.6.0, Principle I; decided
-  2026-11-16, decision 1 in [docs/backlog/radio-stations.md](docs/backlog/radio-stations.md)): the
+  2026-11-16, MOB-009, [specs/009-radio-stations](specs/009-radio-stations/)): the
   app may call the radio extension's read-only requests under `/api/radio/**` (RADIO-002, in the
-  contract since API 0.1.34, operations tagged `Radio`). Radio is optional: offer it only while
+  contract since API 0.1.34, operations tagged `Radio`; used since 0.9.0-alpha). Radio is optional: offer it only while
   `GET /api/v2/extensions` lists the extension `radio` as `ACTIVE`, and work fully without it. The
   contract's other extension paths (`/api/tts/*`) stay out of bounds; another namespace needs a
   constitution amendment.
@@ -188,7 +194,8 @@ Record the build (CI build number and commit), the device and each row's evidenc
 | Start playback (link) | `POST /api/v2/play` `{uri, targetId, targetType, displayName?, volume?}` |
 | Start playback (configured source) | `POST /api/v2/routes` `{inputId, targetId, targetType}` |
 | Move to room | `POST /api/v2/routes/{routeId}/transfer` `{targetId, targetType}`, only when `transferable` and the route is Playing (never while Paused: the hub's behaviour is unchecked). Since API 0.1.22 the response is the same route with the same `routeId`; before 0.1.22 it was a new route. Follow the returned id either way |
-| Settings | `PUT /api/v2/{outputs,groups,inputs}/{id}/enabled` `{enabled}`, `DELETE /api/v2/inputs/{id}`, `GET /api/v2/extensions` (only while the Extensions tab is open, on the session's refreshes), `GET /api/v2/outputs?includeDisabled=true` (the "Test connection" check of a drafted hub address) |
+| Radio (MOB-009) | `GET /api/radio/stations` (search, 50 per page, never past offset 10,000), `/countries`, `/languages`, `/tags`: the four read-only radio requests, on a 6 s client because the hub bounds them at 5 s. A station is started by `POST /api/v2/play` with the station's `radiobrowser://<uuid>` address. Never `GET /api/radio/stations/{uuid}` |
+| Settings | `PUT /api/v2/{outputs,groups,inputs}/{id}/enabled` `{enabled}`, `DELETE /api/v2/inputs/{id}`, `GET /api/v2/extensions` (while the Extensions tab is open, on the session's refreshes, and when Start Playback opens, to know whether the hub offers radio), `GET /api/v2/outputs?includeDisabled=true` (the "Test connection" check of a drafted hub address) |
 
 `targetType` is `SINGLE_OUTPUT` or `OUTPUT_GROUP`.
 
@@ -226,6 +233,7 @@ Record the build (CI build number and commit), the device and each row's evidenc
 - No push channel: poll every ~2.5 s while the app is in the foreground, stop in background.
 - No input kind field (see above).
 - No mDNS announcement of the REST API: the hub address is a manual setting.
+- A failed station start gives no reason (only that it did not start), and whether a station's stream is HLS is not known to the app; the notice says only "Couldn't start <station>".
 - No group volume: `GroupResponse` has no `volume`, and `PUT /api/v2/groups/{id}/volume` sets every
   member to the same absolute value, destroying the balance between rooms. **Never call it.** A
   group pill shows the loudest member; dragging scales each member by new/old loudest (rounded,
@@ -279,6 +287,7 @@ Agreed details — keep them:
   (any origin, decided in one function). Now Playing adds the line "Live streams can't be paused";
   Rooms cards show the status "Live stream". Non-stream sources (e.g. line-in) are never labelled
   live.
+- A radio station is the kind **"Radio"** (an input whose address is `radiobrowser://…`), drawn like a stream; it is live and cannot be paused. Start Playback's Play button reads "Play <station> in <room>" with the station name in full; a chosen station is shown with a marquee name.
 - The transfer action is labelled **"Move to room…"**.
 - The change-source action is labelled **"Change source…"**; it opens Start Playback for the
   playback's own room or group, with no target picker.

@@ -34,4 +34,9 @@ class SourceDetailTest {
         assertNull(addressDetail(SourceKind.LineIn, "alsa://plughw:CARD=X,DEV=0"))
         assertEquals("stream.radioparadise.com", addressDetail(SourceKind.Stream, "https://stream.radioparadise.com/mp3-192"))
     }
+
+    @Test
+    fun aStationShowsNoAddress() {
+        assertNull(sourceDetail(SourceKind.Radio, "radiobrowser://9617a958-0601-11e8"))
+    }
 }

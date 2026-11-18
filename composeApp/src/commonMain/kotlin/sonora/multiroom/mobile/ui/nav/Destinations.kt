@@ -10,6 +10,9 @@ sealed interface Destination {
     data object Rooms : Destination
     data object Settings : Destination
 
+    /** The radio station finder, pushed on top of Start Playback (MOB-009). Not a tab. */
+    data object Radio : Destination
+
     /**
      * [routeId] is the card's route. Start Playback sets [startedAfterSeq] (the session's
      * `startedSeq` when the playback began) and [targetName], so Now Playing does not announce "ended"
@@ -107,6 +110,7 @@ class AppBackStack(initial: List<Destination> = listOf(Destination.Rooms)) {
 internal fun encodeDestination(d: Destination): String = when (d) {
     Destination.Rooms -> "rooms"
     Destination.Settings -> "settings"
+    Destination.Radio -> "radio"
     is Destination.NowPlaying -> "now:${d.routeId}"
     is Destination.StartPlayback -> when (val t = d.fixedTarget) {
         is Target.Room -> "change:room:${t.id}"
@@ -122,6 +126,7 @@ internal fun decodeDestination(s: String): Destination? = when {
     s.startsWith("now:") -> Destination.NowPlaying(s.removePrefix("now:"))
     s.startsWith("change:room:") -> Destination.StartPlayback(null, Target.Room(s.removePrefix("change:room:")))
     s.startsWith("change:group:") -> Destination.StartPlayback(null, Target.Group(s.removePrefix("change:group:")))
+    s == "radio" -> Destination.Radio
     s == "play" -> Destination.StartPlayback(null)
     s.startsWith("play:") -> Destination.StartPlayback(s.removePrefix("play:"))
     else -> null

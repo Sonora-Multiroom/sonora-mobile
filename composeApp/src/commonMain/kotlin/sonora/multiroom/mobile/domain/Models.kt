@@ -20,7 +20,7 @@ data class Group(
 
 enum class SourceOrigin { Configured, Runtime, Unknown }
 
-enum class SourceKind { Stream, LineIn, File, Link }
+enum class SourceKind { Stream, LineIn, File, Link, Radio }
 
 /**
  * How a playback joined its target (API 0.1.21). [Announcement] is the hub's `DUCK_OTHERS`:
@@ -68,6 +68,8 @@ data class Route(
      * not say (before API 0.1.22).
      */
     val outputs: List<String>? = null,
+    /** When the hub says the audio began; null before playback starts, when missing or unreadable (MOB-009). */
+    val startedAt: kotlin.time.Instant? = null,
 )
 
 /** One successful refresh of everything the Rooms screen needs. */

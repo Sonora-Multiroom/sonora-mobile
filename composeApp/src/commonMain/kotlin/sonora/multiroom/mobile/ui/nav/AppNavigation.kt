@@ -2,6 +2,7 @@ package sonora.multiroom.mobile.ui.nav
 
 import sonora.multiroom.mobile.AppGraph
 import sonora.multiroom.mobile.ui.nowplaying.NowPlayingScreen
+import sonora.multiroom.mobile.ui.radio.RadioScreen
 import sonora.multiroom.mobile.ui.rooms.RoomsScreen
 import sonora.multiroom.mobile.ui.session.SettingsTab
 import sonora.multiroom.mobile.ui.settings.SettingsScreen
@@ -10,6 +11,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.safeDrawingPadding
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.text.intl.Locale
 import androidx.compose.ui.Modifier
 import androidx.lifecycle.createSavedStateHandle
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -20,6 +22,8 @@ import androidx.navigation3.ui.NavDisplay
 
 @Composable
 fun AppNavigation(graph: AppGraph, backStack: AppBackStack, onExit: () -> Unit) {
+    // The phone's region picks the first visit's country on the radio screen.
+    val region = Locale.current.region
     Column(modifier = Modifier.fillMaxSize().safeDrawingPadding()) {
         NavDisplay(
             backStack = backStack.stack,
@@ -61,11 +65,19 @@ fun AppNavigation(graph: AppGraph, backStack: AppBackStack, onExit: () -> Unit) 
                         onChangeSource = { target, name -> backStack.push(Destination.StartPlayback(null, target, name)) },
                     )
                 }
+                entry<Destination.Radio> {
+                    RadioScreen(
+                        viewModel = viewModel { graph.radioViewModel(createSavedStateHandle()) { region } },
+                        // Back changes nothing; a chosen station was handed over before it closes.
+                        onClose = { backStack.pop() },
+                    )
+                }
                 entry<Destination.StartPlayback> { key ->
                     StartPlaybackScreen(
                         viewModel = viewModel { graph.startPlaybackViewModel(key.targetId, key.fixedTarget, key.fixedName, createSavedStateHandle()) },
                         onClose = { backStack.pop() },
                         // Back from Now Playing returns to where Start Playback was opened (FR-015).
+                        onOpenRadio = { backStack.push(Destination.Radio) },
                         onStarted = { started ->
                             backStack.showStarted(Destination.NowPlaying(started.routeId, started.startedAfterSeq, started.targetName))
                         },

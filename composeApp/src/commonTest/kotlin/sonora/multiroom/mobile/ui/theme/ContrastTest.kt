@@ -46,6 +46,21 @@ class ContrastTest {
     }
 
     @Test
+    fun stationRowSecondLine() {
+        assertText("station row second line on background", c.textMuted, c.background)
+        assertText("station row second line on selected", c.textMuted, c.selectedBg)
+        assertText("station row second line on surface", c.textMuted, c.surface)
+    }
+
+    @Test
+    fun filterControls() {
+        assertText("textSoft on surface (chips, order control)", c.textSoft, c.surface)
+        assertText("warningText on surface (catalogue card)", c.warningText, c.surface)
+        assertText("textMuted on surface (sheet counts)", c.textMuted, c.surface)
+        assertText("accent on selectedBg (chip remove, chosen count)", c.accent, c.selectedBg)
+    }
+
+    @Test
     fun accentPairs() {
         assertText("onAccent on accent", c.onAccent, c.accent)
         assertText("accent on background", c.accent, c.background)

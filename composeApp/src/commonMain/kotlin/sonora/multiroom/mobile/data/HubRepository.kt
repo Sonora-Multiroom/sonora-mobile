@@ -1,10 +1,15 @@
 package sonora.multiroom.mobile.data
 
+import sonora.multiroom.mobile.domain.Country
 import sonora.multiroom.mobile.domain.ExtensionInventory
 import sonora.multiroom.mobile.domain.HubAddress
 import sonora.multiroom.mobile.domain.HubSnapshot
+import sonora.multiroom.mobile.domain.Language
 import sonora.multiroom.mobile.domain.Route
+import sonora.multiroom.mobile.domain.StationPage
+import sonora.multiroom.mobile.domain.StationQuery
 import sonora.multiroom.mobile.domain.Target
+import sonora.multiroom.mobile.domain.TagPage
 
 /**
  * The only boundary between the app and the hub (Constitution I). There is deliberately no group
@@ -69,6 +74,22 @@ interface HubRepository {
      * link first), unlike every other call.
      */
     suspend fun playLink(uri: String, target: Target): HubResult<Route>
+
+    /**
+     * One page of stations for [query], starting at [offset] (0, then the previous page's
+     * nextOffset). The hub never lists stations the catalogue marks as broken. A radio request
+     * waits up to 6 s (the hub bounds it at 5 s).
+     */
+    suspend fun searchStations(query: StationQuery, offset: Int): HubResult<StationPage>
+
+    /** Every country with stations, largest first. */
+    suspend fun radioCountries(): HubResult<List<Country>>
+
+    /** Every language with stations, largest first. */
+    suspend fun radioLanguages(): HubResult<List<Language>>
+
+    /** One page of tags, largest first; [name] is part of a tag's name, already cleaned, or null. */
+    suspend fun radioTags(name: String?, offset: Int): HubResult<TagPage>
 }
 
 sealed interface HubResult<out T> {

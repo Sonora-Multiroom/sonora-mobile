@@ -1,0 +1,129 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Radio filter sheet</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Sora:wght@500;600;700&amp;family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600&amp;display=swap">
+<style>
+body{margin:0;background:#0E0F12}
+a{color:inherit;text-decoration:none}a:hover{color:inherit}
+button{font:inherit;border:0;padding:0;cursor:pointer;background:transparent;color:inherit}
+a:focus-visible,button:focus-visible{outline:2px solid #F2A541;outline-offset:2px}
+input::placeholder{color:#7C808A}
+.n2{display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;overflow:hidden;overflow-wrap:anywhere}
+.field:focus-within{box-shadow:inset 0 0 0 2px #F2A541}
+.i{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;flex-shrink:0}
+</style>
+</helmet>
+<div style="width: 390px; height: 844px; box-sizing: border-box; background: #0E0F12; color: #F2F1EE; font-family: 'DM Sans', sans-serif; position: relative; overflow: hidden">
+
+<div aria-hidden="true" style="padding: 76px 20px 0; display: flex; flex-direction: column; gap: 12px">
+<div style="height: 52px; border-radius: 16px; background: #17191E"></div>
+<div style="display: flex; gap: 8px">
+<div style="width: 118px; height: 44px; border-radius: 22px; background: #1F1A12"></div>
+<div style="width: 72px; height: 44px; border-radius: 22px; background: #17191E"></div>
+<div style="width: 108px; height: 44px; border-radius: 22px; background: #17191E"></div>
+</div>
+</div>
+<div style="position: absolute; inset: 0; background: rgba(5, 6, 8, 0.72)"></div>
+
+<section role="dialog" aria-labelledby="sheet-title" style="position: absolute; left: 0; right: 0; bottom: 0; height: {{sheetHeight}}; box-sizing: border-box; background: #17191E; border-radius: 28px 28px 0 0; padding: 10px 20px 28px; display: flex; flex-direction: column; gap: 14px">
+<div style="align-self: center; width: 36px; height: 4px; border-radius: 2px; background: #3A3E46"></div>
+<h2 id="sheet-title" style="margin: 0; font-family: Sora, sans-serif; font-size: 22px; font-weight: 600">{{title}}</h2>
+
+<sc-if value="{{hasSearch}}" hint-placeholder-val="{{ true }}">
+<div class="field" style="height: 48px; flex-shrink: 0; box-sizing: border-box; padding: 0 14px; border-radius: 14px; background: #22252B; display: flex; align-items: center; gap: 10px; color: #9A9DA6">
+<svg class="i" style="width: 18px; height: 18px" viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="6.5"></circle><path d="M16 16l4.5 4.5"></path></svg>
+<input type="search" aria-label="{{searchLabel}}" placeholder="{{searchLabel}}" maxlength="100" style="flex-grow: 1; min-width: 0; height: 44px; background: transparent; border: 0; outline: none; color: #F2F1EE; font: inherit; font-size: 15px">
+</div>
+</sc-if>
+
+<div style="flex-grow: 1; min-height: 0; overflow-y: auto; display: flex; flex-direction: column; gap: 2px">
+<sc-for list="{{rows}}" as="o" hint-placeholder-count="8">
+<a href="Radio.dc.html" aria-current="{{o.current}}" style="min-height: 52px; box-sizing: border-box; flex-shrink: 0; padding: 6px 12px; border-radius: 14px; display: flex; align-items: center; gap: 12px; background: {{o.rowBg}}; box-shadow: inset 0 0 0 1px {{o.ring}}">
+<div style="flex: 1 1 0; min-width: 0; display: flex; flex-direction: column; gap: 1px">
+<span style="font-size: 15px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">{{o.name}}</span>
+<sc-if value="{{o.hasSub}}" hint-placeholder-val="{{ false }}">
+<span style="font-size: 12px; color: #9A9DA6">{{o.sub}}</span>
+</sc-if>
+</div>
+<sc-if value="{{o.hasCount}}" hint-placeholder-val="{{ true }}">
+<span style="flex-shrink: 0; font-size: 13px; color: {{o.countColor}}; font-variant-numeric: tabular-nums">{{o.count}}</span>
+</sc-if>
+</a>
+</sc-for>
+<sc-if value="{{isPaged}}" hint-placeholder-val="{{ false }}">
+<p role="status" style="margin: 0; height: 44px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; font-size: 13px; color: #9A9DA6">Loading more tags…</p>
+</sc-if>
+</div>
+
+<a href="Radio.dc.html" style="height: 44px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; font-size: 15px; font-weight: 500; color: #C9CBD1">Cancel</a>
+</section>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"kind":{"editor":"enum","options":["Country","Tag","Language","Order"],"default":"Country"},"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const kind = this.props.kind ?? 'Country';
+    const data = {
+      Country: {
+        search: 'Search countries', picked: 'Ukraine',
+        rows: [
+          ['The United States Of America', '6,965'], ['Germany', '5,599'], ['France', '2,384'],
+          ['Greece', '1,930'], ['China', '1,874'], ['The United Kingdom Of Great Britain And Northern Ireland', '1,702'],
+          ['Mexico', '1,655'], ['Ukraine', '1,502'], ['Italy', '1,420'], ['Australia', '1,391'], ['Canada', '1,280'],
+          ['Spain', '1,144']
+        ]
+      },
+      Tag: {
+        search: 'Search tags', picked: null,
+        rows: [
+          ['pop', '9,418'], ['music', '7,236'], ['news', '6,541'], ['rock', '5,902'], ['classical', '3,377'],
+          ['talk', '3,105'], ['jazz', '1,964'], ['dance', '1,921'], ['oldies', '1,733'], ['80s', '1,412'],
+          ['public radio', '1,360'], ['club dance electronic house trance', '1']
+        ]
+      },
+      Language: {
+        search: 'Search languages', picked: null,
+        rows: [
+          ['english', '11,296'], ['german', '3,974'], ['spanish', '3,859'], ['french', '2,560'], ['russian', '2,244'],
+          ['chinese', '1,810'], ['greek', '1,702'], ['portuguese', '1,540'], ['italian', '1,333'], ['polish', '1,021'],
+          ['dutch', '948'], ['arabic', '902']
+        ]
+      },
+      Order: {
+        search: null, picked: 'Most voted',
+        rows: [
+          ['Most voted', null, 'The catalogue’s all-time favourites'],
+          ['Trending', null, 'Most plays in the last 24 hours'],
+          ['Name A–Z', null, null]
+        ]
+      }
+    };
+    const d = data[kind] || data.Country;
+    const rows = d.rows.map((x) => {
+      const on = x[0] === d.picked;
+      return {
+        name: x[0], count: x[1] || '', hasCount: !!x[1], sub: x[2] || '', hasSub: !!x[2], on,
+        current: on ? 'true' : 'false', countColor: on ? '#F2A541' : '#9A9DA6', size: x[0].length > 30 ? '13px' : '15px',
+        rowBg: on ? '#1F1A12' : 'transparent', ring: on ? '#6B4C1F' : 'transparent'
+      };
+    });
+    return {
+      title: kind,
+      hasSearch: !!d.search,
+      searchLabel: d.search || '',
+      rows,
+      isPaged: kind === 'Tag',
+      sheetHeight: kind === 'Order' ? '340px' : '768px'
+    };
+  }
+}
+</script>
+</body>
+</html>

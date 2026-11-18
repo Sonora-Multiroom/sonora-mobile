@@ -4,7 +4,7 @@ A regression run of the whole app on a real phone against the real hub. Every fe
 `quickstart.md` checks only what that feature added, at the time it shipped. This script checks
 what the app does **today**, across every shipped feature, in one pass.
 
-**Covers**: `0.8.1-alpha` · **Hub API**: 0.1.33 · **Last updated**: 2026-11-07
+**Covers**: `0.9.0-alpha` · **Hub API**: 0.1.34 · **Last updated**: 2026-11-16
 
 Run it when the user asks for a "full app test", before a release, after a hub upgrade, and after
 a dependency update that touches Compose, Ktor or the generated client.
@@ -64,6 +64,8 @@ into the report. Where the hub lacks a role, mark the rows that need it `n/a`.
 | `PAUSEABLE` | a configured `file:` source (`oceanwavescrushing`); may be off on the hub, then turn it on for the run and off again in teardown. The sample lasts ~2 min, after which the hub removes its route: start it just before each row that needs it | R5, N3, N8, N18, ST10 |
 | `LINEIN` | a line-in source, if the hub has one (Chromecast Audio, `alsa://…`, usually off: turn it on for N2 and off right after) | N2 |
 | `LINK` | `soundcloud.com/forss/flickermood` (plays ~3 min, then the hub removes it) | S7, ST11–ST12 |
+| `RADIO` | the `radio` extension `ACTIVE` (`curl $HUB/api/v2/extensions`) and the hub able to reach the internet. Without it mark the RA rows `n/a` except RA14 | RA1–RA19, R18, N21, ST19, X5 |
+| `STATION` | a well-voted MP3 station that starts reliably (MANGORADIO started in 2.4 s on 2026-11-16; if it does not start take another and write which in the report), with its `uuid` from `curl "$HUB/api/radio/stations?name=<name>&limit=5"`; and a second one, `STATION2`, with a long name (`curl "$HUB/api/radio/stations?name=radio&limit=50&order=votes"`, take the longest) | RA3–RA11, RA17, RA18, R18, N21 |
 | `SLOWLINK` | `http://10.255.255.1/stream.mp3` (refused after ~10 s) | S8, S12 |
 
 ## P. Preflight
@@ -113,6 +115,7 @@ into the report. Where the hub lacks a role, mark the rows that need it `n/a`.
 | R15 | as R13, with two long names on two rooms | Rooms | Both scroll and start at different moments. Note whether it looks too busy |
 | R16 | as R13 | Pull the notification shade over Rooms and close it; Home and reopen | Stands still while the shade is down, then scrolls again from its beginning; no error or jump after reopening. Do not capture the shade (it shows private notifications): `dumpsys window \| grep mCurrentFocus` names `NotificationShade` while it is down, and a frame taken ~0.5 s after closing shows the name at its start |
 | R17 | as R13; save `settings get global animator_duration_scale` first | `settings put global animator_duration_scale 0`, then restore it | Names stand still ending in "…" (Rooms: one line); after restoring, scrolling resumes without reopening the app |
+| R18 | `STATION` started by `curl -X POST $HUB/api/v2/play -d '{"uri":"radiobrowser://<uuid>","targetId":"SOLO","targetType":"SINGLE_OUTPUT"}'` | Rooms | The card shows the station's name, "Radio · Live stream" and the stream tile; Stop only. On a group the status reads "<rooms> · Live stream" |
 
 ## N. Now Playing and Move to room
 
@@ -138,12 +141,13 @@ into the report. Where the hub lacks a role, mark the rows that need it `n/a`.
 | N18 | `PAUSEABLE` playing on a room, movable; then paused with `PUT /routes/{id}/pause` | Open the card; then pause and look again | Playing: four equal columns, 64 dp buttons, "Change source…" and "Move to room…" may wrap to two lines, nothing clipped. Paused: Stop · Resume · Change source… |
 | N19 | `STREAM` on `GROUP`, `G2` off | Open the card → "Change source…" | The fixed card is `GROUP` ("Group · Playing <STREAM>"), not `G1`; with a source picked the footer says "<STREAM> will stop in <GROUP>" and "Won't play in <G2> (turned off)". Turn `G2` back on |
 | N20 | `STREAM` on `SOLO`; then `STREAM2` mixed in: `POST /routes {inputId: STREAM2, targetId: SOLO, targetType: SINGLE_OUTPUT, joinMode: "MIX"}` | Open the `STREAM2` card; then the `STREAM` card | `STREAM2` (mixed in): no "Change source…", the other buttons share the row. `STREAM` (replacing): "Change source…" as in N17. Stop `STREAM2` |
+| N21 | as R18 | Open the card | Title the station's name, subtitle "Radio" and nothing after it (no address), Stop without Pause, "Live streams can't be paused"; "Change source…" and "Move to room…" as for any live playback |
 
 ## S. Start Playback
 
 | # | Setup (`curl`) | Do | Expect |
 |---|---|---|---|
-| S1 | — | Rooms → "Play something" | Nothing selected; Play disabled |
+| S1 | — | Rooms → "Play something" | Nothing selected; Play disabled. With radio offered, "Or a radio station" with "Find a radio station" sits between the link field and "Or pick a source"; on a hub without radio there is no such section and no error |
 | S2 | — | Idle room → its play button | That room selected |
 | S3 | — | `STREAM` + an idle room → Play | Now Playing within ~3 s; Back → Rooms shows it |
 | S4 | as S3 | Pick `STREAM2` + the same room | "<STREAM> will stop in <room>" before Play; after Play only that stops |
@@ -163,6 +167,38 @@ into the report. Where the hub lacks a role, mark the rows that need it `n/a`.
 | S18 | Change source… open on `SOLO` with a source picked; then `PUT /outputs/SOLO/enabled {false}` | Look at the screen; turn `SOLO` back on | Within ~3 s the card dims, "<SOLO> is turned off" shows above Play and Play is disabled; after turning it on Play is enabled again with the same source. Close |
 | S19 | `STREAM` on `SOLO` | Change source… open; `DELETE` the route by `curl` | The "will stop" line goes on the next refresh and no "Playback on … ended" notice appears; Play starts on the idle room; Back → Rooms, still no notice |
 | S20 | `STREAM` on `SOLO` | Change source… → paste `SLOWLINK` → Play | Existing failure message, screen stays; `SOLO` falls silent (the hub stops first); Close → the old Now Playing leaves with "Playback on <SOLO> ended" on Rooms |
+
+## RA. Radio stations
+
+Needs `RADIO` and `STATION`. Start from cleared app data for RA1 and RA2 (`adb shell pm clear
+sonora.multiroom.mobile` also removes the hub address: enter it again). Timings are read from
+`screencap` frames, never from a `uiautomator dump`. Say before RA5 that the run replaces what
+plays in `SOLO` and `SOLO2` (two rooms in no group).
+
+| # | Setup (`curl`) | Do | Expect |
+|---|---|---|---|
+| RA1 | cleared app data, hub address set | Rooms → "Play something" | "Or a radio station" with "Find a radio station" within one round trip of opening; no recent rows; everything else as before |
+| RA2 | as RA1 | "Find a radio station" | "Radio stations"; placeholders, then the Country chip shows the phone's region (when the catalogue lists it) and the heading "STATIONS IN <COUNTRY>" with "Most voted"; no "Recent"; the typed text in the field is vertically centred |
+| RA3 | — | Remove the country chip; type `STATION`'s name | No search button; the list shows matching stations about 2 s after the last letter; "Recent" is not shown while text is typed |
+| RA4 | as RA3 | Look at the rows; tap `STATION` | Rows: name and a line of only the known parts ("DE · MP3 · 128 kbps"), no votes, images or address. Back on "Play something": the station selected with "Change", second line starts with "Radio"; nothing plays (`GET /routes` unchanged) |
+| RA5 | `STREAM` on `SOLO` | Select `SOLO` | "<STREAM> will stop in <SOLO>"; Play reads "Play <station> in <SOLO>" with the name in full |
+| RA6 | as RA5 | Play | "Starting…", then Now Playing within a few seconds (N21); `GET /inputs` has an input with `uri` `radiobrowser://…`; Back → Rooms shows R18 |
+| RA7 | `STATION` playing on `SOLO` for more than 30 s | "Play something" | `STATION` is the first row under "Find a radio station" and first under "RECENT" on the radio screen; it is not also listed under "Or pick a source". Selecting it with `SOLO`: "<station> is already playing in <SOLO>", Play dimmed and sends nothing; with `SOLO2` Play is enabled |
+| RA8 | — | A second station on `SOLO2`; `DELETE` its route by `curl` after ~10 s; open the radio screen. Then a third station on `SOLO2`, Home within 10 s, wait 40 s, reopen | The second is not under "Recent"; the third still plays and is first under "Recent" |
+| RA9 | two or more recent stations | ✕ on one "Recent" row | Gone at once, no question; gone on "Play something" too; a playing station keeps playing |
+| RA10 | — | Country chip, type `ger`, choose Germany; Tag chip, type `jazz`, choose it; Language chip, type `german`, choose it | Each sheet lists values with counts, the field narrows it, the tag sheet loads more on scroll; chips read the values with ✕; the list reloads **and finishes loading** each time (it once stayed on the placeholders); the first rows match `curl "$HUB/api/radio/stations?countryCode=DE&tag=jazz&language=german&limit=5"` |
+| RA11 | as RA10 | Order control → "Trending", then "Name A–Z"; reopen a sheet with a value chosen | The control names the order; the list reloads in that order (compare with `curl … &order=clickCount` / `&order=name`); the chosen row is marked and in view |
+| RA12 | as RA10 | Type `qzxvqzxv` | "No stations match", "Try another name or fewer filters.", "Clear filters"; tapping it removes the three chips, keeps order and name |
+| RA13 | filters and order chosen | `am force-stop`, reopen, radio screen | The same filters and order; empty name field; "Recent" still there |
+| RA14 | a hub without the `radio` extension, if one is at hand | "Play something" | No radio section, no error, no recent stations |
+| RA15 | no filter, empty name | Scroll the list several pages | "Loading more stations…" appears and rows are added; no station twice |
+| RA16 | the longest-named country (The United Kingdom Of Great Britain And Northern Ireland), a tag and a language chosen | Look at the chips and the country sheet | The country value ends in "…", the chip row scrolls sideways; in the sheet the long name ends in "…" and its count stays in place |
+| RA17 | `STATION2` (long name) | Select it in Start Playback; look at Play | The selected name scrolls as a marquee; unselected rows end in "…"; Play shows "Play ", the cut name and " in <room>" with the room in full |
+| RA18 | — | Type `100%` and 120 characters | `%` does not appear, the field stops at 100 characters, no error appears |
+| RA19 | radio screen open | Rotate; Home and back | Name, filters, list and position kept |
+| RA20 | a station not under "Recent" (its `uuid` from the catalogue), started by `curl` on a room | Rooms, Now Playing, "Play something", Settings → Sources | R18 and N21; in "Or pick a source" it is listed with kind "Radio"; under "Added at run time" (ST19) the stream tile and the added line; it does not enter "Recent" |
+| RA21 | — | Select a station and a room, Play, Close at once | Rooms; the playback appears, or a failure notice shows there; nothing else appears later |
+| RA22 | a station the hub cannot start (`n/a` when every one starts) | Play | Start Playback stays, the station stays selected, a temporary notice "Couldn't start <station>", no cause; not under "Recent" |
 
 ## ST. Settings
 
@@ -192,6 +228,7 @@ recheck failures by hand. ST17 and ST18 stay manual. When a row below changes, c
 | ST16 | — | Flip a room switch and tap Rooms at once | The change lands on the hub. Put the room back |
 | ST17 | **User**: TalkBack on | A switch row, the tabs, the hub row, a trash button, a dialog | Each read once, with its state; no name read twice |
 | ST18 | as R10 (`G1` off while `STREAM` plays on `GROUP`) | Settings → Rooms; then Groups → turn `GROUP` off → "Keep playing" | `G1` reads "Off"; the dialog says `STREAM` is playing on `G2` only. Turn `G1` back on |
+| ST19 | `STATION` started by `curl` on a room, then another `STATION`, stopped | Sources tab | "Added from apps" lists the playing station with the stream tile and "Added today HH:mm · removed when it stops"; no kind in words on that row |
 
 ## X. Connection loss
 
@@ -201,6 +238,7 @@ recheck failures by hand. ST17 and ST18 stay manual. When a row below changes, c
 | X2 | **User**: the same on Now Playing with the move sheet open, on Start Playback with selections, and on Settings | Sheet's Move disabled; selections kept and Play disabled; Settings "Not connected", switches and trash disabled, "Test connection" still answers. All re-enable after restoring |
 | X3 | as R13. **User**: cut the phone's Wi-Fi on Rooms | The card dims and the long name stands still at its start ending in "…"; it scrolls again once the network is back |
 | X4 | `STREAM` on `SOLO`. **User**: open Change source… on it, then cut the phone's Wi-Fi | Stale banner, Play disabled, the card and selection kept; on Now Playing every button, Change source… included, is disabled. All re-enable after restoring |
+| X5 | `RADIO`. **User**: block the hub's internet access (or `n/a`); then cut the phone's Wi-Fi on the radio screen and type a name; then scroll to the end of the list offline | With the hub's internet cut: "The station catalogue isn't answering" with Retry within ~6 s, never "Can't reach the hub"; Retry after restoring loads the list. With the Wi-Fi cut: never the catalogue message, the stale banner, rows kept; after reconnecting the typed name's list (or the next page) loads by itself, once |
 
 Never stop the hub for these checks unless the user offers to: it stops every playback in the home.
 

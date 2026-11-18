@@ -54,6 +54,10 @@ private class CountingFactory : HubRepositoryFactory {
             override suspend fun transferRoute(routeId: String, target: Target) = fail()
             override suspend fun startSource(inputId: String, target: Target) = fail()
             override suspend fun playLink(uri: String, target: Target) = fail()
+            override suspend fun searchStations(query: sonora.multiroom.mobile.domain.StationQuery, offset: Int) = fail()
+            override suspend fun radioCountries() = fail()
+            override suspend fun radioLanguages() = fail()
+            override suspend fun radioTags(name: String?, offset: Int) = fail()
         }
     }
 }

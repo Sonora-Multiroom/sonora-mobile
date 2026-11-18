@@ -11,6 +11,8 @@ fun SonoraColors.forKind(kind: SourceKind): KindColors = when (kind) {
     SourceKind.LineIn -> kindLineIn
     SourceKind.File -> kindFile
     SourceKind.Link -> kindLink
+    // A station reads as a live stream, so it wears the stream colours.
+    SourceKind.Radio -> kindStream
 }
 
 fun iconForKind(kind: SourceKind): ImageVector = when (kind) {
@@ -18,4 +20,5 @@ fun iconForKind(kind: SourceKind): ImageVector = when (kind) {
     SourceKind.LineIn -> SonoraIcons.LineIn
     SourceKind.File -> SonoraIcons.File
     SourceKind.Link -> SonoraIcons.Link
+    SourceKind.Radio -> SonoraIcons.Stream
 }

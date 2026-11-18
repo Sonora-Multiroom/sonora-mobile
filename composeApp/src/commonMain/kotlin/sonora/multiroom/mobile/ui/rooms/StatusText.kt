@@ -1,5 +1,6 @@
 package sonora.multiroom.mobile.ui.rooms
 
+import sonora.multiroom.mobile.domain.SourceKind
 import sonora.multiroom.mobile.domain.CardStatus
 import sonora.multiroom.mobile.domain.NowPlayingCard
 import sonora.multiroom.mobile.domain.kindLabel
@@ -17,13 +18,16 @@ internal fun statusWord(status: CardStatus): String = when (status) {
 /**
  * The card's third line (data-model.md "CardStatus"). A single room prefixes the kind to the plain
  * "Playing"/"Paused" states ("File · Paused"); a group prefixes its members instead
- * ("Living Room + Kitchen · Live stream"). A card needing attention appends "Not connected".
+ * ("Living Room + Kitchen · Live stream"). A single room playing a radio station says so too
+ * ("Radio · Live stream", MOB-009). A card needing attention appends "Not connected".
  */
 fun statusLine(card: NowPlayingCard): String {
     val word = statusWord(card.status)
     val line = if (card.isGroup) {
         (card.memberNames.joinToString(" + ").takeIf { it.isNotEmpty() }?.let { "$it · $word" }) ?: word
-    } else if (card.status == CardStatus.Playing || card.status == CardStatus.Paused) {
+    } else if (card.status == CardStatus.Playing || card.status == CardStatus.Paused ||
+        (card.status == CardStatus.LiveStream && card.kind == SourceKind.Radio)
+    ) {
         "${kindLabel(card.kind)} · $word"
     } else {
         word

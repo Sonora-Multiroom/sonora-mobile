@@ -1,9 +1,16 @@
 package sonora.multiroom.mobile.data
 
+import sonora.multiroom.mobile.domain.Country
+import sonora.multiroom.mobile.domain.RADIO_PAGE_SIZE
 import sonora.multiroom.mobile.domain.ExtensionInventory
 import sonora.multiroom.mobile.domain.HubAddress
 import sonora.multiroom.mobile.domain.HubSnapshot
+import sonora.multiroom.mobile.domain.Language
 import sonora.multiroom.mobile.domain.Route
+import sonora.multiroom.mobile.domain.StationOrder
+import sonora.multiroom.mobile.domain.StationPage
+import sonora.multiroom.mobile.domain.StationQuery
+import sonora.multiroom.mobile.domain.TagPage
 import sonora.multiroom.mobile.domain.Target
 import sonora.multiroom.mobile.hub.generated.apis.ExtensionsApi
 import sonora.multiroom.mobile.hub.generated.apis.GroupsApi
@@ -11,6 +18,7 @@ import sonora.multiroom.mobile.hub.generated.apis.InputsApi
 import sonora.multiroom.mobile.hub.generated.apis.MasterMuteApi
 import sonora.multiroom.mobile.hub.generated.apis.OutputsApi
 import sonora.multiroom.mobile.hub.generated.apis.PlaybackApi
+import sonora.multiroom.mobile.hub.generated.apis.RadioApi
 import sonora.multiroom.mobile.hub.generated.apis.RoutesApi
 import sonora.multiroom.mobile.hub.generated.models.CreateRouteRequest
 import sonora.multiroom.mobile.hub.generated.models.EnabledRequest
@@ -40,6 +48,18 @@ class KtorHubRepository(address: HubAddress, client: HttpClient) : HubRepository
             install(HttpTimeout) {
                 requestTimeoutMillis = LINK_TIMEOUT_MILLIS
                 socketTimeoutMillis = LINK_TIMEOUT_MILLIS
+                connectTimeoutMillis = HUB_TIMEOUT_MILLIS
+            }
+        },
+    )
+
+    // The radio requests wait a little longer than the hub's own 5 s bound (RADIO_TIMEOUT_MILLIS).
+    private val radio = RadioApi(
+        address.baseUrl,
+        client.config {
+            install(HttpTimeout) {
+                requestTimeoutMillis = RADIO_TIMEOUT_MILLIS
+                socketTimeoutMillis = RADIO_TIMEOUT_MILLIS
                 connectTimeoutMillis = HUB_TIMEOUT_MILLIS
             }
         },
@@ -153,6 +173,48 @@ class KtorHubRepository(address: HubAddress, client: HttpClient) : HubRepository
             is HubResult.Ok -> result.value.toRoute()?.let { HubResult.Ok(it) } ?: HubResult.Err(HubError.Unexpected)
         }
     }
+
+    override suspend fun searchStations(query: StationQuery, offset: Int): HubResult<StationPage> {
+        val order = when (query.order) {
+            StationOrder.MostVoted -> RadioApi.OrderSearchRadioStations.VOTES
+            StationOrder.Trending -> RadioApi.OrderSearchRadioStations.CLICK_COUNT
+            StationOrder.NameAZ -> RadioApi.OrderSearchRadioStations.NAME
+        }
+        // No direction, codec or bitrateMin: the hub's defaults are what the app wants.
+        val result = hubCall {
+            radio.searchRadioStations(
+                name = query.name,
+                tag = query.tag,
+                countryCode = query.countryCode,
+                language = query.language,
+                order = order,
+                limit = RADIO_PAGE_SIZE,
+                offset = offset,
+            )
+        }
+        return when (result) {
+            is HubResult.Err -> result
+            is HubResult.Ok -> HubResult.Ok(result.value.toStationPage())
+        }
+    }
+
+    override suspend fun radioCountries(): HubResult<List<Country>> =
+        when (val result = hubCall { radio.listRadioCountries() }) {
+            is HubResult.Err -> result
+            is HubResult.Ok -> HubResult.Ok(result.value.mapNotNull { it.toCountry() })
+        }
+
+    override suspend fun radioLanguages(): HubResult<List<Language>> =
+        when (val result = hubCall { radio.listRadioLanguages() }) {
+            is HubResult.Err -> result
+            is HubResult.Ok -> HubResult.Ok(result.value.mapNotNull { it.toLanguage() })
+        }
+
+    override suspend fun radioTags(name: String?, offset: Int): HubResult<TagPage> =
+        when (val result = hubCall { radio.listRadioTags(name = name, limit = RADIO_PAGE_SIZE, offset = offset) }) {
+            is HubResult.Err -> result
+            is HubResult.Ok -> HubResult.Ok(result.value.toTagPage())
+        }
 }
 
 class KtorHubRepositoryFactory(private val client: HttpClient) : HubRepositoryFactory {

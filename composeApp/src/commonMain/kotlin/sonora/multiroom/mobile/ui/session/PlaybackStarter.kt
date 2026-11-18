@@ -6,6 +6,7 @@ import sonora.multiroom.mobile.domain.Route
 import sonora.multiroom.mobile.domain.RouteStatus
 import sonora.multiroom.mobile.domain.StartNames
 import sonora.multiroom.mobile.domain.StartWhat
+import sonora.multiroom.mobile.domain.sameStation
 import sonora.multiroom.mobile.domain.Target
 import sonora.multiroom.mobile.ui.StartFailure
 import sonora.multiroom.mobile.ui.StartKind
@@ -17,6 +18,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import kotlin.time.Clock
 
 sealed interface StartAttempt {
     data object Starting : StartAttempt
@@ -39,6 +41,9 @@ class PlaybackStarter(
     private val scope: CoroutineScope,
     private val session: HubSession,
     private val messages: AppMessages,
+    /** Told of every successful station start, so it can become a recent station (MOB-009). */
+    private val tracker: RecentStationTracker? = null,
+    private val now: () -> Long = { Clock.System.now().toEpochMilliseconds() },
 ) {
     private val _attempt = MutableStateFlow<StartAttempt?>(null)
     val attempt: StateFlow<StartAttempt?> = _attempt.asStateFlow()
@@ -50,18 +55,26 @@ class PlaybackStarter(
         val repo = session.repository ?: return
         detached = false
         _attempt.value = StartAttempt.Starting
+        // The audio cannot have begun before the request left; a recovered start keeps this time.
+        val sentAt = now()
         scope.launch {
             val result = when (what) {
                 is StartWhat.Source -> repo.startSource(what.id, target)
                 is StartWhat.Link -> repo.playLink(what.uri, target)
+                // Not through checkLink, which accepts only http(s); the address goes as the hub gave it.
+                is StartWhat.Station -> repo.playLink(what.station.uri, target)
             }
-            val kind = if (what is StartWhat.Source) StartKind.Source else StartKind.Link
+            val kind = when (what) {
+                is StartWhat.Source -> StartKind.Source
+                is StartWhat.Link -> StartKind.Link
+                is StartWhat.Station -> StartKind.Station
+            }
             when (result) {
-                is HubResult.Ok -> succeed(result.value)
+                is HubResult.Ok -> succeed(result.value, what, sentAt)
                 is HubResult.Err -> when {
-                    result.error is HubError.Unreachable -> recover(what, target, StartFailure.HubUnreachable)
+                    result.error is HubError.Unreachable -> recover(what, target, StartFailure.HubUnreachable, sentAt)
                     // The hub may have started it although the answer could not be read.
-                    result.error is HubError.Unexpected -> recover(what, target, StartFailure.Other)
+                    result.error is HubError.Unexpected -> recover(what, target, failureOther(what, names), sentAt)
                     result.error is HubError.Rejected && result.error.status == 404 -> gone(what, target, names, kind, result.error)
                     else -> fail(startFailure(kind, result.error, names, roomNames()))
                 }
@@ -78,9 +91,11 @@ class PlaybackStarter(
         _attempt.value = null
     }
 
-    private fun succeed(route: Route) {
+    private fun succeed(route: Route, what: StartWhat, sentAt: Long) {
         val seq = session.startedSeq
         session.requestRefresh()
+        // Only a station chosen on the radio screen counts; one picked from the sources never does.
+        if (what is StartWhat.Station) tracker?.track(what.station, route, sentAt, seq)
         if (detached) _attempt.value = null else _attempt.value = StartAttempt.Done(route, seq)
     }
 
@@ -93,6 +108,10 @@ class PlaybackStarter(
             _attempt.value = StartAttempt.Failed(failure)
         }
     }
+
+    /** What a failure the hub gave no reason for says: a station names itself, anything else is generic. */
+    private fun failureOther(what: StartWhat, names: StartNames): StartFailure =
+        if (what is StartWhat.Station) StartFailure.StationFailed(names.source ?: names.target) else StartFailure.Other
 
     /** Room names from the latest snapshot, for `outputId`s in refusals. */
     private fun roomNames(): (String) -> String? {
@@ -116,22 +135,25 @@ class PlaybackStarter(
                 what is StartWhat.Source && (source == null || !source.enabled) ->
                     StartFailure.NoLongerOnHub(source?.name ?: names.source ?: names.target)
                 targetGone -> StartFailure.NoLongerOnHub(names.target)
-                else -> StartFailure.Other
+                else -> failureOther(what, names)
             }
         }
         fail(failure)
     }
 
     /** The answer was lost: look for the playback on the hub before calling it a failure (R8). */
-    private suspend fun recover(what: StartWhat, target: Target, notFound: StartFailure) {
+    private suspend fun recover(what: StartWhat, target: Target, notFound: StartFailure, sentAt: Long) {
         val fresh = session.awaitFreshSnapshot()
         val found = fresh?.let { findStarted(it, what, target) }
-        if (found != null) succeed(found) else fail(notFound)
+        if (found != null) succeed(found, what, sentAt) else fail(notFound)
     }
 
     private fun findStarted(snapshot: HubSnapshot, what: StartWhat, target: Target): Route? {
         val inputIds = when (what) {
             is StartWhat.Source -> setOf(what.id)
+            is StartWhat.Station -> snapshot.sources
+                .filter { it.origin == sonora.multiroom.mobile.domain.SourceOrigin.Runtime && sameStation(it.uri, what.station.uri) }
+                .map { it.id }.toSet()
             is StartWhat.Link -> snapshot.sources
                 .filter { it.origin == sonora.multiroom.mobile.domain.SourceOrigin.Runtime && sameLink(it.uri, what.uri) }
                 .map { it.id }.toSet()
