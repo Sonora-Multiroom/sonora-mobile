@@ -99,7 +99,20 @@ under Issues. The first session stopped at 13% battery; the rest ran after the p
   is judged; test above. Row 25 is ⏳ because its Now Playing and Start Playback rows were not re-read.
 - **Open, cause unknown: a station chosen on the radio screen is sometimes not selected on
   return, and Play stays disabled.** Seen once by the owner and once in the Pixel 5 run; not
-  reproduced. Recorded in `docs/backlog/start-playback-station-lost.md`.
+  reproduced. Recorded in `docs/backlog/start-playback-station-lost.md`. On 2026-11-18 the owner
+  could not reproduce it either and decided it stays in the backlog, so it does not block this PR.
+- **Chip ✕ size (2026-11-18): measured on the POCO, 48 × 48 dp, not 40 × 44 dp.** The ✕ is drawn
+  at 40 dp wide in `RadioScreen.kt`, but its accessibility bounds are 96 × 96 px at 320 dpi
+  (`[272,342][368,438]` on the radio screen, country chip The United States Of America), so the
+  touch area is 48 dp square. The chip pill itself is 88 px (44 dp) tall. Cause: Compose applies
+  its 48 dp minimum to clickable elements. The 44 dp touch rule (constitution VI) is therefore met
+  without a code change, and the 44 dp variant that was built for comparison measured the same.
+  Build: local debug APK, source as at `git` HEAD `acb48c3` (`composeApp` clean), SHA-256
+  `b8be06f5…537d`, identical to the installed `base.apk` on the phone (versionName 0.9.0-alpha).
+  Measured with `uiautomator dump`, read-only; the phone refused injected taps, so the radio
+  screen was opened by hand.
+  Again with the country chip Germany (2026-11-18): the ✕ is `[177,342][273,438]`, 96 × 96 px,
+  48 × 48 dp, the same as with The United States Of America.
 - Rows 28-30 need the user and were not done; row 27 and 31 were not possible (no failing station,
   no hub without radio).
 
@@ -107,4 +120,4 @@ under Issues. The first session stopped at 13% battery; the rest ran after the p
 
 | Mode | Date | Commit | Verdict | Notes |
 |---|---|---|---|---|
-| code | 2026-11-17 | daefce5 | CONCERNS | Tracker fix applied (see Issues); chip ✕ 40 dp and the selection-loss defect await the owner |
+| code | 2026-11-17 | daefce5 | CONCERNS | Tracker fix applied; chip ✕ measured at 48 dp on the phone (2026-11-18, no code change); selection-loss defect not reproduced, kept in the backlog by the owner (2026-11-18) |

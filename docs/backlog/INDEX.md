@@ -14,6 +14,7 @@ this list.
 | Priority | Item | Kind | Effort | Why this priority |
 |---|---|---|---|---|
 | P2 | [Rooms with several playbacks](rooms-with-several-playbacks.md) | Feature / fix | Medium | Since hub 0.1.21 a room can play several routes. Rooms then shows it on several cards, and the move sheet misnames what will stop. Planned for a feature after MOB-004 (Settings took that number) |
+| P2 | [Start Playback: a chosen station is sometimes lost](start-playback-station-lost.md) | Fix | Unknown | After choosing a station on the radio screen, Start Playback came back with no station selected and Play disabled; seen twice, not reproduced on demand. The note holds what was tried, three hypotheses and how to diagnose it next time |
 | P2 | [Flaky tests: unsynchronised request recording](flaky-request-recording-tests.md) | Fix (tests) | Small | Two tests record `MockEngine` requests in a plain list from several threads. CI failed twice in eight days (once on `main`, once on a docs pull request) and passed on rerun; a red gate on unrelated changes costs a diagnosis each time |
 | P3 | [Share a link to a room](share-link-to-room.md) | Feature | Medium | The old app could do this, so users lost it in the rewrite. Pasting a link into Start Playback (MOB-003) still works, only with more steps |
 | P3 | [Automate the full app test](automated-full-app-test.md) | Tooling | Medium | A full on-device run takes ~35 min of agent turns and caused test mistakes; Maestro flows with gates could cut it to minutes. Nothing breaks without it |
